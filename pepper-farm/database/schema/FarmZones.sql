@@ -1,0 +1,17 @@
+-- Table: FarmZones
+-- Description: Physical zones in the farm, optionally linked to a pepper variety
+
+-- | Column           | Type           | Nullable | Default           | Notes                              |
+-- |------------------|----------------|----------|-------------------|------------------------------------|
+-- | ZoneId           | INT            | NO       | IDENTITY (auto)   | Primary Key                        |
+-- | ZoneName         | NVARCHAR(100)  | NO       |                   | Unique                             |
+-- | ZoneCode         | NVARCHAR(50)   | YES      |                   | Unique                             |
+-- | PepperId         | INT            | YES      |                   | FK -> PepperVarieties.PepperId     |
+-- | AreaSquareMeters | DECIMAL(10,2)  | YES      |                   |                                    |
+-- | Latitude         | DECIMAL(9,6)   | YES      |                   |                                    |
+-- | Longitude        | DECIMAL(9,6)   | YES      |                   |                                    |
+-- | SoilType         | NVARCHAR(100)  | YES      |                   |                                    |
+-- | IrrigationMethod | NVARCHAR(100)  | YES      |                   |                                    |
+-- | Notes            | NVARCHAR(500)  | YES      |                   |                                    |
+-- | IsActive         | BIT            | NO       | 1                 |                                    |
+-- | CreatedAt        | DATETIME2      | NO       | SYSUTCDATETIME()  |                                    |

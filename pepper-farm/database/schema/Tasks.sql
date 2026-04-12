@@ -1,0 +1,20 @@
+-- Table: Tasks
+-- Description: Tasks assigned by managers to employees, optionally linked to a pepper or zone
+
+-- | Column           | Type           | Nullable | Default           | Notes                              |
+-- |------------------|----------------|----------|-------------------|------------------------------------|
+-- | Id               | INT            | NO       | IDENTITY (auto)   | Primary Key                        |
+-- | Title            | NVARCHAR(200)  | NO       |                   |                                    |
+-- | Description      | NVARCHAR(1000) | YES      |                   |                                    |
+-- | Status           | NVARCHAR(50)   | NO       | 'todo'            | todo / in_progress / done / cancelled |
+-- | Priority         | NVARCHAR(50)   | NO       | 'medium'          | low / medium / high / critical     |
+-- | TaskType         | NVARCHAR(100)  | NO       |                   |                                    |
+-- | CreatedByUserId  | INT            | NO       |                   | FK -> Users.UserId                 |
+-- | AssignedToUserId | INT            | YES      |                   | FK -> Users.UserId                 |
+-- | DueDate          | DATETIME2      | YES      |                   | Must be >= CreatedAt               |
+-- | StartedAt        | DATETIME2      | YES      |                   |                                    |
+-- | CompletedAt      | DATETIME2      | YES      |                   | Must be >= StartedAt               |
+-- | PepperId         | INT            | YES      |                   | FK -> PepperVarieties.PepperId     |
+-- | ZoneId           | INT            | YES      |                   | FK -> FarmZones.ZoneId             |
+-- | CreatedAt        | DATETIME2      | NO       | SYSDATETIME()     |                                    |
+-- | UpdatedAt        | DATETIME2      | NO       | SYSDATETIME()     |                                    |
