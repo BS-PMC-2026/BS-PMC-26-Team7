@@ -21,6 +21,10 @@ function toPayload(data: CreateTaskFormData): CreateTaskPayload {
   };
 }
 
+export async function getTasks(): Promise<Task[]> {
+  return apiFetch<Task[]>('/api/tasks');
+}
+
 export async function createTask(data: CreateTaskFormData): Promise<Task> {
   return apiFetch<Task>('/api/tasks', {
     method: 'POST',

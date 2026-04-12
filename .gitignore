@@ -6,9 +6,13 @@ npm-debug.log*
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 .venv/
 venv/
 env/
+*.egg-info/
+dist/
+build/
 .pytest_cache/
 
 # Environment
@@ -18,3 +22,8 @@ env/
 
 # OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
