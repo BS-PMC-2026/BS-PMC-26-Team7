@@ -1,0 +1,38 @@
+[
+  {
+    "UserId": 1,
+    "FullName": "Admin User",
+    "Email": "admin@farm.com",
+    "PasswordHash": "hashed_password_1",
+    "RoleId": 2,
+    "IsActive": "1",
+    "CreatedAt": "2026-03-29T06:56:57.4548553"
+  },
+  {
+    "UserId": 2,
+    "FullName": "Farm Manager",
+    "Email": "manager@farm.com",
+    "PasswordHash": "hashed_password_2",
+    "RoleId": 2,
+    "IsActive": "1",
+    "CreatedAt": "2026-03-29T06:56:57.4548553"
+  },
+  {
+    "UserId": 3,
+    "FullName": "Field Worker",
+    "Email": "worker@farm.com",
+    "PasswordHash": "hashed_password_3",
+    "RoleId": 3,
+    "IsActive": "1",
+    "CreatedAt": "2026-03-29T06:56:57.4548553"
+  },
+  {
+    "UserId": 4,
+    "FullName": "Guest Visitor",
+    "Email": "visitor@farm.com",
+    "PasswordHash": "hashed_password_4",
+    "RoleId": 4,
+    "IsActive": "1",
+    "CreatedAt": "2026-03-29T06:56:57.4548553"
+  }
+]

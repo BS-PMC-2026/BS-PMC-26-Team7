@@ -1,0 +1,20 @@
+-- Table: PepperVarieties
+-- Description: Catalog of pepper types with growing conditions
+
+-- | Column                 | Type          | Nullable | Default           | Notes                  |
+-- |------------------------|---------------|----------|-------------------|------------------------|
+-- | PepperId               | INT           | NO       | IDENTITY (auto)   | Primary Key            |
+-- | PepperName             | NVARCHAR(100) | NO       |                   | Unique                 |
+-- | ScientificName         | NVARCHAR(150) | YES      |                   |                        |
+-- | HeatLevelScovilleMin   | INT           | YES      |                   |                        |
+-- | HeatLevelScovilleMax   | INT           | YES      |                   |                        |
+-- | OptimalSoilMoistureMin | DECIMAL(5,2)  | YES      |                   |                        |
+-- | OptimalSoilMoistureMax | DECIMAL(5,2)  | YES      |                   |                        |
+-- | OptimalTempMinC        | DECIMAL(5,2)  | YES      |                   |                        |
+-- | OptimalTempMaxC        | DECIMAL(5,2)  | YES      |                   |                        |
+-- | OptimalSunlightHours   | DECIMAL(4,2)  | YES      |                   |                        |
+-- | ImageUrl               | NVARCHAR(500) | YES      |                   |                        |
+-- | Zone                   | NVARCHAR(500) | YES      |                   |                        |
+-- | GeneralDescription     | NVARCHAR(1000)| YES      |                   |                        |
+-- | IsActive               | BIT           | NO       | 1                 |                        |
+-- | CreatedAt              | DATETIME2     | NO       | SYSUTCDATETIME()  |                        |
