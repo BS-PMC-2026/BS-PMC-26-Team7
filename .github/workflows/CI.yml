@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: pepper-farm
+        working-directory: pepper-farm/backend
 
     steps:
       - name: Checkout repository
