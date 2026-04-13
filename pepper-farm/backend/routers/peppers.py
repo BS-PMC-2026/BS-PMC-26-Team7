@@ -7,6 +7,7 @@ from services.pepper_service import create_pepper
 from pathlib import Path
 from uuid import uuid4
 import traceback
+from services.pepper_service import create_pepper, get_all_peppers
 
 router = APIRouter(prefix="/api/peppers", tags=["Peppers"])
 
@@ -72,3 +73,7 @@ async def upload_pepper_image(file: UploadFile = File(...)):
         "message": "Image uploaded successfully.",
         "imageUrl": f"/uploads/pepper_images/{unique_filename}",
     }
+
+@router.get("", response_model=list[PepperResponse])
+def list_peppers_endpoint(db: Session = Depends(get_db)):
+    return get_all_peppers(db)

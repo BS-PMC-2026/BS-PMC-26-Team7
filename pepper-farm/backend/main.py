@@ -6,11 +6,13 @@ import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
 import models.user  # noqa: F401
 import models.task  # noqa: F401
+import models.plant  # noqa: F401
 from database import SessionLocal
 from sqlalchemy import text
 from routers import peppers
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from routers import peppers, plants
 
 app = FastAPI(title="PepperFarm API", version="1.0.0")
 
@@ -30,6 +32,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(peppers.router)
+app.include_router(plants.router)
 
 @app.get("/api/health/db")
 def db_health():

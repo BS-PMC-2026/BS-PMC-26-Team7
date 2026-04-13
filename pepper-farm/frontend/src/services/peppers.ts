@@ -49,3 +49,15 @@ export async function uploadPepperImage(file: File) {
 
   return result;
 }
+
+export async function getPepperVarieties() {
+  const response = await fetch("http://127.0.0.1:8000/api/peppers");
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || "Failed to load pepper varieties");
+  }
+
+  return result;
+}

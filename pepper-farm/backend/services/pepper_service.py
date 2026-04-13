@@ -24,3 +24,6 @@ def create_pepper(db: Session, pepper_data: PepperCreate) -> PepperVariety:
     db.commit()
     db.refresh(pepper)
     return pepper
+
+def get_all_peppers(db: Session) -> list[PepperVariety]:
+    return db.query(PepperVariety).order_by(PepperVariety.PepperName.asc()).all()
