@@ -5,9 +5,10 @@ import os
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is missing. Add it to backend/.env")
+
 
 
 engine = create_engine(DATABASE_URL, echo=False)
