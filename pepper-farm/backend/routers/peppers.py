@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError
 from database import get_db
-from schemas.pepper import PepperCreate, PepperResponse
+from schemas.pepper import PepperCreate, PepperResponse, PepperUpdate
 from pathlib import Path
 from uuid import uuid4
 import traceback
-from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id
+from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id, update_pepper
 
 router = APIRouter(prefix="/api/peppers", tags=["Peppers"])
 
@@ -84,3 +84,33 @@ def get_pepper_endpoint(pepper_id: int, db: Session = Depends(get_db)):
     if not pepper:
         raise HTTPException(status_code=404, detail=f"Pepper with id {pepper_id} not found.")
     return pepper
+
+
+@router.put("/{pepper_id}", response_model=PepperResponse)
+def update_pepper_endpoint(pepper_id: int, pepper: PepperUpdate, db: Session = Depends(get_db)):
+    try:
+        updated = update_pepper(db, pepper_id, pepper)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Pepper with id {pepper_id} not found.")
+        return updated
+
+    except IntegrityError as e:
+        db.rollback()
+        error_text = str(e.orig).lower()
+        if "duplicate key" in error_text or "unique key" in error_text:
+            raise HTTPException(
+                status_code=409,
+                detail=f"A pepper with that name already exists.",
+            )
+        raise HTTPException(status_code=400, detail="Database integrity error while updating pepper.")
+
+    except OperationalError:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Database connection timeout. Please try again.")
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Unexpected server error.")
