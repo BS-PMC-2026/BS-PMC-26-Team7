@@ -3,11 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError
 from database import get_db
 from schemas.pepper import PepperCreate, PepperResponse
-from services.pepper_service import create_pepper
 from pathlib import Path
 from uuid import uuid4
 import traceback
-from services.pepper_service import create_pepper, get_all_peppers
+from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id
 
 router = APIRouter(prefix="/api/peppers", tags=["Peppers"])
 
@@ -77,3 +76,11 @@ async def upload_pepper_image(file: UploadFile = File(...)):
 @router.get("", response_model=list[PepperResponse])
 def list_peppers_endpoint(db: Session = Depends(get_db)):
     return get_all_peppers(db)
+
+
+@router.get("/{pepper_id}", response_model=PepperResponse)
+def get_pepper_endpoint(pepper_id: int, db: Session = Depends(get_db)):
+    pepper = get_pepper_by_id(db, pepper_id)
+    if not pepper:
+        raise HTTPException(status_code=404, detail=f"Pepper with id {pepper_id} not found.")
+    return pepper

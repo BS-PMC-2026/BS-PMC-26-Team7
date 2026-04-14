@@ -1,3 +1,6 @@
+import { apiFetch } from './api';
+import { Pepper } from '@/types/pepper';
+
 export type PepperCreate = {
   PepperName: string;
   ScientificName?: string;
@@ -14,50 +17,34 @@ export type PepperCreate = {
   IsActive: boolean;
 };
 
-export async function createPepper(data: PepperCreate) {
-  const response = await fetch("http://127.0.0.1:8000/api/peppers", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.detail || "Failed to create pepper");
-  }
-
-  return result;
+export async function getAllPeppers(): Promise<Pepper[]> {
+  return apiFetch<Pepper[]>('/api/peppers');
 }
 
-export async function uploadPepperImage(file: File) {
-  const formData = new FormData();
-  formData.append("file", file);
+export async function createPepper(data: PepperCreate): Promise<Pepper> {
+  return apiFetch<Pepper>('/api/peppers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
 
-  const response = await fetch("http://127.0.0.1:8000/api/peppers/upload-image", {
-    method: "POST",
+export async function uploadPepperImage(file: File): Promise<{ imageUrl: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch('/api/peppers/upload-image', {
+    method: 'POST',
     body: formData,
   });
 
   const result = await response.json();
-
   if (!response.ok) {
-    throw new Error(result.detail || "Failed to upload image");
+    throw new Error(result.detail || 'Failed to upload image');
   }
-
   return result;
 }
 
-export async function getPepperVarieties() {
-  const response = await fetch("http://127.0.0.1:8000/api/peppers");
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.detail || "Failed to load pepper varieties");
-  }
-
-  return result;
+/** @deprecated use getAllPeppers() */
+export async function getPepperVarieties(): Promise<Pepper[]> {
+  return getAllPeppers();
 }

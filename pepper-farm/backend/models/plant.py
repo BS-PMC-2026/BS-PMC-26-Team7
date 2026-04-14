@@ -14,4 +14,4 @@ class Plant(Base):
     Status = Column(String(50), nullable=True)
     Notes = Column(String(500), nullable=True)
     IsActive = Column(Boolean, nullable=False, default=True)
-    CreatedAt = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
+    CreatedAt = Column(DateTime, nullable=False, server_default=func.now())

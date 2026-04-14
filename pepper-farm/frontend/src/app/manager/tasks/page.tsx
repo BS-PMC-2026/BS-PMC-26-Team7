@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import TaskForm from '@/components/tasks/TaskForm';
 import TaskCard from '@/components/tasks/TaskCard';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Alert from '@/components/ui/Alert';
+import EmptyState from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
 import { CreateTaskFormData, Task } from '@/types/task';
 import { Worker } from '@/types/user';
 import { createTask, getTasks } from '@/services/tasks';
@@ -55,25 +59,24 @@ export default function ManagerTasksPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-800">Tasks</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Manage and assign farm tasks</p>
-        </div>
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)}>+ Add Task</Button>
-        )}
+      <div className="mb-6">
+        <PageHeader
+          title="Tasks"
+          subtitle="Manage and assign farm tasks"
+          action={
+            !showForm
+              ? <Button onClick={() => setShowForm(true)}>+ Add Task</Button>
+              : undefined
+          }
+        />
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+        <Card className="p-6 mb-6">
           <h2 className="text-lg font-medium text-gray-700 mb-4">New Task</h2>
           {submitError && (
-            <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-4 py-2">
-              {submitError}
-            </p>
+            <Alert className="mb-4">{submitError}</Alert>
           )}
           <TaskForm
             onSubmit={handleSubmit}
@@ -81,23 +84,19 @@ export default function ManagerTasksPage() {
             isLoading={isSubmitting}
             workers={workers}
           />
-        </div>
+        </Card>
       )}
 
       {/* Task list */}
-      {loadError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-4 py-2 mb-4">
-          {loadError}
-        </p>
-      )}
+      {loadError && <Alert className="mb-4">{loadError}</Alert>}
 
       {isLoadingTasks ? (
         <p className="text-sm text-gray-400 text-center py-12">Loading tasks…</p>
       ) : tasks.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-base">No tasks yet.</p>
-          <p className="text-sm mt-1">Click <span className="font-medium">+ Add Task</span> to create the first one.</p>
-        </div>
+        <EmptyState
+          title="No tasks yet."
+          description="Click + Add Task to create the first one."
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {tasks.map((task) => (
