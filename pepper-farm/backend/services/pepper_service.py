@@ -24,3 +24,10 @@ def create_pepper(db: Session, pepper_data: PepperCreate) -> PepperVariety:
     db.commit()
     db.refresh(pepper)
     return pepper
+
+def get_all_peppers(db: Session) -> list[PepperVariety]:
+    return db.query(PepperVariety).order_by(PepperVariety.PepperName.asc()).all()
+
+
+def get_pepper_by_id(db: Session, pepper_id: int) -> PepperVariety | None:
+    return db.query(PepperVariety).filter(PepperVariety.PepperId == pepper_id).first()

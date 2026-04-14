@@ -1,5 +1,7 @@
 import { Task } from '@/types/task';
 import { Worker } from '@/types/user';
+import Badge from '@/components/ui/Badge';
+import Card from '@/components/ui/Card';
 
 const PRIORITY_STYLES: Record<string, string> = {
   low: 'bg-gray-100 text-gray-600',
@@ -27,16 +29,16 @@ export default function TaskCard({ task, workers }: TaskCardProps) {
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+    <Card className="p-4 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-medium text-gray-800 leading-snug">{task.title}</h3>
         <div className="flex gap-1 shrink-0">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
+          <Badge className={STATUS_STYLES[task.status] ?? 'bg-gray-100 text-gray-600'}>
             {task.status.replace('_', ' ')}
-          </span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORITY_STYLES[task.priority] ?? 'bg-gray-100 text-gray-600'}`}>
+          </Badge>
+          <Badge className={PRIORITY_STYLES[task.priority] ?? 'bg-gray-100 text-gray-600'}>
             {task.priority}
-          </span>
+          </Badge>
         </div>
       </div>
 
@@ -53,6 +55,6 @@ export default function TaskCard({ task, workers }: TaskCardProps) {
           <span>Due: <span className="text-gray-600 font-medium">{dueDateLabel}</span></span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
