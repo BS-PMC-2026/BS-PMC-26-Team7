@@ -1,2 +1,0 @@
-responsible for implementing the business 
-logic and handling the main operations of the system.

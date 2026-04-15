@@ -1,2 +1,0 @@
-responsible for defining the API endpoints, receiving
-requests, and routing them to the relevant backend logic.

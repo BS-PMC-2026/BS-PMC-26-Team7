@@ -1,2 +1,0 @@
-responsible for defining the shape and validation
-rules of the data sent to and from the API.

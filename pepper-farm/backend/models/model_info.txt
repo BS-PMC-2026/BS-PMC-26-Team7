@@ -1,2 +1,0 @@
-responsible for defining the database structure as
-Python classes that represent the system entities and their fields.
