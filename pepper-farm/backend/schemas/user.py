@@ -67,3 +67,7 @@ class UserResponse(BaseModel):
     isActive: bool
 
     model_config = {"from_attributes": True}
+
+
+class PromoteRequest(BaseModel):
+    roleId: int

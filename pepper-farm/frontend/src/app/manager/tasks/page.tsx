@@ -9,9 +9,8 @@ import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import { CreateTaskFormData, Task } from '@/types/task';
-import { Worker } from '@/types/user';
 import { createTask, getTasks } from '@/services/tasks';
-import { getWorkers } from '@/services/users';
+import { getAllUsers, UserData } from '@/services/users';
 
 export default function ManagerTasksPage() {
   const [showForm, setShowForm] = useState(false);
@@ -19,16 +18,17 @@ export default function ManagerTasksPage() {
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workers, setWorkers] = useState<UserData[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
     setLoadError(null);
     try {
+      const token = localStorage.getItem("token") ?? "";
       const [fetchedTasks, fetchedWorkers] = await Promise.all([
         getTasks(),
-        getWorkers(),
+        getAllUsers(token),
       ]);
       setTasks(fetchedTasks);
       setWorkers(fetchedWorkers);
@@ -71,7 +71,6 @@ export default function ManagerTasksPage() {
         />
       </div>
 
-      {/* Create form */}
       {showForm && (
         <Card className="p-6 mb-6">
           <h2 className="text-lg font-medium text-gray-700 mb-4">New Task</h2>
@@ -87,11 +86,10 @@ export default function ManagerTasksPage() {
         </Card>
       )}
 
-      {/* Task list */}
       {loadError && <Alert className="mb-4">{loadError}</Alert>}
 
       {isLoadingTasks ? (
-        <p className="text-sm text-gray-400 text-center py-12">Loading tasks…</p>
+        <p className="text-sm text-gray-400 text-center py-12">Loading tasks...</p>
       ) : tasks.length === 0 ? (
         <EmptyState
           title="No tasks yet."
