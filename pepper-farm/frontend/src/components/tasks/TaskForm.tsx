@@ -6,23 +6,8 @@ import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { CreateTaskFormData, TaskPriority } from '@/types/task';
 import { Worker } from '@/types/user';
-import { ZoneSummary } from '@/services/zones';
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
-];
-
-const TASK_TYPE_OPTIONS = [
-  { value: 'irrigation', label: 'Irrigation' },
-  { value: 'harvesting', label: 'Harvesting' },
-  { value: 'planting', label: 'Planting' },
-  { value: 'fertilizing', label: 'Fertilizing' },
-  { value: 'inspection', label: 'Inspection' },
-  { value: 'other', label: 'Other' },
-];
+import type { ZoneSummary } from '@/services/zones';
+import { PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from './taskOptions';
 
 interface TaskFormProps {
   onSubmit: (data: CreateTaskFormData) => void;
@@ -30,6 +15,8 @@ interface TaskFormProps {
   isLoading?: boolean;
   workers?: Worker[];
   zones?: ZoneSummary[];
+  initialData?: Partial<CreateTaskFormData>;
+  submitLabel?: string;
 }
 
 interface FormErrors {
@@ -38,31 +25,36 @@ interface FormErrors {
   dueDate?: string;
 }
 
-export default function TaskForm({ onSubmit, onCancel, isLoading = false, workers = [], zones = [] }: TaskFormProps) {
+export default function TaskForm({
+  onSubmit,
+  onCancel,
+  isLoading = false,
+  workers = [],
+  zones = [],
+  initialData,
+  submitLabel,
+}: TaskFormProps) {
   const [form, setForm] = useState<CreateTaskFormData>({
-    title: '',
-    description: '',
-    taskType: '',
-    priority: 'medium',
-    assignedToUserId: '',
-    dueDate: '',
-    zoneId: '',
+    title: initialData?.title ?? '',
+    description: initialData?.description ?? '',
+    taskType: initialData?.taskType ?? '',
+    priority: initialData?.priority ?? 'medium',
+    assignedToUserId: initialData?.assignedToUserId ?? '',
+    dueDate: initialData?.dueDate ?? '',
+    zoneCode: initialData?.zoneCode ?? '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
 
   const validate = (): boolean => {
     const next: FormErrors = {};
-
     if (!form.title.trim()) next.title = 'Title is required.';
     if (!form.taskType) next.taskType = 'Task type is required.';
-
     if (form.dueDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (new Date(form.dueDate) < today) next.dueDate = 'Due date cannot be in the past.';
     }
-
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -74,10 +66,12 @@ export default function TaskForm({ onSubmit, onCancel, isLoading = false, worker
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (validate()) onSubmit(form);
   };
+
+  const defaultLabel = initialData ? 'Save Changes' : 'Create Task';
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -131,14 +125,17 @@ export default function TaskForm({ onSubmit, onCancel, isLoading = false, worker
       />
 
       <Select
-        id="zoneId"
+        id="zoneCode"
         label="Farm Zone"
         options={[
           { value: '', label: 'No zone' },
-          ...zones.map((z) => ({ value: String(z.ZoneId), label: `${z.ZoneCode} — ${z.ZoneName}` })),
+          ...zones.map((zone) => ({
+            value: zone.ZoneCode,
+            label: `${zone.ZoneCode} - ${zone.ZoneName}`,
+          })),
         ]}
-        value={form.zoneId}
-        onChange={(e) => handleChange('zoneId', e.target.value)}
+        value={form.zoneCode}
+        onChange={(e) => handleChange('zoneCode', e.target.value)}
       />
 
       <Select
@@ -159,7 +156,7 @@ export default function TaskForm({ onSubmit, onCancel, isLoading = false, worker
           </Button>
         )}
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating...' : 'Create Task'}
+          {isLoading ? 'Saving...' : (submitLabel ?? defaultLabel)}
         </Button>
       </div>
     </form>
