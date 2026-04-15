@@ -11,6 +11,7 @@ from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from routers import peppers, plants, zones
 
 app = FastAPI(title="PepperFarm API", version="1.0.0")
 
@@ -33,6 +34,7 @@ app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(peppers.router)
 app.include_router(plants.router)
+app.include_router(zones.router)
 
 
 @app.get("/api/health/db")

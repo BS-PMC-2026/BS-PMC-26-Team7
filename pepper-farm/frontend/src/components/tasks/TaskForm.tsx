@@ -6,6 +6,7 @@ import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { CreateTaskFormData, TaskPriority } from '@/types/task';
 import { Worker } from '@/types/user';
+import { ZoneSummary } from '@/services/zones';
 
 const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low' },
@@ -28,6 +29,7 @@ interface TaskFormProps {
   onCancel?: () => void;
   isLoading?: boolean;
   workers?: Worker[];
+  zones?: ZoneSummary[];
 }
 
 interface FormErrors {
@@ -36,7 +38,7 @@ interface FormErrors {
   dueDate?: string;
 }
 
-export default function TaskForm({ onSubmit, onCancel, isLoading = false, workers = [] }: TaskFormProps) {
+export default function TaskForm({ onSubmit, onCancel, isLoading = false, workers = [], zones = [] }: TaskFormProps) {
   const [form, setForm] = useState<CreateTaskFormData>({
     title: '',
     description: '',
@@ -44,6 +46,7 @@ export default function TaskForm({ onSubmit, onCancel, isLoading = false, worker
     priority: 'medium',
     assignedToUserId: '',
     dueDate: '',
+    zoneId: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -125,6 +128,17 @@ export default function TaskForm({ onSubmit, onCancel, isLoading = false, worker
         value={form.dueDate}
         onChange={(e) => handleChange('dueDate', e.target.value)}
         error={errors.dueDate}
+      />
+
+      <Select
+        id="zoneId"
+        label="Farm Zone"
+        options={[
+          { value: '', label: 'No zone' },
+          ...zones.map((z) => ({ value: String(z.ZoneId), label: `${z.ZoneCode} — ${z.ZoneName}` })),
+        ]}
+        value={form.zoneId}
+        onChange={(e) => handleChange('zoneId', e.target.value)}
       />
 
       <Select

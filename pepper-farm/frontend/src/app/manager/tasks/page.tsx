@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { CreateTaskFormData, Task } from '@/types/task';
 import { createTask, getTasks } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
+import { getZones, ZoneSummary } from '@/services/zones';
 
 export default function ManagerTasksPage() {
   const [showForm, setShowForm] = useState(false);
@@ -20,18 +21,21 @@ export default function ManagerTasksPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [workers, setWorkers] = useState<UserData[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [zones, setZones] = useState<ZoneSummary[]>([]);
 
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
     setLoadError(null);
     try {
       const token = localStorage.getItem("token") ?? "";
-      const [fetchedTasks, fetchedWorkers] = await Promise.all([
+      const [fetchedTasks, fetchedWorkers, fetchedZones] = await Promise.all([
         getTasks(),
         getAllUsers(token),
+        getZones(),
       ]);
       setTasks(fetchedTasks);
       setWorkers(fetchedWorkers);
+      setZones(fetchedZones);
     } catch {
       setLoadError('Failed to load tasks. Is the backend running?');
     } finally {
@@ -82,6 +86,7 @@ export default function ManagerTasksPage() {
             onCancel={() => { setShowForm(false); setSubmitError(null); }}
             isLoading={isSubmitting}
             workers={workers}
+            zones={zones}
           />
         </Card>
       )}
