@@ -6,8 +6,8 @@ import FarmMap, { FarmSection } from '@/components/map/FarmMap';
 import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
-import { Task } from '@/types/task';
-import { getMyTasks } from '@/services/tasks';
+import { Task, TaskStatus } from '@/types/task';
+import { getMyTasks, updateTask } from '@/services/tasks';
 
 export default function WorkerPage() {
   const router = useRouter();
@@ -37,6 +37,16 @@ export default function WorkerPage() {
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    const token = localStorage.getItem('token') ?? '';
+    try {
+      const updated = await updateTask(task.id, { status: newStatus }, token);
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch {
+      setError('Failed to update task status.');
+    }
+  };
 
   // Build section color overrides: red-ish for zones with open tasks
   const openTaskZones = new Set(
@@ -122,7 +132,7 @@ export default function WorkerPage() {
           ) : tasks.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No tasks assigned to you.</p>
           ) : (
-            <TaskList tasks={tasks} />
+            <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
           )}
         </div>
       </div>

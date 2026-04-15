@@ -8,7 +8,7 @@ export interface CreateTaskFormData {
   priority: TaskPriority;
   assignedToUserId: string;
   dueDate: string;
-  zoneId: string; // numeric id as string, empty = none
+  zoneCode: string; // section id like 'GH-01', empty = none
 }
 
 export interface Task {

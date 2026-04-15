@@ -9,7 +9,7 @@ interface CreateTaskPayload {
   priority: string;
   assignedToUserId: number | null;
   dueDate: string | null;
-  zoneId: number | null;
+  zoneCode: string | null;
 }
 
 function toPayload(data: CreateTaskFormData): CreateTaskPayload {
@@ -20,7 +20,7 @@ function toPayload(data: CreateTaskFormData): CreateTaskPayload {
     priority: data.priority,
     assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null,
     dueDate: data.dueDate || null,
-    zoneId: data.zoneId ? Number(data.zoneId) : null,
+    zoneCode: data.zoneCode || null,
   };
 }
 
@@ -42,4 +42,31 @@ export async function createTask(data: CreateTaskFormData): Promise<Task> {
     method: 'POST',
     body: JSON.stringify(toPayload(data)),
   });
+}
+
+export async function updateTask(
+  taskId: number,
+  data: Partial<CreateTaskFormData> & { status?: string },
+  token: string,
+): Promise<Task> {
+  const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      ...(data.title !== undefined && { title: data.title.trim() }),
+      ...(data.description !== undefined && { description: data.description.trim() || null }),
+      ...(data.taskType !== undefined && { taskType: data.taskType }),
+      ...(data.priority !== undefined && { priority: data.priority }),
+      ...(data.assignedToUserId !== undefined && { assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null }),
+      ...(data.dueDate !== undefined && { dueDate: data.dueDate || null }),
+      ...(data.zoneCode !== undefined && { zoneCode: data.zoneCode || null }),
+      ...(data.status !== undefined && { status: data.status }),
+    }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to update task.');
+  return json;
 }

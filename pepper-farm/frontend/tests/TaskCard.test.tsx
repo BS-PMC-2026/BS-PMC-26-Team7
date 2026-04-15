@@ -17,6 +17,7 @@ const baseTask: Task = {
   completedAt: null,
   pepperId: null,
   zoneId: null,
+  zoneCode: null,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
