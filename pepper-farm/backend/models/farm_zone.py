@@ -14,6 +14,7 @@ class FarmZone(Base):
     Longitude        = Column(Numeric(9, 6), nullable=True)
     SoilType         = Column(String(100), nullable=True)
     IrrigationMethod = Column(String(100), nullable=True)
+    Description      = Column(String(1000), nullable=True)
     Notes            = Column(String(500), nullable=True)
     IsActive         = Column(Boolean, nullable=False, default=True)
     CreatedAt        = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
