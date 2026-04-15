@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+import { apiFetch } from './api';
 
 export type ProductCreatePayload = {
   ProductName: string;
@@ -22,39 +21,11 @@ export type ProductResponse = {
   IsActive: boolean;
 };
 
-function extractErrorMessage(payload: any, fallback: string): string {
-  if (Array.isArray(payload?.detail)) {
-    const message = payload.detail
-      .map((item: { msg?: string }) => item?.msg)
-      .filter(Boolean)
-      .join(" | ");
-
-    return message || fallback;
-  }
-
-  if (typeof payload?.detail === "string" && payload.detail.trim()) {
-    return payload.detail;
-  }
-
-  return fallback;
-}
-
 export async function createProduct(
   payload: ProductCreatePayload
 ): Promise<ProductResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+  return apiFetch<ProductResponse>('/api/products', {
+    method: 'POST',
     body: JSON.stringify(payload),
   });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(extractErrorMessage(data, "Failed to create product."));
-  }
-
-  return data as ProductResponse;
 }
