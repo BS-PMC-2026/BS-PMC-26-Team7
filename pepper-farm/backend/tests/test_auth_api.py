@@ -43,14 +43,16 @@ def make_mock_db(user_exists=False):
 
 def test_register_returns_201():
     app.dependency_overrides[get_db] = lambda: make_mock_db()
-    res = client.post("/api/auth/register", json={
-        "fullName": "Test User",
-        "email":    "test@farm.com",
-        "password": "pass123"
-    })
-    app.dependency_overrides.clear()
-    assert res.status_code == 201
-
+    try:
+        with patch("services.auth_service.hash_password", return_value="fake-hash"):
+            res = client.post("/api/auth/register", json={
+                "fullName": "Test User",
+                "email":    "test@farm.com",
+                "password": "pass123"
+            })
+        assert res.status_code == 201
+    finally:
+        app.dependency_overrides.clear()
 
 def test_register_duplicate_email_returns_409():
     app.dependency_overrides[get_db] = lambda: make_mock_db(user_exists=True)
@@ -92,15 +94,17 @@ def test_register_missing_name_returns_422():
 
 def test_register_response_contains_role():
     app.dependency_overrides[get_db] = lambda: make_mock_db()
-    res = client.post("/api/auth/register", json={
-        "fullName": "Test User",
-        "email":    "test@farm.com",
-        "password": "pass123"
-    })
-    app.dependency_overrides.clear()
-    assert res.status_code == 201
-    assert res.json()["role"] == "Visitor"
-
+    try:
+        with patch("services.auth_service.hash_password", return_value="fake-hash"):
+            res = client.post("/api/auth/register", json={
+                "fullName": "Test User",
+                "email":    "test@farm.com",
+                "password": "pass123"
+            })
+        assert res.status_code == 201
+        assert res.json()["role"] == "Visitor"
+    finally:
+        app.dependency_overrides.clear()
 
 def test_login_wrong_password_returns_401():
     mock = MagicMock()
