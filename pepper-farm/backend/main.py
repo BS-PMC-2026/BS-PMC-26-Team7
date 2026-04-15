@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users
+from routers import tasks, users, peppers, plants, products
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -33,6 +33,7 @@ app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(peppers.router)
 app.include_router(plants.router)
+app.include_router(products.router)
 
 @app.get("/api/health/db")
 def db_health():
