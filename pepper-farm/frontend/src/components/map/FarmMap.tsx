@@ -2,6 +2,25 @@
 
 import { useState, useRef, useEffect } from 'react';
 
+interface ZoneData {
+  ZoneName: string;
+  ZoneCode: string;
+  AreaSquareMeters: number | null;
+  Description: string | null;
+  SoilType: string | null;
+  IrrigationMethod: string | null;
+  Notes: string | null;
+  pepper: {
+    PepperId: number;
+    PepperName: string;
+    ScientificName: string | null;
+    HeatLevelScovilleMin: number | null;
+    HeatLevelScovilleMax: number | null;
+    GeneralDescription: string | null;
+    ImageUrl: string | null;
+  } | null;
+}
+
 interface FarmSection {
   id: string;
   name: string;
@@ -58,6 +77,8 @@ const LEGEND_ITEMS = [
 
 export default function FarmMap() {
   const [selected, setSelected] = useState<FarmSection | null>(null);
+  const [zoneData, setZoneData] = useState<ZoneData | null>(null);
+  const [zoneLoading, setZoneLoading] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +94,17 @@ export default function FarmMap() {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  const handleSectionClick = (section: FarmSection) => {
+    setSelected(section);
+    setZoneData(null);
+    setZoneLoading(true);
+    fetch(`http://localhost:8000/api/zones/${section.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setZoneData(data))
+      .catch(() => setZoneData(null))
+      .finally(() => setZoneLoading(false));
+  };
 
   const MIN_SCALE = 0.28;
   const effectiveScale = Math.max(MIN_SCALE, scale);
@@ -114,7 +146,7 @@ export default function FarmMap() {
             return (
               <div
                 key={section.id}
-                onClick={() => setSelected(section)}
+                onClick={() => handleSectionClick(section)}
                 onMouseEnter={() => setHovered(section.id)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
@@ -215,11 +247,12 @@ export default function FarmMap() {
           <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative"
             style={{ border: `4px solid ${selected.color}` }}
+            dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setSelected(null)}
-              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 text-lg"
+              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 text-lg"
               aria-label="Close"
             >
               ×
@@ -233,21 +266,50 @@ export default function FarmMap() {
                 {TYPE_ICONS[selected.type]}
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">{selected.nameEn}</h2>
-                <p className="text-sm text-gray-500 mt-0.5">ID: {selected.id}</p>
+                <h2 className="text-xl font-semibold text-gray-900">{selected.name}</h2>
               </div>
             </div>
 
             {selected.area && (
-              <div className="mb-4 p-3 rounded-lg bg-gray-50">
-                <p className="text-xs text-gray-400 mb-1">Area</p>
-                <p className="text-2xl font-bold text-gray-900">{selected.area}</p>
+              <div className="mb-3 p-3 rounded-lg bg-gray-50">
+                <p className="text-xs text-gray-400 mb-1">שטח</p>
+                <p className="text-xl font-bold text-gray-900">{selected.area}</p>
               </div>
             )}
 
+            {/* Zone description */}
+            {zoneData?.Description && (
+              <p className="text-sm text-gray-600 mb-3">{zoneData.Description}</p>
+            )}
+
+            {/* Pepper info */}
+            <div className="mb-3">
+              {zoneLoading ? (
+                <p className="text-xs text-gray-400 animate-pulse">טוען מידע על גידול...</p>
+              ) : zoneData?.pepper ? (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-100">
+                  <p className="text-xs text-green-600 font-medium mb-2">🌶 גידול נוכחי</p>
+                  <p className="text-base font-bold text-gray-900">{zoneData.pepper.PepperName}</p>
+                  {zoneData.pepper.ScientificName && (
+                    <p className="text-xs text-gray-500 italic mt-0.5">{zoneData.pepper.ScientificName}</p>
+                  )}
+                  {(zoneData.pepper.HeatLevelScovilleMin != null || zoneData.pepper.HeatLevelScovilleMax != null) && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      🔥 {zoneData.pepper.HeatLevelScovilleMin?.toLocaleString()} – {zoneData.pepper.HeatLevelScovilleMax?.toLocaleString()} SHU
+                    </p>
+                  )}
+                  {zoneData.pepper.GeneralDescription && (
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">{zoneData.pepper.GeneralDescription}</p>
+                  )}
+                </div>
+              ) : zoneData && !zoneData.pepper ? (
+                <p className="text-xs text-gray-400">אין גידול משויך לאזור זה.</p>
+              ) : null}
+            </div>
+
             <div className="flex items-center gap-2 text-xs text-gray-400 pt-3 border-t border-gray-100">
               <span>📍</span>
-              <span>Farm Facility · Interactive Map</span>
+              <span>מפת חווה · אינטראקטיבי</span>
             </div>
           </div>
         </div>
