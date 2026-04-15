@@ -8,6 +8,7 @@ export interface CreateTaskFormData {
   priority: TaskPriority;
   assignedToUserId: string;
   dueDate: string;
+  zoneId: string; // numeric id as string, empty = none
 }
 
 export interface Task {
@@ -24,6 +25,7 @@ export interface Task {
   completedAt: string | null;
   pepperId: number | null;
   zoneId: number | null;
+  zoneCode: string | null;
   createdAt: string;
   updatedAt: string;
 }

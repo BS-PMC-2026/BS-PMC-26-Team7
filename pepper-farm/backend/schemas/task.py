@@ -42,6 +42,7 @@ class TaskResponse(BaseModel):
     completedAt: Optional[datetime]
     pepperId: Optional[int]
     zoneId: Optional[int]
+    zoneCode: Optional[str]
     createdAt: datetime
     updatedAt: datetime
 

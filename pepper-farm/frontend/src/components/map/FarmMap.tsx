@@ -21,7 +21,7 @@ interface ZoneData {
   } | null;
 }
 
-interface FarmSection {
+export interface FarmSection {
   id: string;
   name: string;
   nameEn: string;
@@ -75,7 +75,12 @@ const LEGEND_ITEMS = [
   { color: '#3d4a4d', label: 'מפעל ייצור' },
 ];
 
-export default function FarmMap() {
+interface FarmMapProps {
+  sectionColors?: Record<string, string>;
+  renderPopupExtra?: (section: FarmSection, zoneData: ZoneData | null, zoneLoading: boolean) => React.ReactNode;
+}
+
+export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProps = {}) {
   const [selected, setSelected] = useState<FarmSection | null>(null);
   const [zoneData, setZoneData] = useState<ZoneData | null>(null);
   const [zoneLoading, setZoneLoading] = useState(false);
@@ -155,7 +160,7 @@ export default function FarmMap() {
                   top: section.position.y,
                   width: section.position.width,
                   height: section.position.height,
-                  backgroundColor: section.color,
+                  backgroundColor: (sectionColors && sectionColors[section.id]) ?? section.color,
                   border: isHovered ? '2px solid #2d3a2e' : '1px solid rgba(45,58,46,0.2)',
                   borderRadius: 2,
                   cursor: 'pointer',
@@ -306,6 +311,8 @@ export default function FarmMap() {
                 <p className="text-xs text-gray-400">אין גידול משויך לאזור זה.</p>
               ) : null}
             </div>
+
+            {renderPopupExtra && renderPopupExtra(selected, zoneData, zoneLoading)}
 
             <div className="flex items-center gap-2 text-xs text-gray-400 pt-3 border-t border-gray-100">
               <span>📍</span>

@@ -48,9 +48,11 @@ export default function TaskCard({ task, workers }: TaskCardProps) {
 
       <div className="flex flex-wrap gap-4 text-xs text-gray-400 mt-1">
         <span>Type: <span className="text-gray-600 font-medium">{task.taskType}</span></span>
-        {assignee && (
+        {task.assignedToUserId === null ? (
+          <span className="text-orange-500 font-medium">Unassigned</span>
+        ) : assignee ? (
           <span>Assigned to: <span className="text-gray-600 font-medium">{assignee.fullName}</span></span>
-        )}
+        ) : null}
         {dueDateLabel && (
           <span>Due: <span className="text-gray-600 font-medium">{dueDateLabel}</span></span>
         )}

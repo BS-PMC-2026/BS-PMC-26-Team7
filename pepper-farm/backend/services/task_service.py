@@ -59,6 +59,16 @@ def get_all_tasks(db: Session) -> list[TaskResponse]:
     return [_to_response(t) for t in tasks]
 
 
+def get_tasks_by_user(db: Session, user_id: int) -> list[TaskResponse]:
+    tasks = (
+        db.query(Task)
+        .filter(Task.AssignedToUserId == user_id)
+        .order_by(Task.CreatedAt.desc())
+        .all()
+    )
+    return [_to_response(t) for t in tasks]
+
+
 def _to_response(task: Task) -> TaskResponse:
     return TaskResponse(
         id=task.Id,
@@ -74,6 +84,7 @@ def _to_response(task: Task) -> TaskResponse:
         completedAt=task.CompletedAt,
         pepperId=task.PepperId,
         zoneId=task.ZoneId,
+        zoneCode=task.zone.ZoneCode if task.zone else None,
         createdAt=task.CreatedAt,
         updatedAt=task.UpdatedAt,
     )

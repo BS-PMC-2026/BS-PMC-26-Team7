@@ -7,6 +7,15 @@ from models.pepper_variety import PepperVariety
 router = APIRouter(prefix="/api/zones", tags=["Zones"])
 
 
+@router.get("")
+def list_zones(db: Session = Depends(get_db)):
+    zones = db.query(FarmZone).filter(FarmZone.IsActive == True).order_by(FarmZone.ZoneCode).all()
+    return [
+        {"ZoneId": z.ZoneId, "ZoneCode": z.ZoneCode, "ZoneName": z.ZoneName}
+        for z in zones
+    ]
+
+
 @router.get("/{zone_code}")
 def get_zone_by_code(zone_code: str, db: Session = Depends(get_db)):
     zone = db.query(FarmZone).filter(FarmZone.ZoneCode == zone_code).first()
