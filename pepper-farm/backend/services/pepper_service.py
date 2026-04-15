@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from models.pepper_variety import PepperVariety
-from models.pepper_edit_log import PepperEditLog
 from schemas.pepper import PepperCreate, PepperUpdate
 
 
@@ -40,17 +39,8 @@ def update_pepper(db: Session, pepper_id: int, data: PepperUpdate) -> PepperVari
         return None
 
     update_fields = data.model_dump(exclude_unset=True)
-    changed = []
     for field, value in update_fields.items():
         setattr(pepper, field, value)
-        changed.append(field)
-
-    if changed:
-        log_entry = PepperEditLog(
-            PepperId=pepper_id,
-            ChangedFields=",".join(changed),
-        )
-        db.add(log_entry)
 
     db.commit()
     db.refresh(pepper)
