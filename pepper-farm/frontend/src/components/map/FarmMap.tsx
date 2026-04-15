@@ -16,24 +16,24 @@ const MAP_WIDTH = 1200;
 const MAP_HEIGHT = 400;
 
 const sections: FarmSection[] = [
-  { id: 'GH-01', name: 'Greenhouse 1', nameEn: 'Greenhouse 1', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 40, y: 40, width: 58, height: 320 } },
-  { id: 'GH-02', name: 'Greenhouse 2', nameEn: 'Greenhouse 2', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 105, y: 40, width: 58, height: 320 } },
-  { id: 'GH-03', name: 'Greenhouse 3', nameEn: 'Greenhouse 3', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 170, y: 40, width: 58, height: 320 } },
-  { id: 'GH-04', name: 'Greenhouse 4', nameEn: 'Greenhouse 4', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 235, y: 40, width: 58, height: 320 } },
-  { id: 'GH-05', name: 'Greenhouse 5', nameEn: 'Greenhouse 5', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 300, y: 40, width: 58, height: 320 } },
-  { id: 'GH-06', name: 'Greenhouse 6', nameEn: 'Greenhouse 6', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 365, y: 40, width: 58, height: 320 } },
-  { id: 'GH-07', name: 'Greenhouse 7', nameEn: 'Greenhouse 7', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 430, y: 40, width: 58, height: 320 } },
-  { id: 'GH-08', name: 'Greenhouse 8', nameEn: 'Greenhouse 8', area: '400 m²', type: 'greenhouse', color: '#a8d5a3', position: { x: 495, y: 40, width: 58, height: 320 } },
-  { id: 'NURSERY', name: 'Nursery', nameEn: 'Nursery', type: 'nursery', color: '#9ed9a3', position: { x: 580, y: 40, width: 45, height: 180 } },
-  { id: 'SHED-MAIN', name: 'Parking', nameEn: 'Main Shed', type: 'building', color: '#c9c4b8', position: { x: 635, y: 40, width: 140, height: 180 } },
-  { id: 'GH-09', name: 'Growing House 9', nameEn: 'Greenhouse 9', area: '300 m²', type: 'growing', color: '#b8d96f', position: { x: 635, y: 230, width: 140, height: 60 } },
-  { id: 'GH-10', name: 'Growing House 10', nameEn: 'Greenhouse 10', area: '300 m²', type: 'growing', color: '#b8d96f', position: { x: 635, y: 300, width: 140, height: 60 } },
-  { id: 'GERM-01', name: 'Germination 1', nameEn: 'Germination 1', type: 'germination', color: '#a8e6cf', position: { x: 790, y: 40, width: 110, height: 48 } },
-  { id: 'GERM-02', name: 'Germination 2', nameEn: 'Germination 2', type: 'germination', color: '#a8e6cf', position: { x: 790, y: 95, width: 110, height: 48 } },
-  { id: 'GERM-03', name: 'Germination 3', nameEn: 'Germination 3', type: 'germination', color: '#a8e6cf', position: { x: 790, y: 150, width: 110, height: 48 } },
-  { id: 'GERM-04', name: 'Germination 4', nameEn: 'Germination 4', type: 'germination', color: '#a8e6cf', position: { x: 790, y: 205, width: 110, height: 48 } },
-  { id: 'VIS-CENTER', name: 'Visitor Center', nameEn: 'Visitor Center', type: 'visitor', color: '#c7e9c0', position: { x: 790, y: 260, width: 110, height: 100 } },
-  { id: 'FACTORY', name: 'Production Facility', nameEn: 'Production Facility', type: 'production', color: '#3d4a4d', position: { x: 1055, y: 40, width: 110, height: 320 } },
+  { id: 'GH-01', name: 'חממה 1', nameEn: 'Greenhouse 1', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 40, y: 40, width: 58, height: 320 } },
+  { id: 'GH-02', name: 'חממה 2', nameEn: 'Greenhouse 2', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 105, y: 40, width: 58, height: 320 } },
+  { id: 'GH-03', name: 'חממה 3', nameEn: 'Greenhouse 3', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 170, y: 40, width: 58, height: 320 } },
+  { id: 'GH-04', name: 'חממה 4', nameEn: 'Greenhouse 4', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 235, y: 40, width: 58, height: 320 } },
+  { id: 'GH-05', name: 'חממה 5', nameEn: 'Greenhouse 5', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 300, y: 40, width: 58, height: 320 } },
+  { id: 'GH-06', name: 'חממה 6', nameEn: 'Greenhouse 6', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 365, y: 40, width: 58, height: 320 } },
+  { id: 'GH-07', name: 'חממה 7', nameEn: 'Greenhouse 7', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 430, y: 40, width: 58, height: 320 } },
+  { id: 'GH-08', name: 'חממה 8', nameEn: 'Greenhouse 8', area: '400 מ"ר', type: 'greenhouse', color: '#a8d5a3', position: { x: 495, y: 40, width: 58, height: 320 } },
+  { id: 'NURSERY', name: 'משתלה', nameEn: 'Nursery', type: 'nursery', color: '#9ed9a3', position: { x: 560, y: 40, width: 60, height: 180 } },
+  { id: 'SHED-MAIN', name: 'חניה', nameEn: 'Main Shed', type: 'building', color: '#c9c4b8', position: { x: 637, y: 42, width: 140, height: 180 } },
+  { id: 'GH-09', name: 'חממה 9', nameEn: 'Greenhouse 9', area: '300 מ"ר', type: 'growing', color: '#b8d96f', position: { x: 560, y: 230, width: 217, height: 60 } },
+  { id: 'GH-10', name: 'חממה 10', nameEn: 'Greenhouse 10', area: '300 מ"ר', type: 'growing', color: '#b8d96f', position: { x: 560, y: 300, width: 217, height: 60 } },
+  { id: 'GERM-01', name: 'הנבטה 1', nameEn: 'Germination 1', type: 'germination', color: '#a8e6cf', position: { x: 815, y: 42, width: 200, height: 48 } },
+  { id: 'GERM-02', name: 'הנבטה 2', nameEn: 'Germination 2', type: 'germination', color: '#a8e6cf', position: { x: 815, y: 97, width: 200, height: 48 } },
+  { id: 'GERM-03', name: 'הנבטה 3', nameEn: 'Germination 3', type: 'germination', color: '#a8e6cf', position: { x: 815, y: 255, width: 200, height: 48 } },
+  { id: 'GERM-04', name: 'חממת מבקרים 4', nameEn: 'Germination 4', type: 'germination', color: '#a8e6cf', position: { x: 815, y: 310, width: 200, height: 48 } },
+  { id: 'VIS-CENTER', name: 'מרכז מבקרים', nameEn: 'Visitor Center', type: 'visitor', color: '#c7e9c0', position: { x: 858, y: 146, width: 110, height: 100 } },
+  { id: 'FACTORY', name: 'מפעל ייצור', nameEn: 'Production Facility', type: 'production', color: '#3d4a4d', position: { x: 1055, y: 40, width: 110, height: 320 } },
 ];
 
 const TYPE_ICONS: Record<FarmSection['type'], string> = {
@@ -74,14 +74,23 @@ export default function FarmMap() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const scaledHeight = Math.round(MAP_HEIGHT * scale);
+  const MIN_SCALE = 0.28;
+  const effectiveScale = Math.max(MIN_SCALE, scale);
+  const scaledHeight = Math.round(MAP_HEIGHT * effectiveScale);
+  const needsScroll = scale < MIN_SCALE;
 
   return (
     <div className="w-full">
       {/* Map canvas */}
       <div
         ref={containerRef}
-        style={{ height: scaledHeight, position: 'relative', overflow: 'hidden' }}
+        style={{
+          height: scaledHeight,
+          position: 'relative',
+          overflowX: needsScroll ? 'auto' : 'hidden',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+        }}
       >
         <div
           style={{
@@ -92,7 +101,7 @@ export default function FarmMap() {
             border: '2px solid #3d4a4d',
             borderRadius: '2px',
             transformOrigin: 'top left',
-            transform: `scale(${scale})`,
+            transform: `scale(${effectiveScale})`,
           }}
         >
           {sections.map((section) => {
@@ -135,23 +144,23 @@ export default function FarmMap() {
                       transform: 'rotate(180deg)',
                       textAlign: 'center',
                       color: section.type === 'production' ? '#fff' : '#2d3a2e',
-                      fontSize: section.type === 'production' ? '0.85rem' : '0.75rem',
+                      fontSize: `${(section.type === 'production' ? 0.85 : 0.75) / effectiveScale}rem`,
                       fontWeight: 600,
                       pointerEvents: 'none',
                     }}
                   >
                     <div>{section.nameEn}</div>
                     {section.area && (
-                      <div style={{ fontSize: '0.65rem', marginTop: 4 }}>{section.area}</div>
+                      <div style={{ fontSize: `${0.65 / effectiveScale}rem`, marginTop: 4 }}>{section.area}</div>
                     )}
                   </div>
                 ) : section.type === 'growing' ? (
                   <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
-                    <div style={{ color: '#2d3a2e', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <div style={{ color: '#2d3a2e', fontSize: `${0.75 / effectiveScale}rem`, fontWeight: 600 }}>
                       {section.nameEn}
                     </div>
                     {section.area && (
-                      <div style={{ color: '#2d3a2e', fontSize: '0.65rem', marginTop: 2 }}>
+                      <div style={{ color: '#2d3a2e', fontSize: `${0.65 / effectiveScale}rem`, marginTop: 2 }}>
                         {section.area}
                       </div>
                     )}
@@ -161,7 +170,7 @@ export default function FarmMap() {
                     style={{
                       textAlign: 'center',
                       color: '#2d3a2e',
-                      fontSize: section.type === 'building' ? '0.9rem' : '0.7rem',
+                      fontSize: `${(section.type === 'building' ? 0.9 : 0.7) / effectiveScale}rem`,
                       fontWeight: 600,
                       pointerEvents: 'none',
                       padding: '4px',
