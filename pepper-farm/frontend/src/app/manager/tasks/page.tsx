@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import TaskForm from '@/components/tasks/TaskForm';
+import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -13,6 +14,7 @@ import { CreateTaskFormData, Task } from '@/types/task';
 import { createTask, getTasks, updateTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
+import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
 
 export default function ManagerTasksPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -24,6 +26,7 @@ export default function ManagerTasksPage() {
   const [workers, setWorkers] = useState<UserData[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [zones, setZones] = useState<ZoneSummary[]>([]);
+  const [taskFilters, setTaskFilters] = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
 
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
@@ -91,6 +94,8 @@ export default function ManagerTasksPage() {
       }
     : undefined;
 
+  const filteredTasks = useMemo(() => filterTasks(tasks, taskFilters), [tasks, taskFilters]);
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -121,12 +126,27 @@ export default function ManagerTasksPage() {
 
       {loadError && <Alert className="mb-4">{loadError}</Alert>}
 
+      {!isLoadingTasks && tasks.length > 0 && (
+        <TaskFilters
+          className="mb-4"
+          priority={taskFilters.priority}
+          taskType={taskFilters.taskType}
+          totalCount={tasks.length}
+          resultCount={filteredTasks.length}
+          onPriorityChange={(priority) => setTaskFilters((prev) => ({ ...prev, priority }))}
+          onTaskTypeChange={(taskType) => setTaskFilters((prev) => ({ ...prev, taskType }))}
+          onClear={() => setTaskFilters(EMPTY_TASK_FILTERS)}
+        />
+      )}
+
       {isLoadingTasks ? (
         <p className="text-sm text-gray-400 text-center py-12">Loading tasks...</p>
       ) : tasks.length === 0 ? (
         <EmptyState title="No tasks yet." description="Click + Add Task to create the first one." />
+      ) : filteredTasks.length === 0 ? (
+        <EmptyState title="No tasks match these filters." description="Clear filters to see all tasks." />
       ) : (
-        <TaskList tasks={tasks} workers={workers} onEdit={setEditingTask} />
+        <TaskList tasks={filteredTasks} workers={workers} onEdit={setEditingTask} />
       )}
 
       {/* Edit modal */}

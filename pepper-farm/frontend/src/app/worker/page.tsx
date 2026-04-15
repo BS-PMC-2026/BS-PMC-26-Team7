@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import FarmMap, { FarmSection } from '@/components/map/FarmMap';
+import FarmMap, { type FarmSection } from '@/components/map/FarmMap';
+import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
 import { Task, TaskStatus } from '@/types/task';
 import { getMyTasks, updateTask } from '@/services/tasks';
+import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
+import { PRIORITY_BADGE_STYLES, PRIORITY_POPUP_STYLES } from '@/components/tasks/taskOptions';
 
 export default function WorkerPage() {
   const router = useRouter();
@@ -15,6 +18,7 @@ export default function WorkerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTaskDetail, setActiveTaskDetail] = useState<Task | null>(null);
+  const [taskFilters, setTaskFilters] = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
 
   const loadTasks = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -48,9 +52,11 @@ export default function WorkerPage() {
     }
   };
 
+  const filteredTasks = useMemo(() => filterTasks(tasks, taskFilters), [tasks, taskFilters]);
+
   // Build section color overrides: red-ish for zones with open tasks
   const openTaskZones = new Set(
-    tasks
+    filteredTasks
       .filter((t) => (t.status === 'todo' || t.status === 'in_progress') && t.zoneCode)
       .map((t) => t.zoneCode as string)
   );
@@ -60,15 +66,8 @@ export default function WorkerPage() {
     sectionColors[code] = '#fca5a5'; // red-300
   }
 
-  const PRIORITY_COLORS: Record<string, string> = {
-    low: 'bg-gray-100 text-gray-600',
-    medium: 'bg-blue-100 text-blue-700',
-    high: 'bg-orange-100 text-orange-700',
-    critical: 'bg-red-100 text-red-700',
-  };
-
   const renderPopupExtra = (section: FarmSection) => {
-    const zoneTasks = tasks.filter(
+    const zoneTasks = filteredTasks.filter(
       (t) => t.zoneCode === section.id && (t.status === 'todo' || t.status === 'in_progress')
     );
     const hasOpenTask = zoneTasks.length > 0;
@@ -81,10 +80,10 @@ export default function WorkerPage() {
               <button
                 key={task.id}
                 onClick={() => setActiveTaskDetail(task)}
-                className="flex items-center gap-2 w-full text-right px-3 py-2 rounded-lg bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                className={`flex items-center gap-2 w-full text-right px-3 py-2 rounded shadow-sm transition-colors ${PRIORITY_POPUP_STYLES[task.priority]}`}
               >
-                <span className="text-red-500 font-bold text-base shrink-0">✗</span>
-                <span className="text-sm text-red-700 font-medium truncate flex-1">{task.title}</span>
+                <span className="font-bold text-base shrink-0">✗</span>
+                <span className="text-sm font-semibold truncate flex-1">{task.title}</span>
               </button>
             ))}
           </div>
@@ -127,12 +126,26 @@ export default function WorkerPage() {
         {/* Task list */}
         <div>
           <h2 className="text-base font-semibold text-gray-700 mb-4">My Tasks</h2>
+          {!isLoading && tasks.length > 0 && (
+            <TaskFilters
+              className="mb-4"
+              priority={taskFilters.priority}
+              taskType={taskFilters.taskType}
+              totalCount={tasks.length}
+              resultCount={filteredTasks.length}
+              onPriorityChange={(priority) => setTaskFilters((prev) => ({ ...prev, priority }))}
+              onTaskTypeChange={(taskType) => setTaskFilters((prev) => ({ ...prev, taskType }))}
+              onClear={() => setTaskFilters(EMPTY_TASK_FILTERS)}
+            />
+          )}
           {isLoading ? (
             <p className="text-sm text-gray-400 text-center py-8">Loading tasks...</p>
           ) : tasks.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No tasks assigned to you.</p>
+          ) : filteredTasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No tasks match these filters.</p>
           ) : (
-            <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
+            <TaskList tasks={filteredTasks} onStatusChange={handleStatusChange} />
           )}
         </div>
       </div>
@@ -164,7 +177,7 @@ export default function WorkerPage() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[activeTaskDetail.priority] ?? 'bg-gray-100 text-gray-600'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_BADGE_STYLES[activeTaskDetail.priority] ?? 'bg-gray-100 text-gray-600'}`}>
                   {activeTaskDetail.priority}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">

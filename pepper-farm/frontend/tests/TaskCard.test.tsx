@@ -57,6 +57,17 @@ describe('TaskCard', () => {
     expect(screen.getByText('medium')).toBeInTheDocument();
   });
 
+  it('uses a bright card color for the task priority', () => {
+    const { container } = render(<TaskCard task={{ ...baseTask, priority: 'critical' }} workers={[]} />);
+    expect(container.firstChild).toHaveClass('!bg-red-400');
+    expect(container.firstChild).toHaveClass('!border-0');
+  });
+
+  it('uses a bright priority badge color', () => {
+    render(<TaskCard task={{ ...baseTask, priority: 'high' }} workers={[]} />);
+    expect(screen.getByText('high')).toHaveClass('bg-orange-200');
+  });
+
   it('renders task type', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
     expect(screen.getByText('irrigation')).toBeInTheDocument();

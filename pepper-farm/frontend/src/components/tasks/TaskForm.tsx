@@ -7,22 +7,7 @@ import Button from '@/components/ui/Button';
 import { CreateTaskFormData, TaskPriority } from '@/types/task';
 import { Worker } from '@/types/user';
 import type { ZoneSummary } from '@/services/zones';
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
-];
-
-const TASK_TYPE_OPTIONS = [
-  { value: 'irrigation', label: 'Irrigation' },
-  { value: 'harvesting', label: 'Harvesting' },
-  { value: 'planting', label: 'Planting' },
-  { value: 'fertilizing', label: 'Fertilizing' },
-  { value: 'inspection', label: 'Inspection' },
-  { value: 'other', label: 'Other' },
-];
+import { PRIORITY_OPTIONS, TASK_TYPE_OPTIONS } from './taskOptions';
 
 interface TaskFormProps {
   onSubmit: (data: CreateTaskFormData) => void;
