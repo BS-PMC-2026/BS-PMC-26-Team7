@@ -13,6 +13,18 @@ class CreateTaskRequest(BaseModel):
     dueDate: Optional[datetime] = None
     pepperId: Optional[int] = None
     zoneId: Optional[int] = None
+    zoneCode: Optional[str] = None  # alternative to zoneId; resolved server-side
+
+
+class UpdateTaskRequest(BaseModel):
+    title: Optional[str] = None
+    taskType: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assignedToUserId: Optional[int] = None
+    dueDate: Optional[datetime] = None
+    zoneCode: Optional[str] = None
 
     @field_validator("title")
     @classmethod
@@ -42,6 +54,7 @@ class TaskResponse(BaseModel):
     completedAt: Optional[datetime]
     pepperId: Optional[int]
     zoneId: Optional[int]
+    zoneCode: Optional[str]
     createdAt: datetime
     updatedAt: datetime
 

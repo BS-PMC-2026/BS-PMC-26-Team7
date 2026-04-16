@@ -44,6 +44,17 @@ export async function uploadPepperImage(file: File): Promise<{ imageUrl: string 
   return result;
 }
 
+export async function getPepperById(id: number): Promise<Pepper> {
+  return apiFetch<Pepper>(`/api/peppers/${id}`);
+}
+
+export async function updatePepper(id: number, data: Partial<PepperCreate>): Promise<Pepper> {
+  return apiFetch<Pepper>(`/api/peppers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 /** @deprecated use getAllPeppers() */
 export async function getPepperVarieties(): Promise<Pepper[]> {
   return getAllPeppers();
