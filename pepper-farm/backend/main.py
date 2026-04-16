@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users, auth, peppers, plants
-import models.role
-import models.pepper_variety
-import models.farm_zone
-import models.user
-import models.task
-import models.plant
+from routers import tasks, users, auth, peppers, plants, products
+import models.role  # noqa: F401
+import models.pepper_variety  # noqa: F401
+import models.farm_zone  # noqa: F401
+import models.user  # noqa: F401
+import models.task  # noqa: F401
+import models.plant  # noqa: F401
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
@@ -34,6 +34,7 @@ app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(peppers.router)
 app.include_router(plants.router)
+app.include_router(products.router)
 app.include_router(zones.router)
 
 
