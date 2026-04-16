@@ -5,8 +5,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from unittest.mock import MagicMock, patch
 
-from services.user_service import promote_user
-
+from services.user_service import (
+    promote_user,
+    get_user_by_id,
+    search_users_by_name,
+)
 
 # ======================================================================
 # Fixture: mock DB session
