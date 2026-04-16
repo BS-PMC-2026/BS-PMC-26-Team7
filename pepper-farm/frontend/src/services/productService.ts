@@ -29,3 +29,21 @@ export async function createProduct(
     body: JSON.stringify(payload),
   });
 }
+
+export async function getProducts(): Promise<ProductResponse[]> {
+  return apiFetch<ProductResponse[]>('/api/products');
+}
+
+export async function getProductById(id: number): Promise<ProductResponse> {
+  return apiFetch<ProductResponse>(`/api/products/${id}`);
+}
+
+export async function updateProduct(
+  id: number,
+  payload: ProductCreatePayload
+): Promise<ProductResponse> {
+  return apiFetch<ProductResponse>(`/api/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}

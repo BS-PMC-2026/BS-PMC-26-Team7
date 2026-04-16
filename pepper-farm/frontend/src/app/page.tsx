@@ -43,6 +43,12 @@ export default function HomePage() {
             />
             <div className="flex gap-3 mt-1">
               <Link
+                href="/visitor/products"
+                className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+              >
+                Products
+              </Link>
+              <Link
                 href="/login"
                 className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
               >
