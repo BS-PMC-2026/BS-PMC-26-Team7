@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getAllUsers, promoteUser, searchUsers, UserData } from "@/services/users";
 
 const WORKER_ROLE_ID = 3;
+const VISITOR_ROLE_ID = 4;
 
 export default function UserRoleTable() {
   const [users,     setUsers]     = useState<UserData[]>([]);
@@ -62,6 +63,25 @@ export default function UserRoleTable() {
       setPromoting(null);
     }
   };
+
+  const handleRevoke = async (userId: number) => {
+  setPromoting(userId);
+  setMessage(null);
+
+  try {
+    const updated = await promoteUser(token, userId, VISITOR_ROLE_ID);
+
+    setUsers(prev =>
+      prev.map(u => u.userId === userId ? { ...u, roleName: updated.roleName } : u)
+    );
+
+    setMessage({ text: "Employee role revoked successfully.", ok: true });
+  } catch (err: unknown) {
+    setMessage({ text: err instanceof Error ? err.message : "Revoke failed.", ok: false });
+  } finally {
+    setPromoting(null);
+  }
+};
 
   return (
     <div className="flex flex-col gap-4">
@@ -129,6 +149,15 @@ export default function UserRoleTable() {
                       {promoting === user.userId ? "Promoting..." : "Promote to Employee"}
                     </button>
                   )}
+                  {user.roleName === "Worker" && (
+                    <button
+                    onClick={() => handleRevoke(user.userId)}
+                    disabled={promoting === user.userId}
+                    className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition"
+                    >
+                      {promoting === user.userId ? "Updating..." : "Revoke Employee"}
+                      </button>
+                    )}
                 </td>
               </tr>
             ))}

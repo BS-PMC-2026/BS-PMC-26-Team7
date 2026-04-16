@@ -132,3 +132,58 @@ class TestPromoteUserEdgeCases:
         assert user.RoleId == 2
         mock_db.commit.assert_called_once()
         mock_db.refresh.assert_called_once_with(fake_user)
+
+        # ======================================================================
+# 4. get_user_by_id Tests
+# ======================================================================
+
+class TestGetUserById:
+    def test_get_user_by_id_returns_user_when_exists(self):
+        """Existing user id -> returns the matching user."""
+        mock_db = MagicMock()
+        fake_user = _mock_user(user_id=1, full_name="Sahar Ben")
+
+        mock_db.query.return_value.filter.return_value.first.return_value = fake_user
+
+        result = get_user_by_id(mock_db, 1)
+
+        assert result is fake_user
+
+    def test_get_user_by_id_returns_none_when_user_not_exists(self):
+        """Missing user id -> returns None."""
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        result = get_user_by_id(mock_db, 999)
+
+        assert result is None
+
+
+# ======================================================================
+# 5. search_users_by_name Tests
+# ======================================================================
+
+class TestSearchUsersByName:
+    def test_search_users_by_name_returns_matching_users(self):
+        """Matching name -> returns matching users ordered by name."""
+        mock_db = MagicMock()
+        fake_users = [
+            _mock_user(user_id=1, full_name="Sahar Ben"),
+            _mock_user(user_id=2, full_name="Sahar Cohen"),
+        ]
+
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = fake_users
+
+        result = search_users_by_name(mock_db, "Sahar")
+
+        assert result == fake_users
+
+    def test_search_users_by_name_returns_empty_list_when_no_matches(self):
+        """No matching name -> returns empty list."""
+        mock_db = MagicMock()
+
+        mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+
+        result = search_users_by_name(mock_db, "NoSuchName")
+
+        assert result == []
