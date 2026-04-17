@@ -1,9 +1,11 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { getAllPeppers } from '@/services/peppers';
 import {
-  createProduct,
+  getProductById,
+  updateProduct,
   ProductCreatePayload,
 } from '@/services/productService';
 
@@ -23,110 +25,90 @@ type FormState = {
   IsActive: boolean;
 };
 
-const initialForm: FormState = {
-  ProductName: '',
-  ProductDescription: '',
-  Category: '',
-  Price: '',
-  ImageUrl: '',
-  PepperId: '',
-  IsActive: true,
-};
-
 function normalizeOptionalText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 }
 
 function validateForm(form: FormState): string | null {
-  if (!form.ProductName.trim()) {
-    return 'Product name is required.';
-  }
-
-  if (!form.Price.trim()) {
-    return 'Price is required.';
-  }
-
+  if (!form.ProductName.trim()) return 'Product name is required.';
+  if (!form.Price.trim()) return 'Price is required.';
   const parsedPrice = Number(form.Price);
-  if (Number.isNaN(parsedPrice)) {
-    return 'Price must be a valid number.';
-  }
-
-  if (parsedPrice < 0) {
-    return 'Price must be non-negative.';
-  }
-
+  if (Number.isNaN(parsedPrice)) return 'Price must be a valid number.';
+  if (parsedPrice < 0) return 'Price must be non-negative.';
   const imageUrl = form.ImageUrl.trim();
   if (
     imageUrl &&
-    !(
-      imageUrl.startsWith('http://') ||
-      imageUrl.startsWith('https://') ||
-      imageUrl.startsWith('/uploads/')
-    )
+    !(imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('/uploads/'))
   ) {
     return 'Image URL must start with http://, https://, or /uploads/.';
   }
-
   if (form.PepperId) {
     const pepperId = Number(form.PepperId);
-    if (Number.isNaN(pepperId) || pepperId <= 0) {
-      return 'Selected pepper variety is invalid.';
-    }
+    if (Number.isNaN(pepperId) || pepperId <= 0) return 'Selected pepper variety is invalid.';
   }
-
   return null;
 }
 
-function getFriendlyErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return 'Something went wrong. Please try again.';
-  }
+export default function EditProductPage() {
+  const { productId } = useParams<{ productId: string }>();
+  const router = useRouter();
 
-  const message = error.message.toLowerCase();
-
-  if (message.includes('already exists')) {
-    return 'A product with this name already exists.';
-  }
-
-  if (message.includes('linked pepper variety not found')) {
-    return 'The selected pepper variety could not be found.';
-  }
-
-  if (message.includes('database connection timeout')) {
-    return 'The server is taking too long to respond. Please try again in a moment.';
-  }
-
-  if (message.includes('access denied') || message.includes('403')) {
-    return 'You do not have permission to perform this action.';
-  }
-
-  return error.message;
-}
-
-export default function CreateProductPage() {
-  const [form, setForm] = useState<FormState>(initialForm);
+  const [form, setForm] = useState<FormState>({
+    ProductName: '',
+    ProductDescription: '',
+    Category: '',
+    Price: '',
+    ImageUrl: '',
+    PepperId: '',
+    IsActive: true,
+  });
   const [peppers, setPeppers] = useState<PepperOption[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(true);
   const [loadingPeppers, setLoadingPeppers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Load existing product
+  useEffect(() => {
+    async function loadProduct() {
+      try {
+        setLoadingProduct(true);
+        const product = await getProductById(Number(productId));
+        setForm({
+          ProductName: product.ProductName,
+          ProductDescription: product.ProductDescription ?? '',
+          Category: product.Category ?? '',
+          Price: String(product.Price),
+          ImageUrl: product.ImageUrl ?? '',
+          PepperId: product.PepperId ? String(product.PepperId) : '',
+          IsActive: product.IsActive,
+        });
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Failed to load product.'
+        );
+      } finally {
+        setLoadingProduct(false);
+      }
+    }
+    loadProduct();
+  }, [productId]);
+
+  // Load pepper options
   useEffect(() => {
     async function loadPeppers() {
       try {
         setLoadingPeppers(true);
-        setErrorMessage('');
-
         const data = await getAllPeppers();
-        setPeppers(data.filter((pepper) => pepper.IsActive));
-      } catch (error) {
-  setErrorMessage(getFriendlyErrorMessage(error));
-} finally {
+        setPeppers(data.filter((p) => p.IsActive));
+      } catch {
+        // Non-critical — pepper dropdown just stays empty
+      } finally {
         setLoadingPeppers(false);
       }
     }
-
     loadPeppers();
   }, []);
 
@@ -134,20 +116,12 @@ export default function CreateProductPage() {
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value, type } = event.target;
-
     if (type === 'checkbox') {
       const checked = (event.target as HTMLInputElement).checked;
-      setForm((prev) => ({
-        ...prev,
-        [name]: checked,
-      }));
+      setForm((prev) => ({ ...prev, [name]: checked }));
       return;
     }
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -173,23 +147,43 @@ export default function CreateProductPage() {
 
     try {
       setSubmitting(true);
-      const created = await createProduct(payload);
-
-      setSuccessMessage(`Product "${created.ProductName}" created successfully.`);
-      setForm(initialForm);
+      const updated = await updateProduct(Number(productId), payload);
+      setSuccessMessage(`Product "${updated.ProductName}" updated successfully.`);
     } catch (error) {
-  setErrorMessage(getFriendlyErrorMessage(error));
-} finally {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Failed to update product.'
+      );
+    } finally {
       setSubmitting(false);
     }
+  }
+
+  if (loadingProduct) {
+    return (
+      <main className="mx-auto max-w-3xl p-6">
+        <div className="h-6 bg-gray-100 rounded w-1/3 animate-pulse mb-4" />
+        <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+          ))}
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="mx-auto max-w-3xl p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Create Product Item</h1>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="mb-3 text-sm text-gray-500 hover:text-gray-800 transition"
+        >
+          ← Back
+        </button>
+        <h1 className="text-3xl font-bold">Edit Product</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Add a new product to the catalog and optionally link it to a pepper variety.
+          Update the product details below.
         </p>
       </div>
 
@@ -226,10 +220,7 @@ export default function CreateProductPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="ProductDescription"
-            className="mb-1 block text-sm font-medium"
-          >
+          <label htmlFor="ProductDescription" className="mb-1 block text-sm font-medium">
             Description
           </label>
           <textarea
@@ -330,13 +321,22 @@ export default function CreateProductPage() {
           </label>
         </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-black px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? 'Creating...' : 'Create Product'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-black px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+        </div>
       </form>
     </main>
   );

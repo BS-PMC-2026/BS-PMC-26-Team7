@@ -21,6 +21,11 @@ export default function ManagerPage() {
             <h2 className="text-lg font-semibold text-gray-800">🌶️ Peppers</h2>
             <p className="text-sm text-gray-500 mt-1">Manage pepper varieties</p>
           </Link>
+          <Link href="/manager/products"
+            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
+            <h2 className="text-lg font-semibold text-gray-800">🛒 Products</h2>
+            <p className="text-sm text-gray-500 mt-1">View the product catalog</p>
+          </Link>
           <Link href="/manager/tasks"
             className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
             <h2 className="text-lg font-semibold text-gray-800">📋 Tasks</h2>

@@ -2,32 +2,35 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import PepperCard from '@/components/peppers/PepperCard';
+import ProductCard from '@/components/products/ProductCard';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
-import { getAllPeppers } from '@/services/peppers';
-import { Pepper } from '@/types/pepper';
+import { getProducts } from '@/services/productService';
+import { ProductResponse } from '@/services/productService';
 
-export default function VisitorPage() {
-  const [peppers, setPeppers] = useState<Pepper[]>([]);
+export default function VisitorProductsPage() {
+  const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const loadPeppers = useCallback(async () => {
+
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const data = await getAllPeppers();
-      setPeppers(data);
+      const data = await getProducts();
+      setProducts(data);
     } catch {
-      setLoadError('Failed to load pepper varieties. Is the backend running?');
+      setLoadError('Failed to load products. Is the backend running?');
     } finally {
       setIsLoading(false);
     }
   }, []);
+
   useEffect(() => {
-    loadPeppers();
-  }, [loadPeppers]);
+    loadProducts();
+  }, [loadProducts]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
@@ -35,8 +38,8 @@ export default function VisitorPage() {
           <div className="flex items-start justify-between">
             <PageHeader
               label="PepperFarm"
-              title="Pepper Varieties"
-              subtitle="Browse all pepper varieties grown at our farm"
+              title="Product Catalog"
+              subtitle="Browse all products available from our farm"
             />
             <div className="flex gap-3 mt-1">
               <Link
@@ -55,12 +58,21 @@ export default function VisitorPage() {
           </div>
         </div>
       </div>
+
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {loadError && <Alert variant="info" className="mb-6">{loadError}</Alert>}
+        {loadError && (
+          <Alert variant="info" className="mb-6">
+            {loadError}
+          </Alert>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse"
+              >
                 <div className="w-full h-48 bg-gray-100" />
                 <div className="p-4 flex flex-col gap-2">
                   <div className="h-3.5 bg-gray-100 rounded w-3/4" />
@@ -71,16 +83,20 @@ export default function VisitorPage() {
               </div>
             ))}
           </div>
-        ) : peppers.length === 0 ? (
-          <EmptyState icon="🌶️" title="No pepper varieties found" description="Check back later." />
+        ) : products.length === 0 ? (
+          <EmptyState
+            icon="🛒"
+            title="No products available"
+            description="Check back later."
+          />
         ) : (
           <>
             <p className="text-xs text-gray-400 mb-4">
-              {peppers.length} {peppers.length === 1 ? 'variety' : 'varieties'}
+              {products.length} {products.length === 1 ? 'product' : 'products'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {peppers.map((pepper) => (
-                <PepperCard key={pepper.PepperId} pepper={pepper} />
+              {products.map((product) => (
+                <ProductCard key={product.ProductId} product={product} />
               ))}
             </div>
           </>

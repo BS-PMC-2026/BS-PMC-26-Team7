@@ -2,32 +2,34 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import PepperCard from '@/components/peppers/PepperCard';
+import ProductCard from '@/components/products/ProductCard';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
-import { getAllPeppers } from '@/services/peppers';
-import { Pepper } from '@/types/pepper';
+import { getProducts, ProductResponse } from '@/services/productService';
 
-export default function VisitorPage() {
-  const [peppers, setPeppers] = useState<Pepper[]>([]);
+export default function ManagerProductsPage() {
+  const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const loadPeppers = useCallback(async () => {
+
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const data = await getAllPeppers();
-      setPeppers(data);
+      const data = await getProducts();
+      setProducts(data);
     } catch {
-      setLoadError('Failed to load pepper varieties. Is the backend running?');
+      setLoadError('Failed to load products. Is the backend running?');
     } finally {
       setIsLoading(false);
     }
   }, []);
+
   useEffect(() => {
-    loadPeppers();
-  }, [loadPeppers]);
+    loadProducts();
+  }, [loadProducts]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
@@ -35,28 +37,26 @@ export default function VisitorPage() {
           <div className="flex items-start justify-between">
             <PageHeader
               label="PepperFarm"
-              title="Pepper Varieties"
-              subtitle="Browse all pepper varieties grown at our farm"
+              title="Product Catalog"
+              subtitle="Browse and manage all products"
             />
-            <div className="flex gap-3 mt-1">
+            <div className="mt-1">
               <Link
-                href="/login"
-                className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                href="/manager/products/create"
+                className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
               >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
-              >
-                Register
+                + Add New Product
               </Link>
             </div>
           </div>
         </div>
       </div>
+
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {loadError && <Alert variant="info" className="mb-6">{loadError}</Alert>}
+        {loadError && (
+          <Alert variant="info" className="mb-6">{loadError}</Alert>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -71,16 +71,16 @@ export default function VisitorPage() {
               </div>
             ))}
           </div>
-        ) : peppers.length === 0 ? (
-          <EmptyState icon="🌶️" title="No pepper varieties found" description="Check back later." />
+        ) : products.length === 0 ? (
+          <EmptyState icon="🛒" title="No products available" description="Add your first product using the button above." />
         ) : (
           <>
             <p className="text-xs text-gray-400 mb-4">
-              {peppers.length} {peppers.length === 1 ? 'variety' : 'varieties'}
+              {products.length} {products.length === 1 ? 'product' : 'products'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {peppers.map((pepper) => (
-                <PepperCard key={pepper.PepperId} pepper={pepper} />
+              {products.map((product) => (
+                <ProductCard key={product.ProductId} product={product} showEditButton />
               ))}
             </div>
           </>
