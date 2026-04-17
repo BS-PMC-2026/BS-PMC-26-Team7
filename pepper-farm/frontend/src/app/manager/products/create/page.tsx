@@ -78,6 +78,32 @@ function validateForm(form: FormState): string | null {
   return null;
 }
 
+function getFriendlyErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Something went wrong. Please try again.';
+  }
+
+  const message = error.message.toLowerCase();
+
+  if (message.includes('already exists')) {
+    return 'A product with this name already exists.';
+  }
+
+  if (message.includes('linked pepper variety not found')) {
+    return 'The selected pepper variety could not be found.';
+  }
+
+  if (message.includes('database connection timeout')) {
+    return 'The server is taking too long to respond. Please try again in a moment.';
+  }
+
+  if (message.includes('access denied') || message.includes('403')) {
+    return 'You do not have permission to perform this action.';
+  }
+
+  return error.message;
+}
+
 export default function CreateProductPage() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [peppers, setPeppers] = useState<PepperOption[]>([]);
@@ -95,12 +121,8 @@ export default function CreateProductPage() {
         const data = await getAllPeppers();
         setPeppers(data.filter((pepper) => pepper.IsActive));
       } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Failed to load pepper varieties.'
-        );
-      } finally {
+  setErrorMessage(getFriendlyErrorMessage(error));
+} finally {
         setLoadingPeppers(false);
       }
     }
@@ -156,10 +178,8 @@ export default function CreateProductPage() {
       setSuccessMessage(`Product "${created.ProductName}" created successfully.`);
       setForm(initialForm);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to create product.'
-      );
-    } finally {
+  setErrorMessage(getFriendlyErrorMessage(error));
+} finally {
       setSubmitting(false);
     }
   }

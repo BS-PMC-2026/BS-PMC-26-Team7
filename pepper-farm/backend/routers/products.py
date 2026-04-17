@@ -5,13 +5,16 @@ from typing import List
 from database import get_db
 from schemas.product import ProductCreate, ProductResponse
 from services.product_service import create_product, get_products, get_product_by_id, update_product
+from utils.jwt import require_role
 import traceback
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
 
 @router.post("", response_model=ProductResponse, status_code=201)
-def create_product_endpoint(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product_endpoint(product: ProductCreate, db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
     try:
         created = create_product(db, product)
         return created
@@ -92,7 +95,8 @@ def get_product_endpoint(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
-def update_product_endpoint(product_id: int, product: ProductCreate, db: Session = Depends(get_db)):
+def update_product_endpoint(product_id: int, product: ProductCreate, db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),):
     try:
         return update_product(db, product_id, product)
 
