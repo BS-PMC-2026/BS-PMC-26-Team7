@@ -273,10 +273,10 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
             {/* Pepper info */}
             <div className="mb-3">
               {zoneLoading ? (
-                <p className="text-xs text-gray-400 animate-pulse">טוען מידע על עידול...</p>
+                <p className="text-xs text-gray-400 animate-pulse">טוען מידע על גידול...</p>
               ) : zoneData?.pepper ? (
                 <div className="p-3 rounded-lg bg-green-50 border border-green-100">
-                  <p className="text-xs text-green-600 font-medium mb-2">🌶 עידול נוכחי</p>
+                  <p className="text-xs text-green-600 font-medium mb-2">🌶 גידול נוכחי</p>
                   <p className="text-base font-bold text-gray-900">{zoneData.pepper.PepperName}</p>
                   {zoneData.pepper.ScientificName && (
                     <p className="text-xs text-gray-500 italic mt-0.5">{zoneData.pepper.ScientificName}</p>
@@ -291,7 +291,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
                   )}
                 </div>
               ) : zoneData && !zoneData.pepper ? (
-                <p className="text-xs text-gray-400">אין עידול משויך לאזור זה.</p>
+                <p className="text-xs text-gray-400">אין גידול משויך לאזור זה.</p>
               ) : null}
             </div>
 
