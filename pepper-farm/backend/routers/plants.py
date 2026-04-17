@@ -4,7 +4,7 @@ from sqlalchemy.exc import OperationalError
 from database import get_db
 from schemas.plant import PlantCreate, PlantResponse, UpdatePlantLocationRequest
 from services.plant_service import create_plant, update_plant_location, get_all_plants, get_plant_by_id
-from utils.jwt import require_role
+from utils.jwt import require_role, require_any_role
 
 router = APIRouter(prefix="/api/plants", tags=["Plants"])
 
@@ -51,7 +51,7 @@ def update_plant_location_endpoint(
     plant_id: int,
     data: UpdatePlantLocationRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("FarmManager")),
+    current_user: dict = Depends(require_any_role("FarmManager", "Worker")),
 ):
     try:
         plant, error = update_plant_location(db, plant_id, data.zoneId)
