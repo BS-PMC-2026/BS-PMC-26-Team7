@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { FARM_SECTIONS, type FarmSectionData } from '@/data/farmSections';
+import { PlantData } from '@/services/plants';
 
 interface ZoneData {
   ZoneName: string;
@@ -29,10 +30,18 @@ const MAP_HEIGHT = 400;
 
 const sections = FARM_SECTIONS;
 
+const ZONE_CODE_TO_ID: Record<string, number> = {
+  'GH-01': 1,  'GH-02': 2,  'GH-03': 3,  'GH-04': 4,
+  'GH-05': 5,  'GH-06': 6,  'GH-07': 7,  'GH-08': 8,
+  'NURSERY': 9, 'SHED-MAIN': 10, 'GH-09': 11, 'GH-10': 12,
+  'GERM-01': 13, 'GERM-02': 14, 'VIS-CENTER': 15,
+  'GERM-03': 16, 'GERM-04': 17, 'FACTORY': 18,
+};
+
 const TYPE_ICONS: Record<FarmSection['type'], string> = {
   greenhouse: '🌿',
   nursery: '🌱',
-  building: '🏗️',
+  building: '🏠',
   growing: '🌾',
   germination: '🌰',
   visitor: '👥',
@@ -45,21 +54,22 @@ const LEGEND_ITEMS = [
   { color: '#b8d96f', label: 'חממה קטנה' },
   { color: '#a8e6cf', label: 'חממת מבקרים' },
   { color: '#c7e9c0', label: 'מרכז מבקרים' },
-  { color: '#c9c4b8', label: 'חנייה' },
+  { color: '#c9c4b8', label: 'חניה' },
   { color: '#3d4a4d', label: 'מפעל ייצור' },
 ];
 
 interface FarmMapProps {
   sectionColors?: Record<string, string>;
+  plants?: PlantData[];
   renderPopupExtra?: (section: FarmSection, zoneData: ZoneData | null, zoneLoading: boolean) => React.ReactNode;
 }
 
-export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProps = {}) {
-  const [selected, setSelected] = useState<FarmSection | null>(null);
-  const [zoneData, setZoneData] = useState<ZoneData | null>(null);
+export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }: FarmMapProps = {}) {
+  const [selected,    setSelected]    = useState<FarmSection | null>(null);
+  const [zoneData,    setZoneData]    = useState<ZoneData | null>(null);
   const [zoneLoading, setZoneLoading] = useState(false);
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
+  const [hovered,     setHovered]     = useState<string | null>(null);
+  const [scale,       setScale]       = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -224,7 +234,7 @@ export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProp
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative"
+            className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative overflow-y-auto max-h-[90vh]"
             style={{ border: `4px solid ${selected.color}` }}
             dir="rtl"
             onClick={(e) => e.stopPropagation()}
@@ -234,7 +244,7 @@ export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProp
               className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 text-lg"
               aria-label="Close"
             >
-              ×
+              ✕
             </button>
 
             <div className="flex items-start gap-4 mb-5">
@@ -256,7 +266,6 @@ export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProp
               </div>
             )}
 
-            {/* Zone description */}
             {zoneData?.Description && (
               <p className="text-sm text-gray-600 mb-3">{zoneData.Description}</p>
             )}
@@ -285,6 +294,27 @@ export default function FarmMap({ sectionColors, renderPopupExtra }: FarmMapProp
                 <p className="text-xs text-gray-400">אין גידול משויך לאזור זה.</p>
               ) : null}
             </div>
+
+            {/* Plants list */}
+            {(() => {
+              const zoneId = ZONE_CODE_TO_ID[selected.id];
+              const zonePlants = plants.filter(p => p.ZoneId === zoneId);
+              if (zonePlants.length === 0) return null;
+              return (
+                <div className="mb-3 border-t border-gray-100 pt-3">
+                  <p className="text-xs text-gray-500 font-medium mb-2">🌿 צמחים באזור זה ({zonePlants.length}):</p>
+                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                    {zonePlants.map(plant => (
+                      <div key={plant.PlantId} className="flex items-center gap-2 px-2 py-1 rounded bg-green-50 text-xs text-gray-700">
+                        <span>🌱</span>
+                        <span className="font-medium">{plant.PlantCode}</span>
+                        {plant.Status && <span className="text-gray-400">— {plant.Status}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {renderPopupExtra && renderPopupExtra(selected, zoneData, zoneLoading)}
 

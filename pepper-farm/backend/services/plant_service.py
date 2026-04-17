@@ -45,3 +45,28 @@ def create_plant(db: Session, plant_data: PlantCreate) -> tuple[Plant | None, st
     db.commit()
     db.refresh(plant)
     return plant, None
+
+def update_plant_location(
+    db: Session, plant_id: int, zone_id: int | None
+) -> tuple[Plant | None, str | None]:
+    plant = db.query(Plant).filter(Plant.PlantId == plant_id).first()
+    if not plant:
+        return None, "Plant not found."
+
+    if zone_id is not None:
+        existing_zone = db.query(FarmZone).filter(FarmZone.ZoneId == zone_id).first()
+        if not existing_zone:
+            return None, "Selected farm zone does not exist."
+
+    plant.ZoneId = zone_id
+    db.commit()
+    db.refresh(plant)
+    return plant, None
+
+
+def get_all_plants(db: Session) -> list[Plant]:
+    return db.query(Plant).order_by(Plant.PlantCode.asc()).all()
+
+
+def get_plant_by_id(db: Session, plant_id: int) -> Plant | None:
+    return db.query(Plant).filter(Plant.PlantId == plant_id).first()

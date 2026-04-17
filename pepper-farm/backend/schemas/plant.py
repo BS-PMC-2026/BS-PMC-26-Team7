@@ -49,7 +49,16 @@ class PlantCreate(BaseModel):
             return value
         value = value.strip()
         return value or None
+    
+class UpdatePlantLocationRequest(BaseModel):
+    zoneId: int | None = None
 
+    @field_validator("zoneId")
+    @classmethod
+    def validate_zone_id(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("ZoneId must be a positive integer.")
+        return value
 
 class PlantResponse(BaseModel):
     PlantId: int
@@ -62,3 +71,5 @@ class PlantResponse(BaseModel):
     IsActive: bool
 
     model_config = {"from_attributes": True}
+
+    

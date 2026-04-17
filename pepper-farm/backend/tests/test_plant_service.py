@@ -12,7 +12,7 @@ from database import Base
 from models.pepper_variety import PepperVariety
 from models.farm_zone import FarmZone
 from schemas.plant import PlantCreate
-from services.plant_service import create_plant
+from services.plant_service import create_plant , update_plant_location
 
 SQLALCHEMY_TEST_URL = "sqlite:///:memory:"
 
@@ -119,3 +119,80 @@ def test_create_plant_invalid_zone(db):
 
     assert result is None
     assert error == "Selected farm zone does not exist."
+
+
+def test_update_plant_location_valid(db):
+    dto = PlantCreate(
+        PlantCode="PLANT-010",
+        PepperId=1,
+        ZoneId=1,
+        Status="Healthy",
+        Notes="Before update",
+        IsActive=True,
+    )
+
+    plant, error = create_plant(db, dto)
+    assert error is None
+    assert plant is not None
+
+    # add another zone for update
+    now = datetime.now(timezone.utc)
+    db.add(
+        FarmZone(
+            ZoneId=2,
+            ZoneName="Zone B",
+            IsActive=True,
+            CreatedAt=now,
+        )
+    )
+    db.commit()
+
+    updated_plant, error = update_plant_location(db, plant.PlantId, 2)
+
+    assert error is None
+    assert updated_plant is not None
+    assert updated_plant.ZoneId == 2
+
+
+def test_update_plant_location_plant_not_found(db):
+    updated_plant, error = update_plant_location(db, 999, 1)
+
+    assert updated_plant is None
+    assert error == "Plant not found."
+
+
+def test_update_plant_location_zone_not_found(db):
+    dto = PlantCreate(
+        PlantCode="PLANT-011",
+        PepperId=1,
+        ZoneId=1,
+        IsActive=True,
+    )
+
+    plant, error = create_plant(db, dto)
+    assert error is None
+    assert plant is not None
+
+    updated_plant, error = update_plant_location(db, plant.PlantId, 999)
+
+    assert updated_plant is None
+    assert error == "Selected farm zone does not exist."
+
+
+def test_update_plant_location_set_none(db):
+    dto = PlantCreate(
+        PlantCode="PLANT-012",
+        PepperId=1,
+        ZoneId=1,
+        IsActive=True,
+    )
+
+    plant, error = create_plant(db, dto)
+    assert error is None
+    assert plant is not None
+
+    updated_plant, error = update_plant_location(db, plant.PlantId, None)
+
+    assert error is None
+    assert updated_plant is not None
+    assert updated_plant.ZoneId is None
