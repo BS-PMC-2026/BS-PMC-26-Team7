@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import PepperCard from '@/components/peppers/PepperCard';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
@@ -10,9 +11,28 @@ import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 
 export default function VisitorPage() {
-  const [peppers, setPeppers] = useState<Pepper[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
+  const [peppers,    setPeppers]   = useState<Pepper[]>([]);
+  const [isLoading,  setIsLoading] = useState(true);
+  const [loadError,  setLoadError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role  = localStorage.getItem('role');
+    setIsLoggedIn(!!token && role === 'Visitor');
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('fullName');
+    document.cookie = 'token=; path=/; max-age=0';
+    document.cookie = 'role=; path=/; max-age=0';
+    setIsLoggedIn(false);
+    router.push('/');
+  };
+
   const loadPeppers = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -25,9 +45,11 @@ export default function VisitorPage() {
       setIsLoading(false);
     }
   }, []);
+
   useEffect(() => {
     loadPeppers();
   }, [loadPeppers]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
@@ -39,24 +61,57 @@ export default function VisitorPage() {
               subtitle="Browse all pepper varieties grown at our farm"
             />
             <div className="flex gap-3 mt-1">
-              <Link
-                href="/login"
-                className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
-              >
-                Register
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/visitor/products"
+                    className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                  >
+                    Products
+                  </Link>
+                  <Link
+                    href="/visitor/map"
+                    className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                  >
+                    🗺️ Map
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/visitor/products"
+                    className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                  >
+                    Products
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
+
       <div className="max-w-6xl mx-auto px-6 py-8">
         {loadError && <Alert variant="info" className="mb-6">{loadError}</Alert>}
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
