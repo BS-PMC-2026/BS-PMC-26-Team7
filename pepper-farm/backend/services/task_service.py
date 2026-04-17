@@ -10,7 +10,6 @@ ALLOWED_STATUSES = {"todo", "in_progress", "done", "cancelled"}
 
 
 def _resolve_zone_id(db: Session, data_zone_id, zone_code) -> int | None:
-    """Return ZoneId: prefer explicit zoneId, fall back to resolving zoneCode."""
     if data_zone_id is not None:
         return data_zone_id
     if zone_code:
@@ -20,24 +19,20 @@ def _resolve_zone_id(db: Session, data_zone_id, zone_code) -> int | None:
 
 
 def create_task(db: Session, created_by_user_id: int, data: CreateTaskRequest) -> tuple[TaskResponse | None, str | None]:
-    # Verify caller exists and is FarmManager
     caller = db.query(User).filter(User.UserId == created_by_user_id).first()
     if not caller:
         return None, "Caller user does not exist."
     if caller.role.RoleName != "FarmManager":
         return None, "Only FarmManagers can create tasks."
 
-    # Validate priority
     if data.priority not in ALLOWED_PRIORITIES:
         return None, f"Invalid priority '{data.priority}'. Allowed values: low, medium, high, critical."
 
-    # Validate due date
     if data.dueDate:
         today = datetime.now(timezone.utc).date()
         if data.dueDate.date() < today:
             return None, "DueDate cannot be in the past."
 
-    # Validate assignee
     if data.assignedToUserId is not None:
         assignee = db.query(User).filter(User.UserId == data.assignedToUserId).first()
         if not assignee:
@@ -65,7 +60,6 @@ def create_task(db: Session, created_by_user_id: int, data: CreateTaskRequest) -
     db.add(task)
     db.commit()
     db.refresh(task)
-
     return _to_response(task), None
 
 
@@ -103,7 +97,6 @@ def update_task(db: Session, task_id: int, data: UpdateTaskRequest) -> tuple[Tas
     task.UpdatedAt = datetime.now(timezone.utc)
     db.commit()
     db.refresh(task)
-
     return _to_response(task), None
 
 
@@ -117,6 +110,17 @@ def get_tasks_by_user(db: Session, user_id: int) -> list[TaskResponse]:
         db.query(Task)
         .filter(Task.AssignedToUserId == user_id)
         .order_by(Task.CreatedAt.desc())
+        .all()
+    )
+    return [_to_response(t) for t in tasks]
+
+
+def get_open_tasks_report(db: Session) -> list[TaskResponse]:
+    """BSPMT7-107 BSPMT7-108: Returns all tasks with status not done or cancelled"""
+    tasks = (
+        db.query(Task)
+        .filter(Task.Status.notin_(["done", "cancelled"]))
+        .order_by(Task.Priority.asc(), Task.DueDate.asc())
         .all()
     )
     return [_to_response(t) for t in tasks]
