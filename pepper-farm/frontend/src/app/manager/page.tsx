@@ -36,6 +36,11 @@ export default function ManagerPage() {
             <h2 className="text-lg font-semibold text-gray-800">🗺️ Farm Map</h2>
             <p className="text-sm text-gray-500 mt-1">Update plant locations on map</p>
           </Link>
+          <Link href="/manager/reports/open-tasks"
+            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
+            <h2 className="text-lg font-semibold text-gray-800">📊 Open Tasks Report</h2>
+            <p className="text-sm text-gray-500 mt-1">View all open tasks</p>
+          </Link>
         </div>
       </div>
     </main>

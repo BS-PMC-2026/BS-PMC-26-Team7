@@ -38,10 +38,18 @@ export async function getTasks(): Promise<Task[]> {
 }
 
 export async function createTask(data: CreateTaskFormData): Promise<Task> {
-  return apiFetch<Task>('/api/tasks', {
+  const token = localStorage.getItem('token') ?? '';
+  const res = await fetch(`${API_URL}/api/tasks`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(toPayload(data)),
   });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to create task.');
+  return json;
 }
 
 export async function updateTask(
@@ -68,5 +76,23 @@ export async function updateTask(
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.detail ?? 'Failed to update task.');
+  return json;
+}
+
+export async function getTasksReport(token: string): Promise<Task[]> {
+  const res = await fetch(`${API_URL}/api/tasks/report`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
+  return json;
+}
+
+export async function getTasksReportByWorker(token: string, workerId: number): Promise<Task[]> {
+  const res = await fetch(`${API_URL}/api/tasks/report?worker_id=${workerId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
   return json;
 }
