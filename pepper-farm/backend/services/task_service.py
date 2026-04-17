@@ -126,6 +126,20 @@ def get_open_tasks_report(db: Session) -> list[TaskResponse]:
     return [_to_response(t) for t in tasks]
 
 
+def get_open_tasks_by_worker(db: Session, worker_id: int) -> list[TaskResponse]:
+    """BSPMT7-107 BSPMT7-108: Returns open tasks for a specific worker"""
+    tasks = (
+        db.query(Task)
+        .filter(
+            Task.AssignedToUserId == worker_id,
+            Task.Status.notin_(["done", "cancelled"])
+        )
+        .order_by(Task.Priority.asc(), Task.DueDate.asc())
+        .all()
+    )
+    return [_to_response(t) for t in tasks]
+
+
 def _to_response(task: Task) -> TaskResponse:
     return TaskResponse(
         id=task.Id,
