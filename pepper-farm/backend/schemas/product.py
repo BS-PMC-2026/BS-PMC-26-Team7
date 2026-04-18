@@ -59,6 +59,7 @@ class ProductResponse(BaseModel):
     ImageUrl: Optional[str] = None
     PepperId: Optional[int] = None
     IsActive: bool
+    AllocatedQuantity: int = 0   
 
     class Config:
         from_attributes = True

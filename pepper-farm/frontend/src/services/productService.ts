@@ -19,6 +19,7 @@ export type ProductResponse = {
   ImageUrl: string | null;
   PepperId: number | null;
   IsActive: boolean;
+  AllocatedQuantity: number;
 };
 
 export async function createProduct(

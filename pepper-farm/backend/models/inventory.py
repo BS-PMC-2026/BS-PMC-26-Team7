@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 from database import Base
 
 
@@ -11,9 +10,10 @@ class Inventory(Base):
     ProductId = Column(
         Integer,
         ForeignKey("Products.ProductId"),
-        nullable=False,
-        unique=True,  # 1:1 with Product — inventory row per product
+        nullable=True,  # warehouse-only items do not need a product
     )
+    ItemName = Column(String(200), nullable=True)   # used when ProductId is NULL
+    Location = Column(String(200), nullable=True)   # e.g. "Aisle 3, Shelf B"
     WarehouseQuantity = Column(Integer, nullable=False, default=0)
     AllocatedQuantity = Column(Integer, nullable=False, default=0)
     LastUpdatedAt = Column(
