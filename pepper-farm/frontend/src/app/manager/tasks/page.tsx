@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import TaskForm from '@/components/tasks/TaskForm';
 import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
@@ -18,15 +19,15 @@ import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } 
 
 export default function ManagerTasksPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingTask,    setEditingTask]    = useState<Task | null>(null);
+  const [isSubmitting,   setIsSubmitting]   = useState(false);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [workers, setWorkers] = useState<UserData[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [zones, setZones] = useState<ZoneSummary[]>([]);
-  const [taskFilters, setTaskFilters] = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
+  const [submitError,    setSubmitError]    = useState<string | null>(null);
+  const [loadError,      setLoadError]      = useState<string | null>(null);
+  const [workers,        setWorkers]        = useState<UserData[]>([]);
+  const [tasks,          setTasks]          = useState<Task[]>([]);
+  const [zones,          setZones]          = useState<ZoneSummary[]>([]);
+  const [taskFilters,    setTaskFilters]    = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
 
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
@@ -103,9 +104,14 @@ export default function ManagerTasksPage() {
           title="Tasks"
           subtitle="Manage and assign farm tasks"
           action={
-            !showCreateForm
-              ? <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
-              : undefined
+            !showCreateForm ? (
+              <div className="flex gap-2">
+                <Link href="/manager/reports/open-tasks">
+                  <Button variant="secondary">📊 Report</Button>
+                </Link>
+                <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
+              </div>
+            ) : undefined
           }
         />
       </div>
@@ -149,7 +155,6 @@ export default function ManagerTasksPage() {
         <TaskList tasks={filteredTasks} workers={workers} onEdit={setEditingTask} />
       )}
 
-      {/* Edit modal */}
       {editingTask && (
         <Modal onClose={() => { setEditingTask(null); setSubmitError(null); }}>
           <h2 className="text-lg font-medium text-gray-700 mb-4">Edit Task</h2>
