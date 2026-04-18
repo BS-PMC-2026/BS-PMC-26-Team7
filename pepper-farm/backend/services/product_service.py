@@ -3,6 +3,7 @@ from models.product import Product
 from models.pepper_variety import PepperVariety
 from schemas.product import ProductCreate
 from typing import List
+from models.inventory import Inventory
 
 
 def create_product(db: Session, product_data: ProductCreate) -> Product:
@@ -27,6 +28,14 @@ def create_product(db: Session, product_data: ProductCreate) -> Product:
     )
 
     db.add(product)
+    db.commit()
+    db.refresh(product)
+    inventory = Inventory(
+        ProductId=product.ProductId,
+        WarehouseQuantity=0,
+        AllocatedQuantity=0,
+    )
+    db.add(inventory)
     db.commit()
     db.refresh(product)
     return product
