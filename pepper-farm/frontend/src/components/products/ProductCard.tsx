@@ -9,10 +9,15 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
+  const outOfStock = product.AllocatedQuantity === 0;
+
   return (
-    <Card className="overflow-hidden flex flex-col transition-shadow hover:shadow-md rounded-2xl">
-      {/* Image */}
-      <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
+    <Card
+      className={`overflow-hidden flex flex-col transition rounded-2xl ${
+        outOfStock ? 'opacity-50 hover:shadow-none' : 'hover:shadow-md'
+      }`}
+    >
+      <div className="relative w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
         {product.ImageUrl ? (
           <img
             src={product.ImageUrl}
@@ -28,30 +33,32 @@ export default function ProductCard({ product, showEditButton = false }: Product
         ) : (
           <span className="text-5xl opacity-30">🛒</span>
         )}
+
+        {outOfStock && (
+          <span className="absolute top-2 left-2 rounded-full bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wide">
+            Out of stock
+          </span>
+        )}
       </div>
 
-      {/* Body */}
       <div className="p-4 flex flex-col gap-2 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-gray-900 leading-snug">
-            {product.ProductName}
-          </h3>
+          <h3 className="text-sm font-semibold text-gray-900 leading-snug">{product.ProductName}</h3>
           {product.Category && (
-            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">
-              {product.Category}
-            </Badge>
+            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">{product.Category}</Badge>
           )}
         </div>
 
         {product.ProductDescription && (
-          <p className="text-xs text-gray-500 leading-relaxed line-clamp-3 mt-0.5">
-            {product.ProductDescription}
-          </p>
+          <p className="text-xs text-gray-500 leading-relaxed line-clamp-3 mt-0.5">{product.ProductDescription}</p>
         )}
 
-        <p className="text-sm font-bold text-gray-900 mt-auto pt-2 border-t border-gray-100">
-          ${Number(product.Price).toFixed(2)}
-        </p>
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+          <p className="text-sm font-bold text-gray-900">${Number(product.Price).toFixed(2)}</p>
+          <p className={`text-xs font-medium ${outOfStock ? 'text-red-600' : 'text-gray-600'}`}>
+            {outOfStock ? 'Out of stock' : `${product.AllocatedQuantity} left`}
+          </p>
+        </div>
 
         {showEditButton && (
           <Link

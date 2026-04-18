@@ -12,8 +12,7 @@ router = APIRouter(prefix="/api/products", tags=["Products"])
 
 
 @router.post("", response_model=ProductResponse, status_code=201)
-def create_product_endpoint(product: ProductCreate, db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("FarmManager")),
+def create_product_endpoint(product: ProductCreate, db: Session = Depends(get_db)
 ):
     try:
         created = create_product(db, product)
@@ -95,8 +94,7 @@ def get_product_endpoint(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
-def update_product_endpoint(product_id: int, product: ProductCreate, db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("FarmManager")),):
+def update_product_endpoint(product_id: int, product: ProductCreate, db: Session = Depends(get_db)):
     try:
         return update_product(db, product_id, product)
 
