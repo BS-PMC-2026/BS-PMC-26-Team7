@@ -131,3 +131,52 @@ def get_inventory_by_variety(db: Session) -> list[dict]:
             ],
         })
     return results
+
+LOW_STOCK_THRESHOLD = 10
+
+def get_inventory_report(
+    db: Session,
+    category: str | None = None,
+    low_stock_only: bool = False,
+    sort_by: str = "name",
+) -> list[dict]:
+    """BSPMT7-111 BSPMT7-112: Inventory report with filtering/sorting"""
+    rows = (
+        db.query(Inventory, Product.ProductName, Product.Category)
+        .outerjoin(Product, Product.ProductId == Inventory.ProductId)
+        .all()
+    )
+
+    report = []
+    for inv, product_name, product_category in rows:
+        available = inv.WarehouseQuantity - inv.AllocatedQuantity
+        is_low_stock = available < LOW_STOCK_THRESHOLD
+        display_name = product_name or inv.ItemName or "Unknown"
+        row_category = product_category or "Uncategorized"
+
+        report.append({
+            "InventoryId":        inv.InventoryId,
+            "DisplayName":        display_name,
+            "Category":           row_category,
+            "Location":           inv.Location,
+            "WarehouseQuantity":  inv.WarehouseQuantity,
+            "AllocatedQuantity":  inv.AllocatedQuantity,
+            "AvailableQuantity":  available,
+            "LowStock":           is_low_stock,
+            "LastUpdatedAt":      inv.LastUpdatedAt,
+        })
+
+    if category and category.strip():
+        report = [r for r in report if r["Category"].lower() == category.lower()]
+
+    if low_stock_only:
+        report = [r for r in report if r["LowStock"]]
+
+    if sort_by == "quantity":
+        report.sort(key=lambda r: r["AvailableQuantity"])
+    elif sort_by == "category":
+        report.sort(key=lambda r: (r["Category"], r["DisplayName"]))
+    else:
+        report.sort(key=lambda r: r["DisplayName"].lower())
+
+    return report

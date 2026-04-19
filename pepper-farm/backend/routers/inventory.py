@@ -17,6 +17,7 @@ from services.inventory_service import (
     create_warehouse_item,
     update_inventory,
     get_inventory_by_variety,
+    get_inventory_report,
 )
 from utils.jwt import require_role
 
@@ -66,6 +67,24 @@ def inventory_by_variety_endpoint(
 ):
     try:
         return get_inventory_by_variety(db)
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="Database connection timeout. Please try again.")
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Unexpected server error.")
+
+
+@router.get("/report")
+def inventory_report_endpoint(
+    category: str | None = None,
+    low_stock_only: bool = False,
+    sort_by: str = "name",
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
+):
+    """BSPMT7-113: Inventory report API"""
+    try:
+        return get_inventory_report(db, category, low_stock_only, sort_by)
     except OperationalError:
         raise HTTPException(status_code=503, detail="Database connection timeout. Please try again.")
     except Exception:
