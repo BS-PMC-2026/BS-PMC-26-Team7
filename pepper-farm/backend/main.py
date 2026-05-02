@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users, auth, peppers, plants, products, inventory
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings
+from routers.anomalies import router as anomalies_router, resolve_router
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -9,6 +10,10 @@ import models.task  # noqa: F401
 import models.plant  # noqa: F401
 import models.product    # noqa: F401
 import models.inventory  # noqa: F401
+import models.sensor_reading    # noqa: F401
+import models.sensor_assignment  # noqa: F401
+import models.pepper_threshold  # noqa: F401
+import models.sensor_alert      # noqa: F401
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +44,9 @@ app.include_router(plants.router)
 app.include_router(products.router)
 app.include_router(zones.router)
 app.include_router(inventory.router)
+app.include_router(sensor_readings.router)
+app.include_router(anomalies_router)
+app.include_router(resolve_router)
 
 
 @app.get("/api/health/db")
