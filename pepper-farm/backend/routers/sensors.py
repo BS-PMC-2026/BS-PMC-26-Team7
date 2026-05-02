@@ -1,23 +1,88 @@
+import base64
+import os
+import smtplib
 from datetime import datetime, timedelta
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.exc import OperationalError
-from services.sensor_auto_sync_service import run_sensor_auto_sync_once
+from sqlalchemy.orm import Session
+
 from database import get_db
 from models.sensor import Sensor
-from schemas.sensor import SensorResponse, SensorReadingResponse, SensorSyncRequest
+from schemas.sensor import SensorReadingResponse, SensorResponse, SensorSyncRequest
+from services.sensor_auto_sync_service import run_sensor_auto_sync_once
 from services.sensor_service import (
-    sync_sensor_readings,
     get_latest_sensor_reading,
     get_sensor_readings_from_db,
+    sync_sensor_readings,
 )
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensors"])
 
 
+class _ExportAttachment(BaseModel):
+    filename: str
+    content: str       # base64-encoded file bytes
+    contentType: str
+
+
+class _ExportEmailRequest(BaseModel):
+    to: EmailStr
+    attachments: list[_ExportAttachment]
+
+
 @router.get("", response_model=list[SensorResponse])
 def list_sensors(db: Session = Depends(get_db)):
     return db.query(Sensor).order_by(Sensor.SensorId.asc()).all()
+
+
+@router.post("/export/email")
+def send_export_email(request: _ExportEmailRequest):
+    smtp_host     = os.getenv("SMTP_HOST", "")
+    smtp_port     = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user     = os.getenv("SMTP_USER", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+    smtp_from     = os.getenv("SMTP_FROM", "") or smtp_user
+
+    if not smtp_host or not smtp_user or not smtp_password:
+        raise HTTPException(
+            status_code=503,
+            detail="Email service is not configured on this server. "
+                   "Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD in the backend .env file.",
+        )
+
+    msg             = MIMEMultipart()
+    msg["From"]     = smtp_from
+    msg["To"]       = str(request.to)
+    msg["Subject"]  = "Pepper Farm – Sensor Data Export"
+    msg.attach(MIMEText(
+        "Please find the requested sensor data export attached.\n\nPepper Farm",
+        "plain",
+    ))
+
+    for att in request.attachments:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(base64.b64decode(att.content))
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f'attachment; filename="{att.filename}"')
+        msg.attach(part)
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.ehlo()
+            smtp.login(smtp_user, smtp_password)
+            smtp.send_message(msg)
+    except smtplib.SMTPException as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to send email: {exc}")
+
+    return {"message": "Email sent successfully."}
 
 
 @router.post("/sync")

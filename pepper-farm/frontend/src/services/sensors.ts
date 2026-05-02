@@ -30,3 +30,16 @@ export async function getSensorReadings(sensorId: number, hoursBack = 48): Promi
 
   return apiFetch<SensorReading[]>(`/api/sensors/${sensorId}/readings?${query.toString()}`);
 }
+
+export async function getSensorReadingsByRange(
+  sensorId: number,
+  startDate: Date,
+  endDate: Date
+): Promise<SensorReading[]> {
+  const query = new URLSearchParams({
+    startDate: toApiDate(startDate),
+    endDate: toApiDate(endDate),
+  });
+
+  return apiFetch<SensorReading[]>(`/api/sensors/${sensorId}/readings?${query.toString()}`);
+}
