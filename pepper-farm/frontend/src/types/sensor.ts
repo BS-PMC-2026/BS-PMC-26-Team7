@@ -1,3 +1,26 @@
+export type SensorAlert = {
+  AlertId: number;
+  SensorId: number;
+  ReadingId: number;
+  MetricName: string;
+  ActualValue: number;
+  MinAllowed?: number | null;
+  MaxAllowed?: number | null;
+  Severity: string;
+  Message: string;
+  IsResolved: boolean;
+  CreatedAtUtc: string;
+};
+
+export type SensorInfo = {
+  SensorId: number;
+  MacAddress: string;
+  DeviceName?: string | null;
+  UnitName?: string | null;
+  SensorType?: string | null;
+  IsActive: boolean;
+};
+
 export type SensorReading = {
   ReadingId: number;
   SensorId: number;

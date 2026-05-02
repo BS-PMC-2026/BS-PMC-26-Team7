@@ -13,8 +13,8 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models.sensor import Sensor
-from schemas.sensor import SensorReadingResponse, SensorResponse, SensorSyncRequest
+from models.sensor import Sensor, SensorAlert as SensorAlertModel, SensorReading as ReadingModel
+from schemas.sensor import SensorAlertResponse, SensorReadingResponse, SensorResponse, SensorSyncRequest
 from services.sensor_auto_sync_service import run_sensor_auto_sync_once
 from services.sensor_service import (
     get_latest_sensor_reading,
@@ -209,6 +209,25 @@ def get_sensor_live_data(sensor_id: int, db: Session = Depends(get_db)):
         "staleMinutes": stale_minutes,
         "message": message,
     }
+
+@router.get("/{sensor_id}/alerts", response_model=list[SensorAlertResponse])
+def get_sensor_alerts(
+    sensor_id: int,
+    startDate: datetime | None = None,
+    endDate: datetime | None = None,
+    db: Session = Depends(get_db),
+):
+    query = (
+        db.query(SensorAlertModel)
+        .join(ReadingModel, SensorAlertModel.ReadingId == ReadingModel.ReadingId)
+        .filter(SensorAlertModel.SensorId == sensor_id)
+    )
+    if startDate:
+        query = query.filter(ReadingModel.SampleTimeUtc >= startDate)
+    if endDate:
+        query = query.filter(ReadingModel.SampleTimeUtc <= endDate)
+    return query.order_by(SensorAlertModel.AlertId.asc()).all()
+
 
 @router.get("/{sensor_id}/latest", response_model=SensorReadingResponse)
 def get_latest_reading(sensor_id: int, db: Session = Depends(get_db)):

@@ -1,5 +1,9 @@
 import { apiFetch } from './api';
-import { SensorLiveResponse, SensorReading } from '@/types/sensor';
+import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
+
+export async function getSensors(): Promise<SensorInfo[]> {
+  return apiFetch<SensorInfo[]>('/api/sensors');
+}
 
 function toApiDate(date: Date): string {
   return date.toISOString().slice(0, 19);
@@ -29,6 +33,18 @@ export async function getSensorReadings(sensorId: number, hoursBack = 48): Promi
   });
 
   return apiFetch<SensorReading[]>(`/api/sensors/${sensorId}/readings?${query.toString()}`);
+}
+
+export async function getSensorAlerts(
+  sensorId: number,
+  startDate: Date,
+  endDate: Date
+): Promise<SensorAlert[]> {
+  const query = new URLSearchParams({
+    startDate: toApiDate(startDate),
+    endDate: toApiDate(endDate),
+  });
+  return apiFetch<SensorAlert[]>(`/api/sensors/${sensorId}/alerts?${query.toString()}`);
 }
 
 export async function getSensorReadingsByRange(

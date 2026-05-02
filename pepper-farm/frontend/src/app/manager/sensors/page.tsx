@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, ChevronsUpDown, Download, MapPin, RefreshCw } from 'lucide-react';
 import {
   CartesianGrid,
   Legend,
@@ -19,13 +19,19 @@ import Card from '@/components/ui/Card';
 import ExportModal, { ExportOptions } from '@/components/sensors/ExportModal';
 import {
   getLatestSensorReading,
+  getSensorAlerts,
   getSensorReadingsByRange,
+  getSensors,
   refreshSensorLive,
 } from '@/services/sensors';
-import { SensorLiveResponse, SensorReading } from '@/types/sensor';
+import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
 
-const SENSOR_ID = 1;
-const API_BASE   = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
+function sensorLabel(s: SensorInfo): string {
+  const name = s.DeviceName || s.MacAddress;
+  return s.IsActive ? name : `${name} (inactive)`;
+}
 
 const METRIC_CONFIG = [
   { key: 'Temperature'  as const, label: 'Temperature', unit: '°C', color: '#F59E0B', digits: 2 },
@@ -35,6 +41,11 @@ const METRIC_CONFIG = [
 ];
 
 type MetricKey = typeof METRIC_CONFIG[number]['key'];
+
+type SortKey =
+  | 'SampleTimeUtc' | 'ReadingId' | 'ReadingType' | 'Latitude'
+  | 'Temperature'   | 'Humidity'  | 'Leak'         | 'BatteryLevel';
+type SortDir = 'asc' | 'desc';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +64,11 @@ function formatDateTime(value?: string | null): string {
 
 function formatDateForInput(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function mapsUrl(lat?: number | null, lng?: number | null): string | null {
+  if (lat == null || lng == null) return null;
+  return `https://maps.google.com/?q=${lat},${lng}`;
 }
 
 function getStatusLabel(status?: string): string {
@@ -79,6 +95,11 @@ function getStatusStyle(status?: string) {
 export default function SensorDashboardPage() {
   const router = useRouter();
 
+  // sensor list state
+  const [sensors,          setSensors]          = useState<SensorInfo[]>([]);
+  const [selectedSensorId, setSelectedSensorId] = useState<number | null>(null);
+  const [sensorsLoading,   setSensorsLoading]   = useState(true);
+
   // dashboard state
   const [liveData,   setLiveData]   = useState<SensorLiveResponse | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -100,6 +121,11 @@ export default function SensorDashboardPage() {
   const [explorerLoading,  setExplorerLoading]  = useState(false);
   const [explorerError,    setExplorerError]    = useState<string | null>(null);
   const [explorerLoaded,   setExplorerLoaded]   = useState(false);
+  const [explorerAlerts,   setExplorerAlerts]   = useState<SensorAlert[]>([]);
+
+  // sort state for the explorer table
+  const [sortKey, setSortKey] = useState<SortKey>('SampleTimeUtc');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   // export state
   const [showExportModal, setShowExportModal] = useState(false);
@@ -112,7 +138,7 @@ export default function SensorDashboardPage() {
 
   // ── dashboard load ──────────────────────────────────────────────────────────
 
-  async function loadDashboard(isManualRefresh = false) {
+  async function loadDashboard(sensorId: number, isManualRefresh = false) {
     try {
       setError(null);
 
@@ -120,7 +146,7 @@ export default function SensorDashboardPage() {
         setRefreshing(true);
         setSyncError(null);
         try {
-          const live = await refreshSensorLive(SENSOR_ID);
+          const live = await refreshSensorLive(sensorId);
           setLiveData(live);
         } catch (err) {
           setSyncError(
@@ -131,7 +157,7 @@ export default function SensorDashboardPage() {
         setLoading(true);
       }
 
-      const latest = await getLatestSensorReading(SENSOR_ID);
+      const latest = await getLatestSensorReading(sensorId);
 
       if (latest) {
         const sampleTime   = new Date(`${latest.SampleTimeUtc}Z`);
@@ -147,10 +173,10 @@ export default function SensorDashboardPage() {
           status = 'recent'; isStale = false; message = 'Sensor data is recent, but not fully live.';
         }
 
-        setLiveData({ sensorId: SENSOR_ID, macAddress: latest.MacAddress, sync: null,
+        setLiveData({ sensorId, macAddress: latest.MacAddress, sync: null,
           latestReading: latest, status, isStale, staleMinutes, message });
       } else {
-        setLiveData({ sensorId: SENSOR_ID, macAddress: '', sync: null, latestReading: null,
+        setLiveData({ sensorId, macAddress: '', sync: null, latestReading: null,
           status: 'no_data', isStale: true, staleMinutes: null,
           message: 'No readings found for this sensor.' });
       }
@@ -175,7 +201,10 @@ export default function SensorDashboardPage() {
     try {
       const start = new Date(`${startDate}T00:00:00`);
       const end   = new Date(`${endDate}T23:59:59`);
-      const data  = await getSensorReadingsByRange(SENSOR_ID, start, end);
+      const [data, alerts] = await Promise.all([
+        getSensorReadingsByRange(selectedSensorId!, start, end),
+        getSensorAlerts(selectedSensorId!, start, end).catch(() => [] as SensorAlert[]),
+      ]);
       setExplorerReadings(
         [...data].sort(
           (a, b) =>
@@ -183,6 +212,7 @@ export default function SensorDashboardPage() {
             new Date(`${b.SampleTimeUtc}Z`).getTime()
         )
       );
+      setExplorerAlerts(alerts);
       setExplorerLoaded(true);
     } catch (err) {
       setExplorerError(err instanceof Error ? err.message : 'Failed to load readings.');
@@ -191,7 +221,43 @@ export default function SensorDashboardPage() {
     }
   }
 
-  useEffect(() => { loadDashboard(false); }, []);
+  useEffect(() => {
+    async function init() {
+      setSensorsLoading(true);
+      try {
+        const list = await getSensors();
+        setSensors(list);
+        if (list.length > 0) {
+          const firstId = list[0].SensorId;
+          setSelectedSensorId(firstId);
+          await loadDashboard(firstId);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        setError('Failed to load sensors list.');
+        setLoading(false);
+      } finally {
+        setSensorsLoading(false);
+      }
+    }
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── sensor change ──────────────────────────────────────────────────────────
+
+  function handleSensorChange(sensorId: number) {
+    setSelectedSensorId(sensorId);
+    setLiveData(null);
+    setError(null);
+    setSyncError(null);
+    setExplorerReadings([]);
+    setExplorerAlerts([]);
+    setExplorerLoaded(false);
+    setExplorerError(null);
+    loadDashboard(sensorId);
+  }
 
   // ── metric toggle ───────────────────────────────────────────────────────────
 
@@ -205,6 +271,15 @@ export default function SensorDashboardPage() {
       }
       return next;
     });
+  }
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
   }
 
   // ── export ──────────────────────────────────────────────────────────────────
@@ -224,6 +299,11 @@ export default function SensorDashboardPage() {
         const rows = explorerReadings.map(r => {
           const row: Record<string, string | number | null> = {
             'Sample Time': formatDateTime(r.SampleTimeUtc),
+            'Reading ID':  r.ReadingId,
+            'Type':        r.ReadingType ?? '—',
+            'Location':    r.Latitude != null && r.Longitude != null
+              ? `${r.Latitude}, ${r.Longitude}`
+              : '—',
           };
           activeMetrics.forEach(m => {
             const val = r[m.key as keyof SensorReading] as number | null | undefined;
@@ -313,10 +393,31 @@ export default function SensorDashboardPage() {
 
   // ── chart data ──────────────────────────────────────────────────────────────
 
+  // ── alert lookup memos ─────────────────────────────────────────────────────
+
+  const alertsByReadingId = useMemo(() => {
+    const map = new Map<number, SensorAlert[]>();
+    explorerAlerts.forEach(a => {
+      if (!map.has(a.ReadingId)) map.set(a.ReadingId, []);
+      map.get(a.ReadingId)!.push(a);
+    });
+    return map;
+  }, [explorerAlerts]);
+
+  // "${readingId}-${MetricName}" — O(1) cell-level check
+  const alertedMetrics = useMemo(() => {
+    const set = new Set<string>();
+    explorerAlerts.forEach(a => set.add(`${a.ReadingId}-${a.MetricName}`));
+    return set;
+  }, [explorerAlerts]);
+
+  // ── chart data ──────────────────────────────────────────────────────────────
+
   const chartData = useMemo(
     () =>
       explorerReadings.map(r => ({
         time:         formatDateTime(r.SampleTimeUtc),
+        readingId:    r.ReadingId,
         Temperature:  r.Temperature  ?? null,
         Humidity:     r.Humidity     ?? null,
         Leak:         r.Leak         ?? null,
@@ -324,6 +425,74 @@ export default function SensorDashboardPage() {
       })),
     [explorerReadings]
   );
+
+  // ── custom recharts tooltip ─────────────────────────────────────────────────
+
+  const renderTooltip = useCallback(
+    (props: {
+      active?: boolean;
+      payload?: { dataKey: string; name: string; value: number | null; color: string; payload: { readingId?: number } }[];
+      label?: string;
+    }) => {
+      const { active, payload, label } = props;
+      if (!active || !payload?.length) return null;
+      const readingId = payload[0]?.payload?.readingId;
+      const alerts    = readingId ? (alertsByReadingId.get(readingId) ?? []) : [];
+
+      return (
+        <div className="bg-white border border-[#DDE5DC] rounded-xl p-3 shadow-lg text-xs min-w-[180px]">
+          <p className="font-semibold text-gray-600 mb-1">{label}</p>
+          {readingId !== undefined && (
+            <p className="text-gray-400 text-[11px] mb-2">Reading #{readingId}</p>
+          )}
+          <div className="space-y-1">
+            {payload.map(p => {
+              const hasAlert = alertedMetrics.has(`${readingId}-${p.dataKey}`);
+              return (
+                <div key={p.dataKey} className="flex items-center justify-between gap-4">
+                  <span style={{ color: p.color }} className="font-medium">{p.name}</span>
+                  <span className={hasAlert ? 'text-red-600 font-bold' : 'text-gray-800'}>
+                    {p.value != null ? p.value : '—'}{hasAlert && ' ⚠'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {alerts.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+              {alerts.map(a => (
+                <p key={a.AlertId} className="text-red-500 text-[11px]">
+                  {a.Severity === 'critical' ? '🔴' : '🟡'} {a.Message}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    },
+    [alertsByReadingId, alertedMetrics]
+  );
+
+  const sortedReadings = useMemo(() => {
+    return [...explorerReadings].sort((a, b) => {
+      const getVal = (r: SensorReading): number | string | null => {
+        if (sortKey === 'SampleTimeUtc')
+          return new Date(`${r.SampleTimeUtc}Z`).getTime();
+        const v = r[sortKey as keyof SensorReading];
+        return (v as number | string | null | undefined) ?? null;
+      };
+      const av = getVal(a);
+      const bv = getVal(b);
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const cmp =
+        typeof av === 'string'
+          ? av.localeCompare(bv as string)
+          : (av as number) - (bv as number);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [explorerReadings, sortKey, sortDir]);
 
   const latest = liveData?.latestReading ?? null;
 
@@ -335,7 +504,7 @@ export default function SensorDashboardPage() {
 
   // ── loading skeleton ────────────────────────────────────────────────────────
 
-  if (loading) {
+  if (sensorsLoading || (loading && sensors.length === 0)) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
         <p className="text-gray-500 text-sm">Loading sensor dashboard…</p>
@@ -343,7 +512,44 @@ export default function SensorDashboardPage() {
     );
   }
 
+  if (!sensorsLoading && sensors.length === 0) {
+    return (
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <Alert variant="info">No sensors found in the system.</Alert>
+      </main>
+    );
+  }
+
   const statusStyle = getStatusStyle(liveData?.status);
+
+  // clickable sort header cell
+  const SortTh = ({
+    colKey,
+    label,
+    color,
+  }: {
+    colKey: SortKey;
+    label: string;
+    color?: string;
+  }) => {
+    const active = sortKey === colKey;
+    const Icon   = active
+      ? sortDir === 'asc' ? ChevronUp : ChevronDown
+      : ChevronsUpDown;
+    return (
+      <th
+        onClick={() => toggleSort(colKey)}
+        className="px-3 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap
+          cursor-pointer select-none hover:bg-gray-100 transition-colors"
+        style={{ color: active ? (color ?? '#374151') : (color ?? '#6B7280') }}
+      >
+        <span className="inline-flex items-center gap-1">
+          {label}
+          <Icon className={`w-3 h-3 ${active ? 'opacity-100' : 'opacity-30'}`} />
+        </span>
+      </th>
+    );
+  };
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
@@ -371,6 +577,33 @@ export default function SensorDashboardPage() {
           </div>
         </div>
 
+        {/* ── Sensor selector ── */}
+        {sensors.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="sensor-select"
+              className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap"
+            >
+              Sensor
+            </label>
+            <select
+              id="sensor-select"
+              value={selectedSensorId ?? ''}
+              onChange={e => handleSensorChange(Number(e.target.value))}
+              disabled={sensorsLoading || loading}
+              className="rounded-lg border border-[#DDE5DC] px-3 py-2 text-sm text-gray-700
+                bg-white focus:outline-none focus:ring-2 focus:ring-[#2F6F4E]/30
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sensors.map(s => (
+                <option key={s.SensorId} value={s.SensorId}>
+                  {sensorLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
@@ -380,7 +613,10 @@ export default function SensorDashboardPage() {
             Export
           </Button>
 
-          <Button onClick={() => loadDashboard(true)} disabled={refreshing}>
+          <Button
+            onClick={() => selectedSensorId && loadDashboard(selectedSensorId, true)}
+            disabled={refreshing || !selectedSensorId}
+          >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Syncing…' : 'Sync from Atomation'}
           </Button>
@@ -455,16 +691,30 @@ export default function SensorDashboardPage() {
                 { label: 'Sample Time',       value: formatDateTime(latest.SampleTimeUtc) },
                 { label: 'Gateway Read',      value: formatDateTime(latest.GatewayReadTimeUtc) },
                 { label: 'Atomation Created', value: formatDateTime(latest.AtomationCreatedAtUtc) },
-                {
-                  label: 'Location',
-                  value: `${formatNumber(latest.Latitude, 5)}, ${formatNumber(latest.Longitude, 5)}`,
-                },
               ].map(({ label, value }) => (
                 <div key={label} className="rounded-lg bg-gray-50 px-4 py-3">
                   <p className="text-xs text-gray-400 mb-0.5">{label}</p>
                   <p className="text-sm font-medium text-gray-800">{value}</p>
                 </div>
               ))}
+
+              {/* Location tile with Google Maps link */}
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-xs text-gray-400 mb-0.5">Location</p>
+                {mapsUrl(latest.Latitude, latest.Longitude) ? (
+                  <a
+                    href={mapsUrl(latest.Latitude, latest.Longitude)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2F6F4E] hover:underline"
+                  >
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    {formatNumber(latest.Latitude, 5)}, {formatNumber(latest.Longitude, 5)}
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium text-gray-800">—</p>
+                )}
+              </div>
             </div>
           </Card>
         </>
@@ -556,87 +806,154 @@ export default function SensorDashboardPage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
-                  <th className="px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
-                    Sample Time
-                  </th>
+                  <SortTh colKey="SampleTimeUtc" label="Sample Time" />
+                  <SortTh colKey="ReadingId"      label="ID" />
+                  <SortTh colKey="ReadingType"    label="Type" />
+                  <SortTh colKey="Latitude"       label="Location" />
                   {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => (
-                    <th
+                    <SortTh
                       key={m.key}
-                      className="px-3 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
-                      style={{ color: m.color }}
-                    >
-                      {m.label}{m.unit ? ` (${m.unit})` : ''}
-                    </th>
+                      colKey={m.key as SortKey}
+                      label={`${m.label}${m.unit ? ` (${m.unit})` : ''}`}
+                      color={m.color}
+                    />
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {explorerReadings.map(r => (
-                  <tr
-                    key={r.ReadingId}
-                    className="border-b last:border-b-0 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
-                      {formatDateTime(r.SampleTimeUtc)}
-                    </td>
-                    {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => {
-                      const val = r[m.key as keyof SensorReading] as number | null | undefined;
-                      return (
-                        <td key={m.key} className="px-3 py-2.5 font-medium text-gray-800">
-                          {val !== null && val !== undefined
-                            ? `${formatNumber(val, m.digits)}${m.unit}`
-                            : '—'}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {sortedReadings.map(r => {
+                  const url = mapsUrl(r.Latitude, r.Longitude);
+                  return (
+                    <tr
+                      key={r.ReadingId}
+                      className={`border-b last:border-b-0 transition-colors ${
+                        alertsByReadingId.has(r.ReadingId)
+                          ? 'bg-red-50/60 hover:bg-red-50'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                        {formatDateTime(r.SampleTimeUtc)}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                        {r.ReadingId}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                        {r.ReadingType ?? '—'}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[#2F6F4E] hover:underline text-sm"
+                          >
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            {formatNumber(r.Latitude, 5)}, {formatNumber(r.Longitude, 5)}
+                          </a>
+                        ) : '—'}
+                      </td>
+                      {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => {
+                        const val      = r[m.key as keyof SensorReading] as number | null | undefined;
+                        const isAlert  = alertedMetrics.has(`${r.ReadingId}-${m.key}`);
+                        return (
+                          <td key={m.key} className="px-3 py-2.5 whitespace-nowrap">
+                            {val !== null && val !== undefined ? (
+                              <span className={isAlert
+                                ? 'font-bold text-red-600'
+                                : 'font-medium text-gray-800'
+                              }>
+                                {formatNumber(val, m.digits)}{m.unit}
+                                {isAlert && <span className="ml-1 text-red-500">⚠</span>}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
-          /* ref is attached here so html2canvas can capture it */
-          <div ref={chartRef} style={{ height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="time"
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: '8px',
-                    border: '1px solid #DDE5DC',
-                    fontSize: 12,
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => (
-                  <Line
-                    key={m.key}
-                    type="monotone"
-                    dataKey={m.key}
-                    name={`${m.label}${m.unit ? ` (${m.unit})` : ''}`}
-                    stroke={m.color}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
+          <>
+            {/* ref is attached here so html2canvas can capture it */}
+            <div ref={chartRef} style={{ height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="time"
+                    tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                    interval="preserveStartEnd"
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                  <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} />
+                  <Tooltip content={renderTooltip as never} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => (
+                    <Line
+                      key={m.key}
+                      type="monotone"
+                      dataKey={m.key}
+                      name={`${m.label}${m.unit ? ` (${m.unit})` : ''}`}
+                      stroke={m.color}
+                      strokeWidth={2}
+                      connectNulls
+                      dot={(props: {
+                        cx?: number; cy?: number; index: number;
+                        payload: { readingId?: number };
+                      }) => {
+                        const isAlert = alertedMetrics.has(
+                          `${props.payload.readingId}-${m.key}`
+                        );
+                        const cx = props.cx ?? 0;
+                        const cy = props.cy ?? 0;
+                        return isAlert ? (
+                          <circle
+                            key={`d-${props.index}`}
+                            cx={cx} cy={cy}
+                            r={5} fill="#EF4444" stroke="white" strokeWidth={1.5}
+                          />
+                        ) : (
+                          <circle key={`d-${props.index}`} cx={cx} cy={cy} r={0} />
+                        );
+                      }}
+                      activeDot={(props: {
+                        cx?: number; cy?: number;
+                        payload: { readingId?: number };
+                      }) => (
+                        <circle
+                          key="active"
+                          cx={props.cx ?? 0} cy={props.cy ?? 0} r={6}
+                          fill={alertedMetrics.has(`${props.payload.readingId}-${m.key}`)
+                            ? '#EF4444' : m.color}
+                          stroke="white" strokeWidth={2}
+                        />
+                      )}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {explorerAlerts.length > 0 && (
+              <p className="mt-2 text-xs text-gray-400 flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500 shrink-0" />
+                Red dots indicate out-of-range readings
+              </p>
+            )}
+          </>
         )}
 
         {explorerLoaded && explorerReadings.length > 0 && (
           <p className="mt-3 text-xs text-gray-400 text-right">
-            {explorerReadings.length} readings loaded
+            {explorerReadings.length} readings · {explorerAlerts.length} out-of-range
           </p>
         )}
       </Card>

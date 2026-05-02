@@ -47,3 +47,20 @@ class SensorSyncRequest(BaseModel):
     startDate: datetime
     endDate: datetime
     createdAt: bool = False
+
+
+class SensorAlertResponse(BaseModel):
+    AlertId: int
+    SensorId: int
+    ReadingId: int
+    MetricName: str
+    ActualValue: float
+    MinAllowed: Optional[float] = None
+    MaxAllowed: Optional[float] = None
+    Severity: str
+    Message: str
+    IsResolved: bool
+    CreatedAtUtc: datetime
+
+    class Config:
+        from_attributes = True
