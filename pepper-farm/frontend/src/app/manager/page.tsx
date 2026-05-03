@@ -14,6 +14,7 @@ const NAV_CARDS = [
   { href: '/manager/inventory',          icon: '📦', title: 'Inventory',         sub: 'Update warehouse stock quantities' },
   { href: '/manager/map',                icon: '🗺️', title: 'Farm Map',          sub: 'Update plant locations on map' },
   { href: '/manager/reports/open-tasks', icon: '📊', title: 'Open Tasks Report', sub: 'View all open tasks' },
+  { href: '/manager/anomalies',          icon: '📡', title: 'Sensor Anomalies',  sub: 'Live anomaly dashboard' },
 ];
 
 export default function ManagerPage() {
@@ -78,29 +79,6 @@ export default function ManagerPage() {
             Management
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-            {/* Anomaly dashboard card — highlighted with red left border */}
-            <Link
-              href="/manager/anomalies"
-              className="bg-white border border-gray-200 border-l-4 border-l-red-400 rounded-xl p-6 hover:shadow-md transition flex flex-col gap-1"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-800">🚨 Sensor Anomalies</h2>
-                {summary && summary.highSeverity > 0 && (
-                  <span className="text-xs font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
-                    {summary.highSeverity} High
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-gray-500">Live anomaly dashboard</p>
-              {summary && summary.activeAlerts > 0 && (
-                <p className="text-xs text-orange-600 mt-1">
-                  {summary.activeAlerts} active alert{summary.activeAlerts !== 1 ? 's' : ''}
-                </p>
-              )}
-            </Link>
-
-            {/* Existing nav cards — preserved exactly as before */}
             {NAV_CARDS.map((card) => (
               <Link
                 key={card.href}
