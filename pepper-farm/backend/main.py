@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings
 from routers.anomalies import router as anomalies_router, resolve_router
