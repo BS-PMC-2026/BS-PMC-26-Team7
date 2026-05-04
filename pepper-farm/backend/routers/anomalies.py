@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
 
 from database import get_db
-from models.sensor_alert import SensorAlert
-from models.sensor_assignment import SensorAssignment
-from models.sensor_reading import SensorReading
+from models.sensor import SensorAlert
+from models.sensor import SensorAssignment
+from models.sensor import SensorReading
 from models.farm_zone import FarmZone
 from models.plant import Plant
 from models.pepper_variety import PepperVariety

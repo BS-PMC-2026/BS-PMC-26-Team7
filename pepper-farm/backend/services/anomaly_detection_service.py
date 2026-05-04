@@ -22,10 +22,10 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from models.sensor_reading import SensorReading
-from models.sensor_assignment import SensorAssignment
-from models.pepper_threshold import PepperThreshold
-from models.sensor_alert import SensorAlert
+from models.sensor import SensorReading
+from models.sensor import SensorAssignment
+from models.sensor import PepperThreshold
+from models.sensor import SensorAlert
 from schemas.sensor_reading import AlertResult, SensorReadingCreate, SensorReadingResponse
 
 
