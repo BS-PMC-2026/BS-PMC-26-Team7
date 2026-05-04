@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings
 from routers.anomalies import router as anomalies_router, resolve_router
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensors, zones
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -14,13 +15,28 @@ import models.sensor_reading    # noqa: F401
 import models.sensor_assignment  # noqa: F401
 import models.pepper_threshold  # noqa: F401
 import models.sensor_alert      # noqa: F401
+import models.sensor  # noqa: F401
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from routers import peppers, plants, zones
+from services.sensor_auto_sync_service import (
+    start_sensor_scheduler,
+    stop_sensor_scheduler,
+)
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="PepperFarm API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_sensor_scheduler()
+    yield
+    stop_sensor_scheduler()
+
+app = FastAPI(
+    title="Pepper Farm API",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,6 +64,7 @@ app.include_router(sensor_readings.router)
 app.include_router(anomalies_router)
 app.include_router(resolve_router)
 
+app.include_router(sensors.router)
 
 @app.get("/api/health/db")
 def db_health():
@@ -57,3 +74,5 @@ def db_health():
         return {"status": "ok", "database": "connected"}
     finally:
         db.close()
+
+        
