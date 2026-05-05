@@ -59,6 +59,8 @@ jobs:
 
       - name: Build Frontend
         run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://hadinerim.azurewebsites.net
 
       - name: Deploy Frontend to Azure
         uses: azure/webapps-deploy@v3
