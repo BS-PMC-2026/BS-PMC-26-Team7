@@ -26,8 +26,9 @@ import {
 } from '@/services/sensors';
 import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
-
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://hadinerim.azurewebsites.net";
+  
 function sensorLabel(s: SensorInfo): string {
   const name = s.DeviceName || s.MacAddress;
   return s.IsActive ? name : `${name} (inactive)`;
