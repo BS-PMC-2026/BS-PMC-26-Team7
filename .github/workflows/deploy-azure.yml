@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-    deploy-backend:
+  deploy-backend:
     runs-on: ubuntu-latest
 
     defaults:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Install Backend Dependencies
         run: |
