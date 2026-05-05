@@ -23,8 +23,10 @@ export default function RevealSection({
   margin = '-80px 0px',
 }: RevealSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: margin as Parameters<typeof useInView>[1]['margin'] });
-
+  const isInView = useInView(ref, {
+    once: true,
+    margin: margin as `${number}px ${number}px ${number}px ${number}px`,
+  });
   return (
     <motion.div
       ref={ref}
