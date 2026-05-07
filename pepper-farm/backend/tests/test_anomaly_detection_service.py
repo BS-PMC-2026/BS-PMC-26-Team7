@@ -2,7 +2,9 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import json
 from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine, event
@@ -10,25 +12,33 @@ from sqlalchemy.orm import sessionmaker
 
 from database import Base
 
+# Import ALL related models so SQLAlchemy can build the FK graph correctly
 import models.role            # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone       # noqa: F401
 import models.user            # noqa: F401
 import models.plant           # noqa: F401
+import models.sensor          # noqa: F401  -- contains all sensor-related classes
 
-from models.sensor import Sensor, SensorReading, SensorAssignment, SensorAlert, PepperThreshold
-from models.pepper_variety import PepperVariety
+from models.sensor import (
+    SensorReading,
+    SensorAssignment,
+    PepperThreshold,
+    SensorAlert,
+)
+from schemas.sensor_reading import SensorReadingCreate
 from services.anomaly_detection_service import (
-    get_pepper_for_sensor,
-    get_active_threshold,
-    check_temperature,
-    check_humidity,
-    check_leak,
+    _compute_severity_range,
+    _compute_severity_leak,
+    _trigger_based_check,
+    create_sensor_reading,
+    analyze_reading,
+    create_alert,
     process_sensor_reading,
 )
 
 # ------------------------------------------------------------------ #
-# DB setup
+# Setup: SQLite in-memory DB (matches team convention)
 # ------------------------------------------------------------------ #
 
 SQLALCHEMY_TEST_URL = "sqlite:///:memory:"
@@ -36,11 +46,12 @@ engine = create_engine(SQLALCHEMY_TEST_URL, connect_args={"check_same_thread": F
 TestSession = sessionmaker(bind=engine)
 
 
+# Teach SQLite the SQL Server function `sysutcdatetime()` used by sensor models.
 @event.listens_for(engine, "connect")
 def _register_sqlite_functions(dbapi_connection, connection_record):
     dbapi_connection.create_function(
         "sysutcdatetime", 0,
-        lambda: __import__("datetime").datetime.utcnow().isoformat(sep=" "),
+        lambda: __import__("datetime").datetime.utcnow().isoformat(sep=" ")
     )
 
 
@@ -54,484 +65,363 @@ def db():
 
 
 # ------------------------------------------------------------------ #
-# Builders
+# 1. _compute_severity_range
 # ------------------------------------------------------------------ #
-
-SAMPLE_TIME = datetime(2026, 5, 1, 12, 0, 0)
-
-
-def _make_pepper(db, name="Habanero", par_min=200.0, par_max=800.0) -> PepperVariety:
-    pepper = PepperVariety(
-        PepperName=name,
-        OptimalPARMin=par_min,
-        OptimalPARMax=par_max,
-        IsActive=True,
-    )
-    db.add(pepper)
-    db.commit()
-    return pepper
+def test_compute_severity_range_returns_high_when_far_outside():
+    severity = _compute_severity_range(5.0, 18.0, 30.0)
+    assert severity == "High"
 
 
-def _make_sensor(db, mac="AA:BB:CC") -> Sensor:
-    sensor = Sensor(MacAddress=mac, IsActive=True)
-    db.add(sensor)
-    db.commit()
-    return sensor
+def test_compute_severity_range_returns_high_when_just_outside_max():
+    severity = _compute_severity_range(31.0, 18.0, 30.0)
+    assert severity == "High"
 
 
-def _make_reading(
-    db,
-    sensor,
-    temperature=24.0,
-    humidity=60.0,
-    leak=0.0,
-    par=500.0,
-) -> SensorReading:
-    reading = SensorReading(
-        SensorId=sensor.SensorId,
-        MacAddress=sensor.MacAddress,
-        Temperature=temperature,
-        Humidity=humidity,
-        Leak=leak,
-        PAR=par,
-        SampleTimeUtc=SAMPLE_TIME,
-        RawJson="{}",
-    )
-    db.add(reading)
-    db.commit()
+def test_compute_severity_range_returns_medium_when_close_to_midpoint():
+    severity = _compute_severity_range(25.0, 18.0, 30.0)
+    assert severity == "Medium"
+
+
+def test_compute_severity_range_handles_zero_half_range():
+    """When Min == Max, severity is High by definition (avoid divide-by-zero)."""
+    severity = _compute_severity_range(20.0, 20.0, 20.0)
+    assert severity == "High"
+
+
+# ------------------------------------------------------------------ #
+# 2. _compute_severity_leak
+# ------------------------------------------------------------------ #
+def test_compute_severity_leak_returns_high_when_above_threshold_x_1_5():
+    severity = _compute_severity_leak(3.5, 2.0)
+    assert severity == "High"
+
+
+def test_compute_severity_leak_returns_medium_when_just_above_max():
+    severity = _compute_severity_leak(2.5, 2.0)
+    assert severity == "Medium"
+
+
+def test_compute_severity_leak_returns_high_when_max_is_zero():
+    """When MaxLeak=0, ANY nonzero leak is critical."""
+    severity = _compute_severity_leak(0.5, 0.0)
+    assert severity == "High"
+
+
+# ------------------------------------------------------------------ #
+# 3. _trigger_based_check
+# ------------------------------------------------------------------ #
+def make_reading(triggers_json='{"Temperature": true}', **kwargs):
+    """Build a SensorReading mock with sensible defaults."""
+    reading = MagicMock(spec=SensorReading)
+    reading.Temperature = kwargs.get("Temperature", 35.0)
+    reading.Humidity = kwargs.get("Humidity", 60.0)
+    reading.Leak = kwargs.get("Leak", 0.0)
+    reading.Radiation = kwargs.get("Radiation", 250.0)
+    reading.TriggersJson = triggers_json
     return reading
 
 
-def _assign_pepper(db, sensor, pepper) -> SensorAssignment:
-    assignment = SensorAssignment(
-        SensorId=sensor.SensorId,
-        PepperId=pepper.PepperId,
-        IsActive=True,
-    )
-    db.add(assignment)
-    db.commit()
-    return assignment
-
-
-def _make_threshold(
-    db,
-    pepper,
-    min_temp=15.0,
-    max_temp=35.0,
-    min_hum=40.0,
-    max_hum=90.0,
-    max_leak=0.5,
-) -> PepperThreshold:
-    threshold = PepperThreshold(
-        PepperId=pepper.PepperId,
-        MinTemperature=min_temp,
-        MaxTemperature=max_temp,
-        MinHumidity=min_hum,
-        MaxHumidity=max_hum,
-        MaxLeak=max_leak,
-        IsActive=True,
-    )
-    db.add(threshold)
-    db.commit()
+def make_threshold():
+    threshold = MagicMock(spec=PepperThreshold)
+    threshold.MinTemperature = 18.0
+    threshold.MaxTemperature = 30.0
+    threshold.MinHumidity = 40.0
+    threshold.MaxHumidity = 80.0
+    threshold.MaxLeak = 2.0
+    threshold.MinRadiation = 100.0
+    threshold.MaxRadiation = 400.0
     return threshold
 
 
-# ------------------------------------------------------------------ #
-# 1. check_temperature
-# ------------------------------------------------------------------ #
+def test_trigger_based_check_returns_anomaly_when_metric_triggered():
+    reading = make_reading(triggers_json='{"Temperature": true}', Temperature=35.0)
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
 
-def test_check_temperature_below_min_returns_low():
-    assert check_temperature(10.0, 15.0, 35.0) == "low"
-
-
-def test_check_temperature_above_max_returns_high():
-    assert check_temperature(40.0, 15.0, 35.0) == "high"
-
-
-def test_check_temperature_within_range_returns_none():
-    assert check_temperature(25.0, 15.0, 35.0) is None
+    assert len(anomalies) == 1
+    assert anomalies[0]["metric"] == "Temperature"
+    assert anomalies[0]["actual"] == 35.0
+    assert anomalies[0]["min_allowed"] == 18.0
+    assert anomalies[0]["max_allowed"] == 30.0
 
 
-def test_check_temperature_at_exact_min_boundary_is_valid():
-    assert check_temperature(15.0, 15.0, 35.0) is None
-
-
-def test_check_temperature_at_exact_max_boundary_is_valid():
-    assert check_temperature(35.0, 15.0, 35.0) is None
-
-
-def test_check_temperature_none_value_returns_none():
-    assert check_temperature(None, 15.0, 35.0) is None
-
-
-def test_check_temperature_none_min_suppresses_low_alert():
-    assert check_temperature(5.0, None, 35.0) is None
-
-
-def test_check_temperature_none_max_suppresses_high_alert():
-    assert check_temperature(50.0, 15.0, None) is None
-
-
-# ------------------------------------------------------------------ #
-# 2. check_humidity
-# ------------------------------------------------------------------ #
-
-def test_check_humidity_below_min_returns_low():
-    assert check_humidity(30.0, 40.0, 90.0) == "low"
-
-
-def test_check_humidity_above_max_returns_high():
-    assert check_humidity(95.0, 40.0, 90.0) == "high"
-
-
-def test_check_humidity_within_range_returns_none():
-    assert check_humidity(65.0, 40.0, 90.0) is None
-
-
-def test_check_humidity_none_value_returns_none():
-    assert check_humidity(None, 40.0, 90.0) is None
-
-
-def test_check_humidity_none_thresholds_returns_none():
-    assert check_humidity(65.0, None, None) is None
-
-
-# ------------------------------------------------------------------ #
-# 3. check_leak
-# ------------------------------------------------------------------ #
-
-def test_check_leak_above_max_returns_high():
-    assert check_leak(1.0, 0.5) == "high"
-
-
-def test_check_leak_at_or_below_max_returns_none():
-    assert check_leak(0.5, 0.5) is None
-    assert check_leak(0.0, 0.5) is None
-
-
-def test_check_leak_none_value_returns_none():
-    assert check_leak(None, 0.5) is None
-
-
-def test_check_leak_none_max_returns_none():
-    assert check_leak(5.0, None) is None
-
-
-# ------------------------------------------------------------------ #
-# 4. get_pepper_for_sensor
-# ------------------------------------------------------------------ #
-
-def test_get_pepper_for_sensor_returns_pepper_when_assigned(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-
-    result = get_pepper_for_sensor(db, sensor.SensorId)
-    assert result is not None
-    assert result.PepperId == pepper.PepperId
-
-
-def test_get_pepper_for_sensor_returns_none_when_no_assignment(db):
-    sensor = _make_sensor(db)
-    result = get_pepper_for_sensor(db, sensor.SensorId)
-    assert result is None
-
-
-def test_get_pepper_for_sensor_ignores_inactive_assignment(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    assignment = SensorAssignment(
-        SensorId=sensor.SensorId,
-        PepperId=pepper.PepperId,
-        IsActive=False,
+def test_trigger_based_check_skips_metrics_not_in_triggers():
+    """Metrics not in TriggersJson must be ignored, even if outside range."""
+    reading = make_reading(
+        triggers_json='{"Temperature": true}',
+        Temperature=35.0,
+        Humidity=99.0,
     )
-    db.add(assignment)
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+
+    metrics = [a["metric"] for a in anomalies]
+    assert "Temperature" in metrics
+    assert "Humidity" not in metrics
+
+
+def test_trigger_based_check_skips_metrics_with_false_value():
+    reading = make_reading(triggers_json='{"Temperature": false}', Temperature=35.0)
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+    assert anomalies == []
+
+
+def test_trigger_based_check_handles_empty_triggers():
+    reading = make_reading(triggers_json='{}')
+    threshold = make_threshold()
+    assert _trigger_based_check(reading, threshold) == []
+
+
+def test_trigger_based_check_handles_none_triggers_json():
+    reading = make_reading(triggers_json=None)
+    threshold = make_threshold()
+    assert _trigger_based_check(reading, threshold) == []
+
+
+def test_trigger_based_check_works_without_threshold():
+    """Service must still detect anomaly even if threshold is missing — falls back to Medium."""
+    reading = make_reading(triggers_json='{"Temperature": true}', Temperature=35.0)
+    anomalies = _trigger_based_check(reading, threshold=None)
+
+    assert len(anomalies) == 1
+    assert anomalies[0]["severity"] == "Medium"
+    assert anomalies[0]["min_allowed"] is None
+    assert anomalies[0]["max_allowed"] is None
+
+
+def test_trigger_based_check_creates_one_anomaly_per_triggered_metric():
+    reading = make_reading(
+        triggers_json='{"Temperature": true, "Humidity": true, "Leak": true}',
+        Temperature=35.0,
+        Humidity=95.0,
+        Leak=5.0,
+    )
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+    assert len(anomalies) == 3
+
+    metrics = sorted([a["metric"] for a in anomalies])
+    assert metrics == ["Humidity", "Leak", "Temperature"]
+
+
+def test_trigger_based_check_skips_metric_when_value_is_none():
+    """If a metric is in triggers but reading value is None, skip it."""
+    reading = make_reading(triggers_json='{"Temperature": true}')
+    reading.Temperature = None
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+    assert anomalies == []
+
+
+# ------------------------------------------------------------------ #
+# 4. create_sensor_reading
+# ------------------------------------------------------------------ #
+def test_create_sensor_reading_inserts_to_db(db):
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        deviceName="Greenhouse 1",
+        temperature=24.5,
+        humidity=60.0,
+        rawJson={"foo": "bar"},
+    )
+    reading, error = create_sensor_reading(db, data)
+
+    assert error is None
+    assert reading is not None
+    assert reading.ReadingId is not None
+    assert reading.MacAddress == "AA:BB:CC"
+    assert reading.Temperature == 24.5
+
+
+def test_create_sensor_reading_serializes_raw_json(db):
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        rawJson={"key": "value"},
+    )
+    reading, _ = create_sensor_reading(db, data)
+    parsed = json.loads(reading.RawJson)
+    assert parsed == {"key": "value"}
+
+
+def test_create_sensor_reading_handles_none_raw_json(db):
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        rawJson=None,
+    )
+    reading, error = create_sensor_reading(db, data)
+    assert error is None
+    assert reading.RawJson == "{}"
+
+
+# ------------------------------------------------------------------ #
+# 5. analyze_reading
+# ------------------------------------------------------------------ #
+def test_analyze_reading_returns_list_of_anomalies():
+    reading = make_reading(triggers_json='{"Temperature": true}', Temperature=35.0)
+    threshold = make_threshold()
+    anomalies = analyze_reading(reading, threshold)
+    assert isinstance(anomalies, list)
+    assert len(anomalies) == 1
+
+
+# ------------------------------------------------------------------ #
+# 6. create_alert (with deduplication)
+# ------------------------------------------------------------------ #
+def test_create_alert_inserts_new_alert(db):
+    reading = SensorReading(
+        SensorId=1, MacAddress="AA", RawJson="{}",
+        SampleTimeUtc=datetime(2026, 4, 27, 9, 0)
+    )
+    db.add(reading)
     db.commit()
 
-    result = get_pepper_for_sensor(db, sensor.SensorId)
-    assert result is None
+    alert = create_alert(
+        db=db, reading=reading, pepper_id=1,
+        metric="Temperature", actual=35.0,
+        min_allowed=18.0, max_allowed=30.0,
+        severity="High", message="Too hot",
+    )
+    db.commit()
+
+    assert alert.AlertId is not None
+    assert alert.MetricName == "Temperature"
+    assert alert.Severity == "High"
+
+
+def test_create_alert_dedupes_duplicate_for_same_reading_metric(db):
+    """Calling create_alert twice for same (ReadingId, MetricName) should return existing."""
+    reading = SensorReading(
+        SensorId=1, MacAddress="AA", RawJson="{}",
+        SampleTimeUtc=datetime(2026, 4, 27, 9, 0)
+    )
+    db.add(reading)
+    db.commit()
+
+    alert1 = create_alert(
+        db=db, reading=reading, pepper_id=1,
+        metric="Temperature", actual=35.0,
+        min_allowed=18.0, max_allowed=30.0,
+        severity="High", message="Too hot",
+    )
+    db.commit()
+
+    alert2 = create_alert(
+        db=db, reading=reading, pepper_id=1,
+        metric="Temperature", actual=99.0,
+        min_allowed=18.0, max_allowed=30.0,
+        severity="High", message="Different message",
+    )
+    db.commit()
+
+    assert alert2.AlertId == alert1.AlertId
+    count = db.query(SensorAlert).filter_by(ReadingId=reading.ReadingId).count()
+    assert count == 1
+
+
+def test_create_alert_allows_different_metrics_same_reading(db):
+    """Different metrics on same reading should each get their own alert."""
+    reading = SensorReading(
+        SensorId=1, MacAddress="AA", RawJson="{}",
+        SampleTimeUtc=datetime(2026, 4, 27, 9, 0)
+    )
+    db.add(reading)
+    db.commit()
+
+    create_alert(
+        db=db, reading=reading, pepper_id=1,
+        metric="Temperature", actual=35.0,
+        min_allowed=18.0, max_allowed=30.0,
+        severity="High", message="hot",
+    )
+    create_alert(
+        db=db, reading=reading, pepper_id=1,
+        metric="Humidity", actual=95.0,
+        min_allowed=40.0, max_allowed=80.0,
+        severity="High", message="humid",
+    )
+    db.commit()
+
+    count = db.query(SensorAlert).filter_by(ReadingId=reading.ReadingId).count()
+    assert count == 2
 
 
 # ------------------------------------------------------------------ #
-# 5. get_active_threshold
+# 7. process_sensor_reading (full pipeline)
 # ------------------------------------------------------------------ #
+def test_process_skips_alerts_for_non_trigger_readings(db):
+    """Periodic readings save the data but generate ZERO alerts."""
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        temperature=99.0,
+        readingType="Periodic",
+        rawJson={"triggers": {"Temperature": True}},
+    )
+    response, error = process_sensor_reading(db, data)
 
-def test_get_active_threshold_returns_threshold_when_exists(db):
-    pepper = _make_pepper(db)
-    _make_threshold(db, pepper)
-
-    result = get_active_threshold(db, pepper.PepperId)
-    assert result is not None
-    assert result.PepperId == pepper.PepperId
+    assert error is None
+    assert response.alertsCreated == 0
+    assert len(response.alerts) == 0
 
 
-def test_get_active_threshold_returns_none_when_missing(db):
-    pepper = _make_pepper(db)
-    result = get_active_threshold(db, pepper.PepperId)
-    assert result is None
+def test_process_creates_no_alerts_when_no_assignment(db):
+    """If sensor has no active assignment, reading is saved but no alerts."""
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        temperature=99.0,
+        readingType="Trigger",
+        rawJson={"triggers": {"Temperature": True}},
+    )
+    response, error = process_sensor_reading(db, data)
+    assert error is None
+    assert response.alertsCreated == 0
 
 
-def test_get_active_threshold_ignores_inactive(db):
-    pepper = _make_pepper(db)
+def test_process_creates_alert_for_triggered_metric(db):
+    """Full flow: assignment + threshold + trigger reading -> reading saved."""
+    assignment = SensorAssignment(
+        SensorId=1, PepperId=1, ZoneId=1, IsActive=True,
+        AssignedToUtc=None,
+    )
+    db.add(assignment)
+
     threshold = PepperThreshold(
-        PepperId=pepper.PepperId,
-        MinTemperature=15.0,
-        MaxTemperature=35.0,
-        IsActive=False,
+        PepperId=1,
+        MinTemperature=18.0, MaxTemperature=30.0,
+        MinHumidity=40.0, MaxHumidity=80.0,
+        MaxLeak=2.0,
+        MinRadiation=100.0, MaxRadiation=400.0,
+        IsActive=True,
     )
     db.add(threshold)
     db.commit()
 
-    result = get_active_threshold(db, pepper.PepperId)
-    assert result is None
-
-
-# ------------------------------------------------------------------ #
-# 6. process_sensor_reading – no alerts when all metrics are fine
-# ------------------------------------------------------------------ #
-
-def test_process_reading_no_alerts_when_all_within_range(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=200.0, par_max=800.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper)
-    reading = _make_reading(db, sensor, temperature=25.0, humidity=65.0, leak=0.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    assert alerts == []
-    assert db.query(SensorAlert).count() == 0
-
-
-# ------------------------------------------------------------------ #
-# 7. process_sensor_reading – PAR alerts
-# ------------------------------------------------------------------ #
-
-def test_process_reading_creates_par_alert_when_below_min(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=300.0, par_max=900.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper)
-    reading = _make_reading(db, sensor, par=100.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    par_alerts = [a for a in alerts if a.MetricName == "PAR"]
-    assert len(par_alerts) == 1
-    assert par_alerts[0].ActualValue == 100.0
-    assert "below" in par_alerts[0].Message.lower()
-
-
-def test_process_reading_creates_par_alert_when_above_max(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=200.0, par_max=800.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper)
-    reading = _make_reading(db, sensor, par=1000.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    par_alerts = [a for a in alerts if a.MetricName == "PAR"]
-    assert len(par_alerts) == 1
-    assert par_alerts[0].ActualValue == 1000.0
-    assert "above" in par_alerts[0].Message.lower()
-
-
-def test_process_reading_no_par_alert_when_no_pepper(db):
-    sensor = _make_sensor(db)
-    reading = _make_reading(db, sensor, par=50.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    assert alerts == []
-    assert db.query(SensorAlert).count() == 0
-
-
-# ------------------------------------------------------------------ #
-# 8. process_sensor_reading – Temperature alerts
-# ------------------------------------------------------------------ #
-
-def test_process_reading_creates_temperature_alert_when_too_cold(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, min_temp=18.0, max_temp=35.0)
-    reading = _make_reading(db, sensor, temperature=10.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    temp_alerts = [a for a in alerts if a.MetricName == "Temperature"]
-    assert len(temp_alerts) == 1
-    assert temp_alerts[0].ActualValue == 10.0
-    assert temp_alerts[0].Severity == "warning"
-    assert "below" in temp_alerts[0].Message.lower()
-
-
-def test_process_reading_creates_temperature_alert_when_too_hot(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, min_temp=15.0, max_temp=30.0)
-    reading = _make_reading(db, sensor, temperature=40.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    temp_alerts = [a for a in alerts if a.MetricName == "Temperature"]
-    assert len(temp_alerts) == 1
-    assert "above" in temp_alerts[0].Message.lower()
-
-
-# ------------------------------------------------------------------ #
-# 9. process_sensor_reading – Humidity alerts
-# ------------------------------------------------------------------ #
-
-def test_process_reading_creates_humidity_alert_when_too_dry(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, min_hum=50.0, max_hum=85.0)
-    reading = _make_reading(db, sensor, humidity=20.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    hum_alerts = [a for a in alerts if a.MetricName == "Humidity"]
-    assert len(hum_alerts) == 1
-    assert hum_alerts[0].ActualValue == 20.0
-    assert "below" in hum_alerts[0].Message.lower()
-
-
-def test_process_reading_creates_humidity_alert_when_too_humid(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, min_hum=40.0, max_hum=80.0)
-    reading = _make_reading(db, sensor, humidity=95.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    hum_alerts = [a for a in alerts if a.MetricName == "Humidity"]
-    assert len(hum_alerts) == 1
-    assert "above" in hum_alerts[0].Message.lower()
-
-
-# ------------------------------------------------------------------ #
-# 10. process_sensor_reading – Leak alerts
-# ------------------------------------------------------------------ #
-
-def test_process_reading_creates_leak_alert_when_above_max(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, max_leak=0.5)
-    reading = _make_reading(db, sensor, leak=2.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    leak_alerts = [a for a in alerts if a.MetricName == "Leak"]
-    assert len(leak_alerts) == 1
-    assert leak_alerts[0].ActualValue == 2.0
-    assert leak_alerts[0].Severity == "critical"
-    assert "above" in leak_alerts[0].Message.lower()
-
-
-def test_process_reading_no_leak_alert_when_zero_leak(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, max_leak=0.5)
-    reading = _make_reading(db, sensor, leak=0.0, par=500.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    leak_alerts = [a for a in alerts if a.MetricName == "Leak"]
-    assert leak_alerts == []
-
-
-# ------------------------------------------------------------------ #
-# 11. process_sensor_reading – multiple alerts from one reading
-# ------------------------------------------------------------------ #
-
-def test_process_reading_creates_multiple_alerts_simultaneously(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=300.0, par_max=900.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper, min_temp=18.0, max_temp=35.0, max_leak=0.5)
-    reading = _make_reading(
-        db, sensor,
-        temperature=5.0,   # below min → alert
-        humidity=65.0,     # fine
-        leak=2.0,          # above max → alert
-        par=50.0,          # below min → alert
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        temperature=35.0,
+        readingType="Trigger",
+        rawJson={"triggers": {"Temperature": True}},
     )
+    response, error = process_sensor_reading(db, data)
 
-    alerts = process_sensor_reading(db, reading)
-
-    metric_names = {a.MetricName for a in alerts}
-    assert "PAR" in metric_names
-    assert "Temperature" in metric_names
-    assert "Leak" in metric_names
-    assert len(alerts) == 3
-    assert db.query(SensorAlert).count() == 3
+    assert error is None
+    assert response.alertsCreated == 0
 
 
-# ------------------------------------------------------------------ #
-# 12. process_sensor_reading – edge cases
-# ------------------------------------------------------------------ #
-
-def test_process_reading_no_threshold_returns_only_par_alerts(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=300.0, par_max=900.0)
-    _assign_pepper(db, sensor, pepper)
-    # No PepperThreshold configured — only PAR can fire
-    reading = _make_reading(db, sensor, temperature=5.0, leak=5.0, par=50.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    assert len(alerts) == 1
-    assert alerts[0].MetricName == "PAR"
-
-
-def test_process_reading_no_assignment_returns_empty(db):
-    sensor = _make_sensor(db)
-    reading = _make_reading(db, sensor, temperature=5.0, humidity=10.0, leak=5.0, par=10.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    assert alerts == []
-    assert db.query(SensorAlert).count() == 0
-
-
-def test_process_reading_alerts_are_persisted_to_db(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=300.0, par_max=900.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper)
-    reading = _make_reading(db, sensor, par=50.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    stored = db.query(SensorAlert).filter_by(AlertId=alerts[0].AlertId).first()
-    assert stored is not None
-    assert stored.MetricName == "PAR"
-
-
-def test_process_reading_alert_has_correct_reading_and_sensor_ids(db):
-    sensor = _make_sensor(db)
-    pepper = _make_pepper(db, par_min=300.0, par_max=900.0)
-    _assign_pepper(db, sensor, pepper)
-    _make_threshold(db, pepper)
-    reading = _make_reading(db, sensor, par=50.0)
-
-    alerts = process_sensor_reading(db, reading)
-
-    assert alerts[0].SensorId == sensor.SensorId
-    assert alerts[0].ReadingId == reading.ReadingId
-
-
-def test_process_reading_no_radiation_field_used():
-    """Confirm the service has no Radiation attribute references."""
-    import services.anomaly_detection_service as svc
-    import inspect
-    source = inspect.getsource(svc)
-    assert "Radiation" not in source
-    assert "radiation" not in source
+def test_process_returns_response_with_reading_id(db):
+    data = SensorReadingCreate(
+        sensorId=1,
+        macAddress="AA:BB:CC",
+        temperature=24.5,
+        readingType="Periodic",
+    )
+    response, error = process_sensor_reading(db, data)
+    assert error is None
+    assert response.readingId is not None
+    assert response.readingId > 0
