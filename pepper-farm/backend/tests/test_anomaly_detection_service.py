@@ -116,7 +116,6 @@ def make_reading(triggers_json='{"Temperature": true}', **kwargs):
     reading.Temperature = kwargs.get("Temperature", 35.0)
     reading.Humidity = kwargs.get("Humidity", 60.0)
     reading.Leak = kwargs.get("Leak", 0.0)
-    reading.Radiation = kwargs.get("Radiation", 250.0)
     reading.TriggersJson = triggers_json
     return reading
 
@@ -128,8 +127,6 @@ def make_threshold():
     threshold.MinHumidity = 40.0
     threshold.MaxHumidity = 80.0
     threshold.MaxLeak = 2.0
-    threshold.MinRadiation = 100.0
-    threshold.MaxRadiation = 400.0
     return threshold
 
 
@@ -395,7 +392,6 @@ def test_process_creates_alert_for_triggered_metric(db):
         MinTemperature=18.0, MaxTemperature=30.0,
         MinHumidity=40.0, MaxHumidity=80.0,
         MaxLeak=2.0,
-        MinRadiation=100.0, MaxRadiation=400.0,
         IsActive=True,
     )
     db.add(threshold)
@@ -411,7 +407,7 @@ def test_process_creates_alert_for_triggered_metric(db):
     response, error = process_sensor_reading(db, data)
 
     assert error is None
-    assert response.alertsCreated == 0
+    assert response.alertsCreated == 1
 
 
 def test_process_returns_response_with_reading_id(db):

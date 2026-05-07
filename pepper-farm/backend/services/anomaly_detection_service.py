@@ -1,3 +1,6 @@
+import json
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from models.sensor import (
@@ -6,91 +9,186 @@ from models.sensor import (
     SensorAlert,
     PepperThreshold,
 )
-from models.pepper_variety import PepperVariety
-from services.sensor_service import create_par_alert_if_needed
+from schemas.sensor_reading import SensorReadingCreate, AlertResult, SensorReadingResponse
+
+# Metrics supported by trigger-based anomaly detection.
+# Each entry: metric_name -> (reading_attr, threshold_min_attr, threshold_max_attr, severity_type)
+_METRIC_CONFIG: dict[str, tuple[str, str | None, str | None, str]] = {
+    "Temperature": ("Temperature", "MinTemperature", "MaxTemperature", "range"),
+    "Humidity":    ("Humidity",    "MinHumidity",    "MaxHumidity",    "range"),
+    "Leak":        ("Leak",        None,             "MaxLeak",        "leak"),
+}
 
 
-def get_pepper_for_sensor(db: Session, sensor_id: int) -> "PepperVariety | None":
-    assignment = (
-        db.query(SensorAssignment)
-        .filter(
-            SensorAssignment.SensorId == sensor_id,
-            SensorAssignment.IsActive == True,
-        )
-        .first()
-    )
-    if not assignment or not assignment.PepperId:
-        return None
-    return (
-        db.query(PepperVariety)
-        .filter(PepperVariety.PepperId == assignment.PepperId)
-        .first()
-    )
+def _compute_severity_range(value: float, min_val, max_val) -> str:
+    """Return 'High' when value is outside [min_val, max_val], 'Medium' when inside.
 
-
-def get_active_threshold(db: Session, pepper_id: int) -> "PepperThreshold | None":
-    return (
-        db.query(PepperThreshold)
-        .filter(
-            PepperThreshold.PepperId == pepper_id,
-            PepperThreshold.IsActive == True,
-        )
-        .first()
-    )
-
-
-def check_temperature(value: float | None, min_val, max_val) -> str | None:
-    if value is None:
-        return None
+    When min_val == max_val, any value is considered 'High' (zero-width range
+    avoids a divide-by-zero in hypothetical normalized calculations).
+    """
+    if (
+        min_val is not None
+        and max_val is not None
+        and float(min_val) == float(max_val)
+    ):
+        return "High"
     if min_val is not None and value < float(min_val):
-        return "low"
+        return "High"
     if max_val is not None and value > float(max_val):
-        return "high"
-    return None
+        return "High"
+    return "Medium"
 
 
-def check_humidity(value: float | None, min_val, max_val) -> str | None:
-    if value is None:
-        return None
-    if min_val is not None and value < float(min_val):
-        return "low"
-    if max_val is not None and value > float(max_val):
-        return "high"
-    return None
+def _compute_severity_leak(value: float, max_val) -> str:
+    """Return 'High' when leak is ≥ 1.5× the allowed max, 'Medium' otherwise.
+
+    When max_val == 0 any non-zero leak is immediately 'High'.
+    """
+    if max_val == 0:
+        return "High"
+    if value > float(max_val) * 1.5:
+        return "High"
+    return "Medium"
 
 
-def check_leak(value: float | None, max_val) -> str | None:
-    if value is None:
-        return None
-    if max_val is not None and value > float(max_val):
-        return "high"
-    return None
+def _trigger_based_check(
+    reading: SensorReading,
+    threshold: "PepperThreshold | None",
+) -> list[dict]:
+    """Return anomaly dicts for every metric flagged True in reading.TriggersJson.
+
+    Only processes metrics present in _METRIC_CONFIG.  Radiation is not
+    included — PAR is the light-related metric since the US20 migration.
+    """
+    if not reading.TriggersJson:
+        return []
+
+    try:
+        triggers: dict = json.loads(reading.TriggersJson)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    anomalies: list[dict] = []
+
+    for metric, (attr, min_attr, max_attr, severity_type) in _METRIC_CONFIG.items():
+        if not triggers.get(metric):
+            continue
+
+        actual = getattr(reading, attr, None)
+        if actual is None:
+            continue
+
+        if threshold is None:
+            anomalies.append(
+                {
+                    "metric": metric,
+                    "actual": actual,
+                    "min_allowed": None,
+                    "max_allowed": None,
+                    "severity": "Medium",
+                }
+            )
+            continue
+
+        min_val = getattr(threshold, min_attr, None) if min_attr else None
+        max_val = getattr(threshold, max_attr, None) if max_attr else None
+
+        if severity_type == "range":
+            if min_val is not None or max_val is not None:
+                severity = _compute_severity_range(actual, min_val, max_val)
+            else:
+                severity = "Medium"
+        else:
+            severity = _compute_severity_leak(actual, max_val) if max_val is not None else "Medium"
+
+        anomalies.append(
+            {
+                "metric": metric,
+                "actual": actual,
+                "min_allowed": float(min_val) if min_val is not None else None,
+                "max_allowed": float(max_val) if max_val is not None else None,
+                "severity": severity,
+            }
+        )
+
+    return anomalies
 
 
-def _create_metric_alert(
+def create_sensor_reading(
     db: Session,
-    sensor_id: int,
-    reading_id: int,
+    data: SensorReadingCreate,
+) -> "tuple[SensorReading | None, str | None]":
+    """Persist a new SensorReading and return (reading, None) or (None, error).
+
+    Radiation is intentionally omitted — it was removed in the US20 migration.
+    PAR is the current light-related metric and is computed separately.
+    """
+    try:
+        triggers: dict = {}
+        if data.rawJson:
+            triggers = data.rawJson.get("triggers", {})
+
+        raw_json_str = json.dumps(data.rawJson or {})
+
+        reading = SensorReading(
+            SensorId=data.sensorId,
+            MacAddress=data.macAddress,
+            DeviceName=data.deviceName,
+            Temperature=data.temperature,
+            Humidity=data.humidity,
+            Leak=data.leak,
+            BatteryLevel=data.batteryLevel,
+            ReadingType=data.readingType,
+            TriggersJson=json.dumps(triggers),
+            SampleTimeUtc=datetime.utcnow(),
+            RawJson=raw_json_str,
+        )
+
+        db.add(reading)
+        db.commit()
+        db.refresh(reading)
+        return reading, None
+
+    except Exception as exc:
+        db.rollback()
+        return None, str(exc)
+
+
+def analyze_reading(
+    reading: SensorReading,
+    threshold: "PepperThreshold | None",
+) -> list[dict]:
+    """Public wrapper around _trigger_based_check."""
+    return _trigger_based_check(reading, threshold)
+
+
+def create_alert(
+    db: Session,
+    reading: SensorReading,
     pepper_id: int | None,
     metric: str,
     actual: float,
     min_allowed: float | None,
     max_allowed: float | None,
-    direction: str,
     severity: str,
+    message: str,
 ) -> SensorAlert:
-    if direction == "low":
-        message = (
-            f"{metric} {actual} is below minimum threshold ({min_allowed})"
-        )
-    else:
-        message = (
-            f"{metric} {actual} is above maximum threshold ({max_allowed})"
-        )
+    """Insert a SensorAlert, deduplicating on (ReadingId, MetricName).
+
+    If an alert for the same reading + metric already exists, returns it
+    unchanged rather than creating a duplicate.
+    """
+    existing = (
+        db.query(SensorAlert)
+        .filter_by(ReadingId=reading.ReadingId, MetricName=metric)
+        .first()
+    )
+    if existing:
+        return existing
 
     alert = SensorAlert(
-        SensorId=sensor_id,
-        ReadingId=reading_id,
+        SensorId=reading.SensorId,
+        ReadingId=reading.ReadingId,
         PepperId=pepper_id,
         MetricName=metric,
         ActualValue=actual,
@@ -101,91 +199,88 @@ def _create_metric_alert(
         IsResolved=False,
     )
     db.add(alert)
-    db.commit()
-    db.refresh(alert)
     return alert
 
 
-def process_sensor_reading(db: Session, reading: SensorReading) -> list[SensorAlert]:
-    """Check a SensorReading against all configured thresholds and create alerts.
+def process_sensor_reading(
+    db: Session,
+    data: SensorReadingCreate,
+) -> "tuple[SensorReadingResponse | None, str | None]":
+    """Full pipeline: save reading → optionally detect anomalies → return response.
 
-    Returns the list of SensorAlert rows that were created.
+    Alerts are only generated for Trigger-type readings that have an active
+    sensor assignment.  Radiation is not checked anywhere in this pipeline.
     """
-    alerts: list[SensorAlert] = []
+    reading, error = create_sensor_reading(db, data)
+    if error:
+        return None, f"Failed to create sensor reading: {error}"
 
-    pepper = get_pepper_for_sensor(db, reading.SensorId)
-    pepper_id = pepper.PepperId if pepper else None
-
-    par_min = float(pepper.OptimalPARMin) if pepper and pepper.OptimalPARMin is not None else None
-    par_max = float(pepper.OptimalPARMax) if pepper and pepper.OptimalPARMax is not None else None
-    par_alert = create_par_alert_if_needed(
-        db,
-        sensor_id=reading.SensorId,
-        reading_id=reading.ReadingId,
-        pepper_id=pepper_id,
-        par=reading.PAR,
-        optimal_min=par_min,
-        optimal_max=par_max,
+    base_response = SensorReadingResponse(
+        readingId=reading.ReadingId,
+        alertsCreated=0,
+        alerts=[],
     )
-    if par_alert:
-        alerts.append(par_alert)
 
-    if pepper is None:
-        return alerts
+    if not data.readingType or data.readingType.lower() != "trigger":
+        return base_response, None
 
-    threshold = get_active_threshold(db, pepper.PepperId)
-    if threshold is None:
-        return alerts
+    assignment = (
+        db.query(SensorAssignment)
+        .filter(
+            SensorAssignment.SensorId == data.sensorId,
+            SensorAssignment.IsActive == True,
+        )
+        .first()
+    )
+    if not assignment:
+        return base_response, None
 
-    temp_dir = check_temperature(reading.Temperature, threshold.MinTemperature, threshold.MaxTemperature)
-    if temp_dir:
-        alerts.append(
-            _create_metric_alert(
-                db,
-                sensor_id=reading.SensorId,
-                reading_id=reading.ReadingId,
-                pepper_id=pepper_id,
-                metric="Temperature",
-                actual=reading.Temperature,
-                min_allowed=float(threshold.MinTemperature) if threshold.MinTemperature is not None else None,
-                max_allowed=float(threshold.MaxTemperature) if threshold.MaxTemperature is not None else None,
-                direction=temp_dir,
-                severity="warning",
+    threshold = (
+        db.query(PepperThreshold)
+        .filter(
+            PepperThreshold.PepperId == assignment.PepperId,
+            PepperThreshold.IsActive == True,
+        )
+        .first()
+    )
+
+    anomalies = analyze_reading(reading, threshold)
+
+    alert_results: list[AlertResult] = []
+    for anomaly in anomalies:
+        msg = (
+            f"{anomaly['metric']} {anomaly['actual']} is anomalous "
+            f"(severity: {anomaly['severity']})"
+        )
+        create_alert(
+            db=db,
+            reading=reading,
+            pepper_id=assignment.PepperId,
+            metric=anomaly["metric"],
+            actual=anomaly["actual"],
+            min_allowed=anomaly.get("min_allowed"),
+            max_allowed=anomaly.get("max_allowed"),
+            severity=anomaly["severity"],
+            message=msg,
+        )
+        alert_results.append(
+            AlertResult(
+                metricName=anomaly["metric"],
+                actualValue=anomaly["actual"],
+                minAllowed=anomaly.get("min_allowed"),
+                maxAllowed=anomaly.get("max_allowed"),
+                severity=anomaly["severity"],
+                message=msg,
             )
         )
 
-    hum_dir = check_humidity(reading.Humidity, threshold.MinHumidity, threshold.MaxHumidity)
-    if hum_dir:
-        alerts.append(
-            _create_metric_alert(
-                db,
-                sensor_id=reading.SensorId,
-                reading_id=reading.ReadingId,
-                pepper_id=pepper_id,
-                metric="Humidity",
-                actual=reading.Humidity,
-                min_allowed=float(threshold.MinHumidity) if threshold.MinHumidity is not None else None,
-                max_allowed=float(threshold.MaxHumidity) if threshold.MaxHumidity is not None else None,
-                direction=hum_dir,
-                severity="warning",
-            )
-        )
+    db.commit()
 
-    leak_dir = check_leak(reading.Leak, threshold.MaxLeak)
-    if leak_dir:
-        alerts.append(
-            _create_metric_alert(
-                db,
-                sensor_id=reading.SensorId,
-                reading_id=reading.ReadingId,
-                pepper_id=pepper_id,
-                metric="Leak",
-                actual=reading.Leak,
-                min_allowed=None,
-                max_allowed=float(threshold.MaxLeak) if threshold.MaxLeak is not None else None,
-                direction=leak_dir,
-                severity="critical",
-            )
-        )
-
-    return alerts
+    return (
+        SensorReadingResponse(
+            readingId=reading.ReadingId,
+            alertsCreated=len(alert_results),
+            alerts=alert_results,
+        ),
+        None,
+    )
