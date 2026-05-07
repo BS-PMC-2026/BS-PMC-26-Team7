@@ -44,7 +44,6 @@ def make_mock_reading(reading_id=1, sensor_id=1, sample_time=None):
     r.Leak = 0.0
     r.VibrationSD = 0.0
     r.BatteryLevel = 90.0
-    r.Radiation = 0.0
     r.SampleTimeUtc = sample_time or datetime.utcnow() - timedelta(minutes=5)
     r.GatewayReadTimeUtc = None
     r.AtomationCreatedAtUtc = None

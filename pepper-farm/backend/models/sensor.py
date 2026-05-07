@@ -54,7 +54,7 @@ class SensorReading(Base):
     Leak = Column(Float, nullable=True)
     VibrationSD = Column(Float, nullable=True)
     BatteryLevel = Column(Float, nullable=True)
-    Radiation = Column(Float, nullable=True)
+    PAR = Column(Float, nullable=True)
 
     SampleTimeUtc = Column(DateTime, nullable=False)
     GatewayReadTimeUtc = Column(DateTime, nullable=True)
@@ -106,9 +106,6 @@ class PepperThreshold(Base):
     MaxHumidity = Column(Float, nullable=True)
 
     MaxLeak = Column(Float, nullable=True)
-
-    MinRadiation = Column(Float, nullable=True)
-    MaxRadiation = Column(Float, nullable=True)
 
     IsActive = Column(Boolean, nullable=False, default=True)
     CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())

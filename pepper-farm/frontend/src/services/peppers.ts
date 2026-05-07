@@ -10,7 +10,8 @@ export type PepperCreate = {
   OptimalSoilMoistureMax?: number;
   OptimalTempMinC?: number;
   OptimalTempMaxC?: number;
-  OptimalSunlightHours?: number;
+  OptimalPARMin?: number;
+  OptimalPARMax?: number;
   ImageUrl?: string;
   Zone?: string;
   GeneralDescription?: string;

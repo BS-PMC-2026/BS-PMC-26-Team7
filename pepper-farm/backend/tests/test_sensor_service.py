@@ -77,7 +77,6 @@ def make_atomation_reading(**overrides):
         "Leak": 0.0,
         "Vibration SD": 0.1,
         "Battery Level": 85.0,
-        "Radiation": 0.05,
         "sample_time_utc": "2026-04-27T09:13:17.000Z",
         "gw_read_time_utc": "2026-04-27T09:13:20.000Z",
         "created_at": "2026-04-27T09:13:25.000Z",
