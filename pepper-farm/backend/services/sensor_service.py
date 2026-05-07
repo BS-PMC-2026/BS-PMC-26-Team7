@@ -1,12 +1,123 @@
 import json
+import random
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from models.sensor import Sensor, SensorReading, SensorSyncState
+from models.sensor import Sensor, SensorReading, SensorSyncState, SensorAlert
 from services.atomation_service import AtomationService
+
+
+def generate_par(
+    sample_time: datetime | None = None,
+    temperature: float | None = None,
+    humidity: float | None = None,
+) -> float:
+    """Generate realistic PAR value in µmol/m²/s from timestamp, temperature, and humidity."""
+    if sample_time is not None:
+        h = sample_time.hour
+        if h < 5 or h >= 21:
+            lo, hi = 0.0, 80.0
+        elif h < 7 or h >= 19:
+            lo, hi = 80.0, 350.0
+        elif h < 9 or h >= 17:
+            lo, hi = 200.0, 600.0
+        elif h < 11 or h >= 15:
+            lo, hi = 350.0, 850.0
+        else:
+            lo, hi = 500.0, 1200.0
+    else:
+        lo, hi = 100.0, 900.0
+
+    base = random.uniform(lo, hi)
+
+    if temperature is not None:
+        if temperature > 35:
+            base *= random.uniform(1.1, 1.3)
+        elif temperature > 28:
+            base *= random.uniform(1.0, 1.1)
+        elif temperature < 10:
+            base *= random.uniform(0.5, 0.8)
+        elif temperature < 18:
+            base *= random.uniform(0.8, 0.95)
+
+    if humidity is not None:
+        if humidity > 90:
+            base *= random.uniform(0.4, 0.65)
+        elif humidity > 75:
+            base *= random.uniform(0.7, 0.9)
+        elif humidity < 30:
+            base *= random.uniform(1.05, 1.2)
+
+    par = base + random.gauss(0, 20)
+    return round(max(0.0, min(1500.0, par)), 2)
+
+
+def check_par_threshold(
+    par: float | None,
+    optimal_min: float | None,
+    optimal_max: float | None,
+) -> str | None:
+    """Return 'low', 'high', or None based on whether par violates thresholds.
+
+    Boundary values (par == optimal_min or par == optimal_max) are considered
+    valid and return None.  Missing par or missing thresholds are safe (None).
+    """
+    if par is None:
+        return None
+    if optimal_min is not None and par < float(optimal_min):
+        return "low"
+    if optimal_max is not None and par > float(optimal_max):
+        return "high"
+    return None
+
+
+def create_par_alert_if_needed(
+    db: Session,
+    sensor_id: int,
+    reading_id: int,
+    pepper_id: int | None,
+    par: float | None,
+    optimal_min: float | None,
+    optimal_max: float | None,
+) -> "SensorAlert | None":
+    """Create and persist a SensorAlert when par is outside the valid range.
+
+    Returns the new SensorAlert row, or None when no alert is required.
+    """
+    direction = check_par_threshold(par, optimal_min, optimal_max)
+    if direction is None:
+        return None
+
+    if direction == "low":
+        message = (
+            f"PAR {par} µmol/m²/s is below minimum threshold "
+            f"({optimal_min} µmol/m²/s)"
+        )
+    else:
+        message = (
+            f"PAR {par} µmol/m²/s is above maximum threshold "
+            f"({optimal_max} µmol/m²/s)"
+        )
+
+    alert = SensorAlert(
+        SensorId=sensor_id,
+        ReadingId=reading_id,
+        PepperId=pepper_id,
+        MetricName="PAR",
+        ActualValue=par,
+        MinAllowed=float(optimal_min) if optimal_min is not None else None,
+        MaxAllowed=float(optimal_max) if optimal_max is not None else None,
+        Severity="warning",
+        Message=message,
+        IsResolved=False,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
 
 
 def parse_utc_datetime(value: str | None) -> datetime | None:
@@ -99,17 +210,24 @@ def save_single_reading(db: Session, reading: dict[str, Any]) -> tuple[bool, int
 
     lat, lng = extract_location(reading)
 
+    temperature = reading.get("Temperature")
+    humidity = reading.get("Humidity")
+
     sensor_reading = SensorReading(
         SensorId=sensor.SensorId,
         MacAddress=reading.get("mac"),
         DeviceName=reading.get("device_name"),
 
-        Temperature=reading.get("Temperature"),
-        Humidity=reading.get("Humidity"),
+        Temperature=temperature,
+        Humidity=humidity,
         Leak=reading.get("Leak"),
         VibrationSD=reading.get("Vibration SD"),
         BatteryLevel=reading.get("Battery Level"),
-        Radiation=reading.get("Radiation"),
+        PAR=generate_par(
+            sample_time=sample_time,
+            temperature=temperature,
+            humidity=humidity,
+        ),
 
         SampleTimeUtc=sample_time,
         GatewayReadTimeUtc=parse_utc_datetime(reading.get("gw_read_time_utc")),

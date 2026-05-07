@@ -53,7 +53,8 @@ def _mock_pepper(
         OptimalSoilMoistureMax=None,
         OptimalTempMinC=None,
         OptimalTempMaxC=None,
-        OptimalSunlightHours=None,
+        OptimalPARMin=None,
+        OptimalPARMax=None,
         ImageUrl=image_url,
         Zone=None,
         GeneralDescription=description,
@@ -128,7 +129,8 @@ class TestUpdatePepperSuccess:
                 "OptimalSoilMoistureMax": 55.0,
                 "OptimalTempMinC": 15.0,
                 "OptimalTempMaxC": 28.0,
-                "OptimalSunlightHours": 7.0,
+                "OptimalPARMin": 300.0,
+                "OptimalPARMax": 900.0,
             }
             response = test_client.put("/api/peppers/1", json=payload)
 
@@ -257,10 +259,10 @@ class TestUpdatePepperValidationErrors:
         response = test_client.put("/api/peppers/1", json={"OptimalTempMaxC": 81.0})
         assert response.status_code == 422
 
-    def test_sunlight_hours_above_24_returns_422(self, client):
-        """OptimalSunlightHours > 24 → 422."""
+    def test_par_above_2000_returns_422(self, client):
+        """OptimalPARMin > 2000 → 422."""
         test_client, _ = client
-        response = test_client.put("/api/peppers/1", json={"OptimalSunlightHours": 25.0})
+        response = test_client.put("/api/peppers/1", json={"OptimalPARMin": 2001.0})
         assert response.status_code == 422
 
     def test_pepper_name_exceeds_max_length_returns_422(self, client):

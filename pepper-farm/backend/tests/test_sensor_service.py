@@ -20,7 +20,7 @@ import models.farm_zone       # noqa: F401
 import models.user            # noqa: F401
 import models.plant           # noqa: F401
 
-from models.sensor import Sensor, SensorReading, SensorSyncState
+from models.sensor import Sensor, SensorReading, SensorSyncState, SensorAlert
 from services.sensor_service import (
     parse_utc_datetime,
     extract_location,
@@ -33,6 +33,9 @@ from services.sensor_service import (
     sync_sensor_readings,
     get_latest_sensor_reading,
     get_sensor_readings_from_db,
+    generate_par,
+    check_par_threshold,
+    create_par_alert_if_needed,
 )
 
 # ------------------------------------------------------------------ #
@@ -77,7 +80,6 @@ def make_atomation_reading(**overrides):
         "Leak": 0.0,
         "Vibration SD": 0.1,
         "Battery Level": 85.0,
-        "Radiation": 0.05,
         "sample_time_utc": "2026-04-27T09:13:17.000Z",
         "gw_read_time_utc": "2026-04-27T09:13:20.000Z",
         "created_at": "2026-04-27T09:13:25.000Z",
@@ -417,3 +419,299 @@ def test_get_sensor_readings_filters_by_date_range(db):
         end_date=datetime(2026, 4, 28, 0, 0),
     )
     assert len(results) == 1
+
+
+# ------------------------------------------------------------------ #
+# 12. generate_par – US20 PAR generation realism
+# ------------------------------------------------------------------ #
+def test_generate_par_returns_non_negative_value():
+    assert generate_par() >= 0.0
+
+
+def test_generate_par_returns_value_within_clamp_range():
+    assert 0.0 <= generate_par() <= 1500.0
+
+
+def test_generate_par_with_all_none_inputs_does_not_crash():
+    result = generate_par(sample_time=None, temperature=None, humidity=None)
+    assert 0.0 <= result <= 1500.0
+
+
+def test_generate_par_result_is_rounded_to_two_decimal_places():
+    result = generate_par()
+    assert result == round(result, 2)
+
+
+def test_generate_par_never_returns_negative_over_many_runs():
+    """Gaussian noise can drive the raw value below 0; clamp must prevent it."""
+    import random
+    random.seed(0)
+    night = datetime(2026, 4, 27, 3, 0, 0)
+    for _ in range(300):
+        val = generate_par(sample_time=night, temperature=4.0, humidity=95.0)
+        assert val >= 0.0, f"Negative PAR generated: {val}"
+
+
+def test_generate_par_never_exceeds_1500_over_many_runs():
+    """Hot midday with dry air could push past 1500 without the clamp."""
+    import random
+    random.seed(1)
+    midday = datetime(2026, 4, 27, 12, 0, 0)
+    for _ in range(300):
+        val = generate_par(sample_time=midday, temperature=40.0, humidity=15.0)
+        assert val <= 1500.0, f"PAR exceeded clamp: {val}"
+
+
+def test_generate_par_midday_average_higher_than_night_average():
+    """Midday hours should produce substantially higher PAR than night hours."""
+    import random
+    random.seed(42)
+    midday = datetime(2026, 4, 27, 12, 0, 0)
+    night = datetime(2026, 4, 27, 2, 0, 0)
+
+    midday_avg = sum(generate_par(sample_time=midday) for _ in range(100)) / 100
+    night_avg = sum(generate_par(sample_time=night) for _ in range(100)) / 100
+
+    assert midday_avg > night_avg
+
+
+def test_generate_par_high_humidity_lowers_average_par():
+    """Very high humidity (cloud cover) should reduce average PAR."""
+    import random
+    random.seed(10)
+    midday = datetime(2026, 4, 27, 12, 0, 0)
+
+    clear_avg = sum(
+        generate_par(sample_time=midday, temperature=25.0, humidity=40.0)
+        for _ in range(100)
+    ) / 100
+    cloudy_avg = sum(
+        generate_par(sample_time=midday, temperature=25.0, humidity=92.0)
+        for _ in range(100)
+    ) / 100
+
+    assert cloudy_avg < clear_avg
+
+
+# ------------------------------------------------------------------ #
+# 13. check_par_threshold – US20 threshold comparison logic
+# ------------------------------------------------------------------ #
+def test_check_par_below_min_returns_low():
+    assert check_par_threshold(100.0, 200.0, 800.0) == "low"
+
+
+def test_check_par_above_max_returns_high():
+    assert check_par_threshold(900.0, 200.0, 800.0) == "high"
+
+
+def test_check_par_within_range_returns_none():
+    assert check_par_threshold(500.0, 200.0, 800.0) is None
+
+
+def test_check_par_at_exact_min_boundary_is_valid():
+    """PAR == OptimalPARMin is exactly at the lower bound – no alert."""
+    assert check_par_threshold(200.0, 200.0, 800.0) is None
+
+
+def test_check_par_at_exact_max_boundary_is_valid():
+    """PAR == OptimalPARMax is exactly at the upper bound – no alert."""
+    assert check_par_threshold(800.0, 200.0, 800.0) is None
+
+
+def test_check_par_none_par_returns_none():
+    """Missing PAR must not crash and must return None (no alert)."""
+    assert check_par_threshold(None, 200.0, 800.0) is None
+
+
+def test_check_par_none_min_suppresses_low_alert():
+    """If OptimalPARMin is absent, low-end violation is not flagged."""
+    assert check_par_threshold(50.0, None, 800.0) is None
+
+
+def test_check_par_none_max_suppresses_high_alert():
+    """If OptimalPARMax is absent, high-end violation is not flagged."""
+    assert check_par_threshold(1200.0, 200.0, None) is None
+
+
+def test_check_par_both_thresholds_none_returns_none():
+    """No thresholds configured → never alert regardless of PAR value."""
+    assert check_par_threshold(500.0, None, None) is None
+
+
+def test_check_par_none_par_with_both_thresholds_none():
+    assert check_par_threshold(None, None, None) is None
+
+
+def test_check_par_accepts_decimal_thresholds():
+    """Thresholds fetched from DB arrive as Decimal; float() cast must handle them."""
+    from decimal import Decimal
+    assert check_par_threshold(100.0, Decimal("200.00"), Decimal("800.00")) == "low"
+    assert check_par_threshold(900.0, Decimal("200.00"), Decimal("800.00")) == "high"
+    assert check_par_threshold(500.0, Decimal("200.00"), Decimal("800.00")) is None
+
+
+# ------------------------------------------------------------------ #
+# 14. create_par_alert_if_needed – US20 alert triggering
+# ------------------------------------------------------------------ #
+def _make_sensor_and_reading(db) -> tuple[int, int]:
+    """Insert a Sensor + SensorReading; return (sensor_id, reading_id)."""
+    sensor = Sensor(MacAddress="PAR:TEST:01", IsActive=True)
+    db.add(sensor)
+    db.commit()
+
+    reading = SensorReading(
+        SensorId=sensor.SensorId,
+        MacAddress="PAR:TEST:01",
+        SampleTimeUtc=datetime(2026, 4, 27, 12, 0, 0),
+        PAR=500.0,
+        RawJson="{}",
+    )
+    db.add(reading)
+    db.commit()
+    return sensor.SensorId, reading.ReadingId
+
+
+def test_create_par_alert_below_min_creates_alert(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    alert = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=100.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert alert is not None
+    assert alert.MetricName == "PAR"
+    assert alert.ActualValue == 100.0
+    assert alert.MinAllowed == 200.0
+    assert alert.MaxAllowed == 800.0
+    assert "below" in alert.Message.lower()
+
+
+def test_create_par_alert_above_max_creates_alert(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    alert = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=900.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert alert is not None
+    assert alert.MetricName == "PAR"
+    assert alert.ActualValue == 900.0
+    assert "above" in alert.Message.lower()
+
+
+def test_create_par_alert_within_range_returns_none(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    result = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=500.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert result is None
+    assert db.query(SensorAlert).count() == 0
+
+
+def test_create_par_alert_none_par_returns_none(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    result = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=None, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert result is None
+    assert db.query(SensorAlert).count() == 0
+
+
+def test_create_par_alert_none_thresholds_returns_none(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    result = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=500.0, optimal_min=None, optimal_max=None,
+    )
+    assert result is None
+    assert db.query(SensorAlert).count() == 0
+
+
+def test_create_par_alert_at_exact_min_boundary_no_alert(db):
+    """PAR == OptimalPARMin is valid – must not create an alert."""
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    result = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=200.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert result is None
+
+
+def test_create_par_alert_at_exact_max_boundary_no_alert(db):
+    """PAR == OptimalPARMax is valid – must not create an alert."""
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    result = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=800.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert result is None
+
+
+def test_create_par_alert_sets_severity_warning(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    alert = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=50.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    assert alert.Severity == "warning"
+
+
+def test_create_par_alert_persisted_to_db(db):
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    alert = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=None,
+        par=50.0, optimal_min=200.0, optimal_max=800.0,
+    )
+    stored = db.query(SensorAlert).filter_by(AlertId=alert.AlertId).first()
+    assert stored is not None
+    assert stored.MetricName == "PAR"
+
+
+def test_create_par_alert_with_pepper_id(db):
+    from models.pepper_variety import PepperVariety
+    variety = PepperVariety(
+        PepperName="Habanero",
+        OptimalPARMin=200.0,
+        OptimalPARMax=800.0,
+        IsActive=True,
+    )
+    db.add(variety)
+    db.commit()
+
+    sensor_id, reading_id = _make_sensor_and_reading(db)
+    alert = create_par_alert_if_needed(
+        db, sensor_id, reading_id, pepper_id=variety.PepperId,
+        par=50.0,
+        optimal_min=float(variety.OptimalPARMin),
+        optimal_max=float(variety.OptimalPARMax),
+    )
+    assert alert is not None
+    assert alert.PepperId == variety.PepperId
+
+
+# ------------------------------------------------------------------ #
+# 15. PAR field stored in save_single_reading
+# ------------------------------------------------------------------ #
+def test_save_single_reading_stores_par_value(db):
+    """Every new reading must carry a generated PAR value within valid bounds."""
+    _, reading_id = save_single_reading(db, make_atomation_reading())
+
+    saved = db.query(SensorReading).filter_by(ReadingId=reading_id).first()
+    assert saved.PAR is not None
+    assert 0.0 <= saved.PAR <= 1500.0
+
+
+# ------------------------------------------------------------------ #
+# 16. Radiation / UV cleanup – US20 migration verification
+# ------------------------------------------------------------------ #
+def test_sensor_reading_has_no_radiation_attribute():
+    assert not hasattr(SensorReading, "Radiation")
+
+
+def test_sensor_reading_has_no_uv_attribute():
+    assert not hasattr(SensorReading, "UV")
+
+
+def test_pepper_variety_has_no_optimal_sunlight_hours_attribute():
+    from models.pepper_variety import PepperVariety
+    assert not hasattr(PepperVariety, "OptimalSunlightHours")

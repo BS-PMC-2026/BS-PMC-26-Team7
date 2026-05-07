@@ -28,7 +28,7 @@ class SensorReadingResponse(BaseModel):
     Leak: Optional[float] = None
     VibrationSD: Optional[float] = None
     BatteryLevel: Optional[float] = None
-    Radiation: Optional[float] = None
+    PAR: Optional[float] = None
 
     SampleTimeUtc: datetime
     GatewayReadTimeUtc: Optional[datetime] = None

@@ -11,7 +11,8 @@ class PepperCreate(BaseModel):
     OptimalSoilMoistureMax: Optional[float] = None
     OptimalTempMinC: Optional[float] = None
     OptimalTempMaxC: Optional[float] = None
-    OptimalSunlightHours: Optional[float] = None
+    OptimalPARMin: Optional[float] = None
+    OptimalPARMax: Optional[float] = None
     ImageUrl: Optional[str] = Field(None, max_length=500)
     Zone: Optional[str] = Field(None, max_length=500)
     GeneralDescription: Optional[str] = Field(None, max_length=1000)
@@ -84,11 +85,11 @@ class PepperCreate(BaseModel):
             raise ValueError("Temperature must be between -50 and 80 Celsius.")
         return value
 
-    @field_validator("OptimalSunlightHours")
+    @field_validator("OptimalPARMin", "OptimalPARMax")
     @classmethod
-    def validate_sunlight_hours(cls, value: Optional[float]) -> Optional[float]:
-        if value is not None and (value < 0 or value > 24):
-            raise ValueError("Sunlight hours must be between 0 and 24.")
+    def validate_par(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and (value < 0 or value > 2000):
+            raise ValueError("PAR must be between 0 and 2000 µmol/m²/s.")
         return value
 
     @model_validator(mode="after")
@@ -114,6 +115,13 @@ class PepperCreate(BaseModel):
         ):
             raise ValueError("OptimalTempMinC cannot be greater than OptimalTempMaxC.")
 
+        if (
+            self.OptimalPARMin is not None
+            and self.OptimalPARMax is not None
+            and self.OptimalPARMin > self.OptimalPARMax
+        ):
+            raise ValueError("OptimalPARMin cannot be greater than OptimalPARMax.")
+
         return self
 
 
@@ -127,7 +135,8 @@ class PepperUpdate(BaseModel):
     OptimalSoilMoistureMax: Optional[float] = None
     OptimalTempMinC: Optional[float] = None
     OptimalTempMaxC: Optional[float] = None
-    OptimalSunlightHours: Optional[float] = None
+    OptimalPARMin: Optional[float] = None
+    OptimalPARMax: Optional[float] = None
     ImageUrl: Optional[str] = Field(None, max_length=500)
     Zone: Optional[str] = Field(None, max_length=500)
     GeneralDescription: Optional[str] = Field(None, max_length=1000)
@@ -186,11 +195,11 @@ class PepperUpdate(BaseModel):
             raise ValueError("Temperature must be between -50 and 80 Celsius.")
         return value
 
-    @field_validator("OptimalSunlightHours")
+    @field_validator("OptimalPARMin", "OptimalPARMax")
     @classmethod
-    def validate_sunlight_hours(cls, value: Optional[float]) -> Optional[float]:
-        if value is not None and (value < 0 or value > 24):
-            raise ValueError("Sunlight hours must be between 0 and 24.")
+    def validate_par(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and (value < 0 or value > 2000):
+            raise ValueError("PAR must be between 0 and 2000 µmol/m²/s.")
         return value
 
 
@@ -204,7 +213,8 @@ class PepperResponse(BaseModel):
     OptimalSoilMoistureMax: Optional[float] = None
     OptimalTempMinC: Optional[float] = None
     OptimalTempMaxC: Optional[float] = None
-    OptimalSunlightHours: Optional[float] = None
+    OptimalPARMin: Optional[float] = None
+    OptimalPARMax: Optional[float] = None
     ImageUrl: Optional[str] = None
     Zone: Optional[str] = None
     GeneralDescription: Optional[str] = None

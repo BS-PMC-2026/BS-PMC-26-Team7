@@ -34,17 +34,18 @@ function sensorLabel(s: SensorInfo): string {
 }
 
 const METRIC_CONFIG = [
-  { key: 'Temperature'  as const, label: 'Temperature', unit: '°C', color: '#F59E0B', digits: 2 },
-  { key: 'Humidity'     as const, label: 'Humidity',    unit: '%',  color: '#3B82F6', digits: 2 },
-  { key: 'Leak'         as const, label: 'Leak',        unit: '',   color: '#EF4444', digits: 3 },
-  { key: 'BatteryLevel' as const, label: 'Battery',     unit: '%',  color: '#10B981', digits: 0 },
+  { key: 'Temperature'  as const, label: 'Temperature',       unit: '°C',          color: '#F59E0B', digits: 2 },
+  { key: 'Humidity'     as const, label: 'Humidity',          unit: '%',            color: '#3B82F6', digits: 2 },
+  { key: 'Leak'         as const, label: 'Leak',              unit: '',             color: '#EF4444', digits: 3 },
+  { key: 'BatteryLevel' as const, label: 'Battery',           unit: '%',            color: '#10B981', digits: 0 },
+  { key: 'PAR'          as const, label: 'PAR',               unit: 'µmol/m²/s',   color: '#A855F7', digits: 2 },
 ];
 
 type MetricKey = typeof METRIC_CONFIG[number]['key'];
 
 type SortKey =
   | 'SampleTimeUtc' | 'ReadingId' | 'ReadingType' | 'Latitude'
-  | 'Temperature'   | 'Humidity'  | 'Leak'         | 'BatteryLevel';
+  | 'Temperature'   | 'Humidity'  | 'Leak'         | 'BatteryLevel' | 'PAR';
 type SortDir = 'asc' | 'desc';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -422,6 +423,7 @@ export default function SensorDashboardPage() {
         Humidity:     r.Humidity     ?? null,
         Leak:         r.Leak         ?? null,
         BatteryLevel: r.BatteryLevel ?? null,
+        PAR:          r.PAR          ?? null,
       })),
     [explorerReadings]
   );

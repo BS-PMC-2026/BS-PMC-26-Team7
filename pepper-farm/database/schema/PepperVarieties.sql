@@ -12,7 +12,8 @@
 -- | OptimalSoilMoistureMax | DECIMAL(5,2)  | YES      |                   |                        |
 -- | OptimalTempMinC        | DECIMAL(5,2)  | YES      |                   |                        |
 -- | OptimalTempMaxC        | DECIMAL(5,2)  | YES      |                   |                        |
--- | OptimalSunlightHours   | DECIMAL(4,2)  | YES      |                   |                        |
+-- | OptimalPARMin          | DECIMAL(7,2)  | YES      |                   | µmol/m²/s              |
+-- | OptimalPARMax          | DECIMAL(7,2)  | YES      |                   | µmol/m²/s              |
 -- | ImageUrl               | NVARCHAR(500) | YES      |                   |                        |
 -- | Zone                   | NVARCHAR(500) | YES      |                   |                        |
 -- | GeneralDescription     | NVARCHAR(1000)| YES      |                   |                        |
