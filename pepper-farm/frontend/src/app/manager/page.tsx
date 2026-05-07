@@ -1,8 +1,36 @@
-import Link from "next/link";
+'use client';
+
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { getAnomalySummary } from '@/services/anomalies';
+import AnomalySummaryCards from '@/components/anomalies/AnomalySummaryCards';
+import type { AnomalySummary } from '@/types/anomaly';
+
+const NAV_CARDS = [
+  { href: '/manager/users',              icon: '👥', title: 'User Management',   sub: 'Promote visitors to employees' },
+  { href: '/manager/peppers',            icon: '🌶️', title: 'Peppers',           sub: 'Manage pepper varieties' },
+  { href: '/manager/products',           icon: '🛒', title: 'Products',          sub: 'View the product catalog' },
+  { href: '/manager/tasks',              icon: '📋', title: 'Tasks',             sub: 'Manage farm tasks' },
+  { href: '/manager/inventory',          icon: '📦', title: 'Inventory',         sub: 'Update warehouse stock quantities' },
+  { href: '/manager/map',                icon: '🗺️', title: 'Farm Map',          sub: 'Update plant locations on map' },
+  { href: '/manager/reports/open-tasks', icon: '📊', title: 'Open Tasks Report', sub: 'View all open tasks' },
+  { href: '/manager/anomalies',          icon: '📡', title: 'Sensor Anomalies',  sub: 'Live anomaly dashboard' },
+];
 
 export default function ManagerPage() {
+  const [summary, setSummary] = useState<AnomalySummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  useEffect(() => {
+    getAnomalySummary()
+      .then(setSummary)
+      .catch(() => setSummary(null))
+      .finally(() => setSummaryLoading(false));
+  }, []);
+
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* Page header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <h1 className="text-2xl font-bold text-gray-800">🌶️ PepperFarm</h1>
