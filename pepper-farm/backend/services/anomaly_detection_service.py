@@ -1,42 +1,46 @@
 """
-Anomaly Detection Service — Phase 2 (Trigger-Based)
+Anomaly Detection Service — Phase 3 (Threshold-Based, All Readings)
 
 Flow:
     process_sensor_reading()          ← called by the router
         create_sensor_reading()       ← inserts the reading (flush only)
-        if ReadingType != 'Trigger'   ← skip alert creation, commit and return
         query SensorAssignment        ← find active assignment for the sensor
-        query PepperThreshold         ← find active thresholds for the pepper
-        analyze_reading()             ← use TriggersJson to find triggered metrics
-        create_alert()  ×N            ← persist each alert (dedup inside)
+        if no assignment              ← commit and return (no alerts)
+        query Plant[]                 ← find all active plants in that zone
+        for each distinct PepperId:
+            query PepperVariety       ← get optimal thresholds from the pepper itself
+            if no variety             ← skip this pepper
+            _rule_based_check()       ← compare reading values against variety thresholds
+            create_alert() ×N         ← persist each anomaly (dedup inside)
         db.commit()                   ← single atomic commit
 
-Only readings with ReadingType='Trigger' generate alerts.
-TriggersJson (set by the sensor device) determines which metrics fired.
-Thresholds are used only for MinAllowed/MaxAllowed/Severity enrichment.
+Every reading is saved regardless of ReadingType.
+TriggersJson is NOT used for anomaly decisions.
+Thresholds come from PepperVariety.OptimalTempMinC/MaxC and OptimalSoilMoistureMin/Max.
+Deduplication key: (ReadingId, MetricName, PepperId).
 """
 
-import json
 from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+import json
 
 from models.sensor import SensorReading
 from models.sensor import SensorAssignment
-from models.sensor import PepperThreshold
 from models.sensor import SensorAlert
+from models.plant import Plant
+from models.pepper_variety import PepperVariety
 from schemas.sensor_reading import AlertResult, SensorReadingCreate, SensorReadingResponse
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Severity helpers
 # ---------------------------------------------------------------------------
 
 def _compute_severity_range(actual: float, min_val: float, max_val: float) -> str:
     """
     High if deviation from midpoint exceeds 20% of the half-range.
-    Matches the SQL procedure logic in sp_DetectSensorAnomalies.
     """
     midpoint = (min_val + max_val) / 2.0
     half_range = (max_val - min_val) / 2.0
@@ -46,110 +50,62 @@ def _compute_severity_range(actual: float, min_val: float, max_val: float) -> st
     return "High" if deviation_pct > 20 else "Medium"
 
 
-def _compute_severity_leak(actual: float, max_leak: float) -> str:
-    """High if more than 50% above the MaxLeak threshold."""
-    if max_leak == 0:
-        return "High"  # any leak when MaxLeak=0 is immediately critical
-    return "High" if actual > max_leak * 1.5 else "Medium"
-
+# ---------------------------------------------------------------------------
+# Threshold-based anomaly detection
+# ---------------------------------------------------------------------------
 
 def _rule_based_check(
     reading: SensorReading,
-    threshold: PepperThreshold,
+    pepper: PepperVariety,
 ) -> list[dict]:
     """
-    Compare a reading against its pepper's thresholds.
-    Returns a list of dicts, each representing one anomaly.
-    Keys: metric, actual, min_allowed, max_allowed, severity, message
+    Compare a reading against a pepper variety's optimal thresholds.
+    Uses OptimalTempMinC/MaxC for temperature and
+    OptimalSoilMoistureMin/Max for humidity.
+    Returns a list of anomaly dicts with keys:
+      metric, actual, min_allowed, max_allowed, severity, message
     """
     anomalies: list[dict] = []
 
     # --- Temperature ---
+    min_temp = float(pepper.OptimalTempMinC) if pepper.OptimalTempMinC is not None else None
+    max_temp = float(pepper.OptimalTempMaxC) if pepper.OptimalTempMaxC is not None else None
     if (
         reading.Temperature is not None
-        and threshold.MinTemperature is not None
-        and threshold.MaxTemperature is not None
-        and (
-            reading.Temperature < threshold.MinTemperature
-            or reading.Temperature > threshold.MaxTemperature
-        )
+        and min_temp is not None
+        and max_temp is not None
+        and (reading.Temperature < min_temp or reading.Temperature > max_temp)
     ):
         anomalies.append({
             "metric": "Temperature",
             "actual": reading.Temperature,
-            "min_allowed": threshold.MinTemperature,
-            "max_allowed": threshold.MaxTemperature,
-            "severity": _compute_severity_range(
-                reading.Temperature, threshold.MinTemperature, threshold.MaxTemperature
-            ),
+            "min_allowed": min_temp,
+            "max_allowed": max_temp,
+            "severity": _compute_severity_range(reading.Temperature, min_temp, max_temp),
             "message": (
-                f"Temperature {reading.Temperature}°C is outside "
-                f"[{threshold.MinTemperature}, {threshold.MaxTemperature}] °C"
+                f"Temperature {reading.Temperature}°C is outside the optimal range "
+                f"[{min_temp}, {max_temp}] °C for {pepper.PepperName}"
             ),
         })
 
-    # --- Humidity ---
+    # --- Humidity (mapped from OptimalSoilMoistureMin/Max) ---
+    min_moisture = float(pepper.OptimalSoilMoistureMin) if pepper.OptimalSoilMoistureMin is not None else None
+    max_moisture = float(pepper.OptimalSoilMoistureMax) if pepper.OptimalSoilMoistureMax is not None else None
     if (
         reading.Humidity is not None
-        and threshold.MinHumidity is not None
-        and threshold.MaxHumidity is not None
-        and (
-            reading.Humidity < threshold.MinHumidity
-            or reading.Humidity > threshold.MaxHumidity
-        )
+        and min_moisture is not None
+        and max_moisture is not None
+        and (reading.Humidity < min_moisture or reading.Humidity > max_moisture)
     ):
         anomalies.append({
             "metric": "Humidity",
             "actual": reading.Humidity,
-            "min_allowed": threshold.MinHumidity,
-            "max_allowed": threshold.MaxHumidity,
-            "severity": _compute_severity_range(
-                reading.Humidity, threshold.MinHumidity, threshold.MaxHumidity
-            ),
+            "min_allowed": min_moisture,
+            "max_allowed": max_moisture,
+            "severity": _compute_severity_range(reading.Humidity, min_moisture, max_moisture),
             "message": (
-                f"Humidity {reading.Humidity}% is outside "
-                f"[{threshold.MinHumidity}, {threshold.MaxHumidity}] %"
-            ),
-        })
-
-    # --- Leak (one-sided: only upper bound) ---
-    if (
-        reading.Leak is not None
-        and threshold.MaxLeak is not None
-        and reading.Leak > threshold.MaxLeak
-    ):
-        anomalies.append({
-            "metric": "Leak",
-            "actual": reading.Leak,
-            "min_allowed": None,
-            "max_allowed": threshold.MaxLeak,
-            "severity": _compute_severity_leak(reading.Leak, threshold.MaxLeak),
-            "message": (
-                f"Leak index {reading.Leak} exceeds MaxLeak of {threshold.MaxLeak}"
-            ),
-        })
-
-    # --- Radiation ---
-    if (
-        reading.Radiation is not None
-        and threshold.MinRadiation is not None
-        and threshold.MaxRadiation is not None
-        and (
-            reading.Radiation < threshold.MinRadiation
-            or reading.Radiation > threshold.MaxRadiation
-        )
-    ):
-        anomalies.append({
-            "metric": "Radiation",
-            "actual": reading.Radiation,
-            "min_allowed": threshold.MinRadiation,
-            "max_allowed": threshold.MaxRadiation,
-            "severity": _compute_severity_range(
-                reading.Radiation, threshold.MinRadiation, threshold.MaxRadiation
-            ),
-            "message": (
-                f"Radiation {reading.Radiation} W/m² is outside "
-                f"[{threshold.MinRadiation}, {threshold.MaxRadiation}] W/m²"
+                f"Humidity {reading.Humidity}% is outside the optimal soil moisture range "
+                f"[{min_moisture}, {max_moisture}] % for {pepper.PepperName}"
             ),
         })
 
@@ -197,67 +153,6 @@ def create_sensor_reading(
         return None, str(exc)
 
 
-def _trigger_based_check(
-    reading: SensorReading,
-    threshold: Optional[PepperThreshold],
-) -> list[dict]:
-    """
-    Uses TriggersJson (device-determined) to decide which metrics are anomalous.
-    Thresholds are used only to enrich MinAllowed/MaxAllowed/Severity.
-    Metrics not in TriggersJson or with value=false are ignored.
-    """
-    triggers: dict = json.loads(reading.TriggersJson or "{}") if reading.TriggersJson else {}
-
-    # Map TriggersJson key -> (reading attr, min threshold attr, max threshold attr)
-    METRIC_CONFIG = {
-        "Temperature": ("Temperature", "MinTemperature", "MaxTemperature"),
-        "Humidity":    ("Humidity",    "MinHumidity",    "MaxHumidity"),
-        "Leak":        ("Leak",        None,             "MaxLeak"),
-        "Radiation":   ("Radiation",   "MinRadiation",   "MaxRadiation"),
-    }
-
-    anomalies: list[dict] = []
-    for metric, (reading_attr, min_attr, max_attr) in METRIC_CONFIG.items():
-        if not triggers.get(metric):
-            continue
-        actual = getattr(reading, reading_attr, None)
-        if actual is None:
-            continue
-
-        min_val = getattr(threshold, min_attr, None) if threshold and min_attr else None
-        max_val = getattr(threshold, max_attr, None) if threshold and max_attr else None
-
-        if metric == "Leak":
-            severity = _compute_severity_leak(actual, max_val) if max_val is not None else "Medium"
-        elif min_val is not None and max_val is not None:
-            severity = _compute_severity_range(actual, min_val, max_val)
-        else:
-            severity = "Medium"
-
-        anomalies.append({
-            "metric": metric,
-            "actual": actual,
-            "min_allowed": min_val,
-            "max_allowed": max_val,
-            "severity": severity,
-            "message": f"{metric} value {actual} triggered sensor alert",
-        })
-
-    return anomalies
-
-
-def analyze_reading(
-    reading: SensorReading,
-    threshold: Optional[PepperThreshold],
-) -> list[dict]:
-    """
-    Return a list of anomaly dicts for the given Trigger reading.
-    Uses TriggersJson to determine which metrics fired.
-    Does not write to the database.
-    """
-    return _trigger_based_check(reading, threshold)
-
-
 def create_alert(
     db: Session,
     reading: SensorReading,
@@ -271,7 +166,7 @@ def create_alert(
 ) -> SensorAlert:
     """
     Persist a single SensorAlert.
-    Deduplication: if an alert already exists for (ReadingId, MetricName), return it.
+    Deduplication: if an alert already exists for (ReadingId, MetricName, PepperId), return it.
     The caller is responsible for db.commit().
     """
     existing = (
@@ -279,6 +174,7 @@ def create_alert(
         .filter(
             SensorAlert.ReadingId == reading.ReadingId,
             SensorAlert.MetricName == metric,
+            SensorAlert.PepperId == pepper_id,
         )
         .first()
     )
@@ -310,14 +206,17 @@ def process_sensor_reading(
     Full pipeline:
       1. Insert reading
       2. Resolve active SensorAssignment
-      3. Resolve active PepperThreshold
-      4. Detect anomalies
-      5. Persist alerts (dedup inside create_alert)
+      3. Find all active Plants in that zone
+      4. For each distinct PepperId: get PepperVariety, run rule-based check
+      5. Persist alerts (dedup on ReadingId + MetricName + PepperId)
       6. Commit everything atomically
       7. Return response
 
-    If no assignment or no threshold exists, the reading is still saved
-    and the response contains zero alerts (not an error condition).
+    Every reading is saved. Alerts are generated based on threshold violations
+    using PepperVariety.OptimalTempMinC/MaxC and OptimalSoilMoistureMin/Max.
+
+    If no assignment exists or no plants are found, the reading is still saved
+    and the response contains zero alerts.
     """
     # 1. Insert reading (flush only)
     reading, error = create_sensor_reading(db, data)
@@ -326,51 +225,62 @@ def process_sensor_reading(
 
     alerts_created: list[SensorAlert] = []
 
-    # Only Trigger readings generate alerts
-    if data.readingType != "Trigger":
-        db.commit()
-        db.refresh(reading)
-        return SensorReadingResponse(readingId=reading.ReadingId, alertsCreated=0, alerts=[]), None
-
     # 2. Find active assignment
     assignment: Optional[SensorAssignment] = (
         db.query(SensorAssignment)
         .filter(
             SensorAssignment.SensorId == data.sensorId,
-            SensorAssignment.IsActive == True,  # noqa: E712
+            SensorAssignment.IsActive == True,       # noqa: E712
             SensorAssignment.AssignedToUtc == None,  # noqa: E711 — still open
         )
         .first()
     )
 
-    if assignment is not None and assignment.PepperId is not None:
-        # 3. Find active threshold for this pepper
-        threshold: Optional[PepperThreshold] = (
-            db.query(PepperThreshold)
+    if assignment is not None and assignment.ZoneId is not None:
+        # 3. Find all active plants in the zone
+        plants = (
+            db.query(Plant)
             .filter(
-                PepperThreshold.PepperId == assignment.PepperId,
-                PepperThreshold.IsActive == True,  # noqa: E712
+                Plant.ZoneId == assignment.ZoneId,
+                Plant.IsActive == True,  # noqa: E712
             )
-            .first()
+            .all()
         )
 
-        # 4. Detect anomalies from TriggersJson (threshold may be None)
-        anomalies = analyze_reading(reading, threshold)
+        # Collect distinct PepperIds
+        pepper_ids = list({p.PepperId for p in plants if p.PepperId is not None})
 
-        # 5. Persist one alert per anomaly
-        for anomaly in anomalies:
-            alert = create_alert(
-                db=db,
-                reading=reading,
-                pepper_id=assignment.PepperId,
-                metric=anomaly["metric"],
-                actual=anomaly["actual"],
-                min_allowed=anomaly["min_allowed"],
-                max_allowed=anomaly["max_allowed"],
-                severity=anomaly["severity"],
-                message=anomaly["message"],
+        for pepper_id in pepper_ids:
+            # 4a. Get the pepper variety (thresholds live here)
+            pepper: Optional[PepperVariety] = (
+                db.query(PepperVariety)
+                .filter(
+                    PepperVariety.PepperId == pepper_id,
+                    PepperVariety.IsActive == True,  # noqa: E712
+                )
+                .first()
             )
-            alerts_created.append(alert)
+
+            if pepper is None:
+                continue  # pepper not found or inactive — skip
+
+            # 4b. Detect threshold violations
+            anomalies = _rule_based_check(reading, pepper)
+
+            # 5. Persist one alert per anomaly
+            for anomaly in anomalies:
+                alert = create_alert(
+                    db=db,
+                    reading=reading,
+                    pepper_id=pepper_id,
+                    metric=anomaly["metric"],
+                    actual=anomaly["actual"],
+                    min_allowed=anomaly["min_allowed"],
+                    max_allowed=anomaly["max_allowed"],
+                    severity=anomaly["severity"],
+                    message=anomaly["message"],
+                )
+                alerts_created.append(alert)
 
     # 6. Single atomic commit
     db.commit()
@@ -379,6 +289,7 @@ def process_sensor_reading(
     # 7. Build response
     alert_results = [
         AlertResult(
+            pepperId=a.PepperId,
             metricName=a.MetricName,
             actualValue=a.ActualValue,
             minAllowed=a.MinAllowed,
@@ -389,9 +300,8 @@ def process_sensor_reading(
         for a in alerts_created
     ]
 
-    response = SensorReadingResponse(
+    return SensorReadingResponse(
         readingId=reading.ReadingId,
         alertsCreated=len(alert_results),
         alerts=alert_results,
-    )
-    return response, None
+    ), None

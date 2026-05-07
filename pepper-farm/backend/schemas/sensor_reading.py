@@ -24,6 +24,7 @@ class SensorReadingCreate(BaseModel):
 
 
 class AlertResult(BaseModel):
+    pepperId: Optional[int] = None
     metricName: str
     actualValue: float
     minAllowed: Optional[float]
