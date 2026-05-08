@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import PepperCard from '@/components/peppers/PepperCard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import { Pepper } from '@/types/pepper';
 import { getAllPeppers } from '@/services/peppers';
 
 export default function ManagerPeppersPage() {
+  const router = useRouter();
   const [peppers, setPeppers] = useState<Pepper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +38,22 @@ export default function ManagerPeppersPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
         <PageHeader
+          label="Manager Dashboard"
           title="Pepper Varieties"
           subtitle="Manage pepper varieties in the farm"
           action={
-            <Link href="/manager/peppers/create">
-              <Button>+ Add Pepper</Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/manager')}
+              >
+                ← Dashboard
+              </Button>
+              <Link href="/manager/peppers/create">
+                <Button>+ Add Pepper</Button>
+              </Link>
+            </div>
           }
         />
       </div>

@@ -9,7 +9,6 @@ class SensorReadingCreate(BaseModel):
     temperature: Optional[float] = None
     humidity: Optional[float] = None
     leak: Optional[float] = None
-    radiation: Optional[float] = None
     batteryLevel: Optional[float] = None
     readingType: Optional[str] = Field(None, max_length=50)
     rawJson: Optional[dict] = None  # serialised to JSON string before DB insert

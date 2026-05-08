@@ -32,7 +32,7 @@ export type SensorReading = {
   Leak?: number | null;
   VibrationSD?: number | null;
   BatteryLevel?: number | null;
-  Radiation?: number | null;
+  PAR?: number | null;
 
   SampleTimeUtc: string;
   GatewayReadTimeUtc?: string | null;

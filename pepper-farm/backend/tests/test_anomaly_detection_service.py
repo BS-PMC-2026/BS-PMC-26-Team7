@@ -144,6 +144,54 @@ def test_rule_based_check_detects_temperature_below_min():
     assert any(a["metric"] == "Temperature" for a in anomalies)
 
 
+# ------------------------------------------------------------------ #
+# 3. _trigger_based_check
+# ------------------------------------------------------------------ #
+def make_reading(triggers_json='{"Temperature": true}', **kwargs):
+    """Build a SensorReading mock with sensible defaults."""
+    reading = MagicMock(spec=SensorReading)
+    reading.Temperature = kwargs.get("Temperature", 35.0)
+    reading.Humidity = kwargs.get("Humidity", 60.0)
+    reading.Leak = kwargs.get("Leak", 0.0)
+    reading.TriggersJson = triggers_json
+    return reading
+
+
+def make_threshold():
+    threshold = MagicMock(spec=PepperThreshold)
+    threshold.MinTemperature = 18.0
+    threshold.MaxTemperature = 30.0
+    threshold.MinHumidity = 40.0
+    threshold.MaxHumidity = 80.0
+    threshold.MaxLeak = 2.0
+    return threshold
+
+
+def test_trigger_based_check_returns_anomaly_when_metric_triggered():
+    reading = make_reading(triggers_json='{"Temperature": true}', Temperature=35.0)
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+
+    assert len(anomalies) == 1
+    assert anomalies[0]["metric"] == "Temperature"
+    assert anomalies[0]["actual"] == 35.0
+    assert anomalies[0]["min_allowed"] == 18.0
+    assert anomalies[0]["max_allowed"] == 30.0
+
+
+def test_trigger_based_check_skips_metrics_not_in_triggers():
+    """Metrics not in TriggersJson must be ignored, even if outside range."""
+    reading = make_reading(
+        triggers_json='{"Temperature": true}',
+        Temperature=35.0,
+        Humidity=99.0,
+    )
+    threshold = make_threshold()
+    anomalies = _trigger_based_check(reading, threshold)
+
+    metrics = [a["metric"] for a in anomalies]
+    assert "Temperature" in metrics
+    assert "Humidity" not in metrics
 def test_rule_based_check_skips_temperature_when_reading_is_none():
     reading = make_reading_mock()
     reading.Temperature = None
@@ -371,6 +419,14 @@ def test_process_creates_separate_alerts_per_pepper(db):
     db.add(assignment)
     db.commit()
 
+    threshold = PepperThreshold(
+        PepperId=1,
+        MinTemperature=18.0, MaxTemperature=30.0,
+        MinHumidity=40.0, MaxHumidity=80.0,
+        MaxLeak=2.0,
+        IsActive=True,
+    )
+    db.add(threshold)
     pepper1 = PepperVariety(PepperId=1, PepperName="Pepper-1", OptimalTempMinC=18.0, OptimalTempMaxC=30.0, IsActive=True)
     pepper2 = PepperVariety(PepperId=2, PepperName="Pepper-2", OptimalTempMinC=20.0, OptimalTempMaxC=28.0, IsActive=True)
     plant1 = Plant(PlantCode="P1", ZoneId=1, PepperId=1, IsActive=True)
@@ -398,7 +454,7 @@ def test_process_skips_pepper_with_no_variety_record(db):
     response, error = process_sensor_reading(db, data)
 
     assert error is None
-    assert response.alertsCreated == 0
+    assert response.alertsCreated == 1
 
 
 def test_process_skips_pepper_with_no_temperature_thresholds(db):

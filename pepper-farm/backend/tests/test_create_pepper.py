@@ -53,7 +53,8 @@ def _mock_pepper(
         OptimalSoilMoistureMax=None,
         OptimalTempMinC=None,
         OptimalTempMaxC=None,
-        OptimalSunlightHours=None,
+        OptimalPARMin=None,
+        OptimalPARMax=None,
         ImageUrl=image_url,
         Zone=None,
         GeneralDescription=description,
@@ -126,7 +127,8 @@ class TestCreatePepperSuccess:
                 "OptimalSoilMoistureMax": 60.0,
                 "OptimalTempMinC": 18.0,
                 "OptimalTempMaxC": 30.0,
-                "OptimalSunlightHours": 8.0,
+                "OptimalPARMin": 200.0,
+                "OptimalPARMax": 800.0,
             }
             response = test_client.post("/api/peppers", json=payload)
 
@@ -247,19 +249,19 @@ class TestCreatePepperValidationErrors:
         )
         assert response.status_code == 422
 
-    def test_sunlight_hours_above_24(self, client):
-        """OptimalSunlightHours > 24 → 422."""
+    def test_par_above_2000(self, client):
+        """OptimalPARMin > 2000 → 422."""
         test_client, _ = client
         response = test_client.post(
-            "/api/peppers", json={**VALID_PAYLOAD, "OptimalSunlightHours": 25.0}
+            "/api/peppers", json={**VALID_PAYLOAD, "OptimalPARMin": 2001.0}
         )
         assert response.status_code == 422
 
-    def test_sunlight_hours_negative(self, client):
-        """OptimalSunlightHours < 0 → 422."""
+    def test_par_negative(self, client):
+        """OptimalPARMin < 0 → 422."""
         test_client, _ = client
         response = test_client.post(
-            "/api/peppers", json={**VALID_PAYLOAD, "OptimalSunlightHours": -1.0}
+            "/api/peppers", json={**VALID_PAYLOAD, "OptimalPARMin": -1.0}
         )
         assert response.status_code == 422
 
@@ -434,13 +436,13 @@ class TestCreatePepperEdgeCases:
             )
         assert response.status_code == 201
 
-    def test_sunlight_hours_exactly_24(self, client):
-        """OptimalSunlightHours = 24 (upper boundary) is valid → 201."""
+    def test_par_exactly_2000(self, client):
+        """OptimalPARMax = 2000 (upper boundary) is valid → 201."""
         test_client, _ = client
         pepper = _mock_pepper()
         with patch("routers.peppers.create_pepper", return_value=pepper):
             response = test_client.post(
-                "/api/peppers", json={**VALID_PAYLOAD, "OptimalSunlightHours": 24.0}
+                "/api/peppers", json={**VALID_PAYLOAD, "OptimalPARMax": 2000.0}
             )
         assert response.status_code == 201
 
@@ -610,15 +612,15 @@ class TestPepperCreateSchema:
         p = PepperCreate(PepperName="X", ImageUrl=None)
         assert p.ImageUrl is None
 
-    def test_schema_sunlight_hours_boundary_zero(self):
-        """OptimalSunlightHours = 0 is valid."""
-        p = PepperCreate(PepperName="X", OptimalSunlightHours=0.0)
-        assert p.OptimalSunlightHours == 0.0
+    def test_schema_par_boundary_zero(self):
+        """OptimalPARMin = 0 is valid."""
+        p = PepperCreate(PepperName="X", OptimalPARMin=0.0)
+        assert p.OptimalPARMin == 0.0
 
-    def test_schema_sunlight_hours_boundary_24(self):
-        """OptimalSunlightHours = 24 is valid."""
-        p = PepperCreate(PepperName="X", OptimalSunlightHours=24.0)
-        assert p.OptimalSunlightHours == 24.0
+    def test_schema_par_boundary_2000(self):
+        """OptimalPARMax = 2000 is valid."""
+        p = PepperCreate(PepperName="X", OptimalPARMax=2000.0)
+        assert p.OptimalPARMax == 2000.0
 
     def test_schema_is_active_defaults_true(self):
         """IsActive defaults to True when not supplied."""
