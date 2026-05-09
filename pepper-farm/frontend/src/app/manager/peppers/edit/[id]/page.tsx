@@ -116,40 +116,172 @@ export default function EditPepperPage() {
   }
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-        <button type="button" onClick={() => router.push("/manager/peppers")} style={{ color: "#666", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}>
-          ← Back
-        </button>
-        <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: 0 }}>Edit Pepper Variety</h1>
+  <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 px-6 py-8">
+    <div className="mx-auto max-w-3xl">
+      
+      <button
+        type="button"
+        onClick={() => router.push("/manager/peppers")}
+        className="mb-6 text-sm font-medium text-gray-600 hover:text-green-700"
+      >
+        ← Back
+      </button>
+
+      <div className="rounded-2xl bg-white p-8 shadow-lg border border-gray-100">
+
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+          Edit Pepper Variety
+        </h1>
+
+        {successMessage && (
+          <div className="mb-4 rounded-xl bg-green-100 text-green-700 px-4 py-2 text-sm">
+            {successMessage}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 rounded-xl bg-red-100 text-red-700 px-4 py-2 text-sm">
+            {errorMessage}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          <input
+            name="PepperName"
+            placeholder="Pepper Name"
+            value={formData.PepperName}
+            onChange={handleChange}
+            required
+            className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-400 outline-none"
+          />
+
+          <input
+            name="ScientificName"
+            placeholder="Scientific Name"
+            value={formData.ScientificName}
+            onChange={handleChange}
+            className="w-full border rounded-xl px-4 py-3"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              name="HeatLevelScovilleMin"
+              type="number"
+              placeholder="Heat Min"
+              value={formData.HeatLevelScovilleMin}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+            <input
+              name="HeatLevelScovilleMax"
+              type="number"
+              placeholder="Heat Max"
+              value={formData.HeatLevelScovilleMax}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              name="OptimalSoilMoistureMin"
+              type="number"
+              placeholder="Soil Min"
+              value={formData.OptimalSoilMoistureMin}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+            <input
+              name="OptimalSoilMoistureMax"
+              type="number"
+              placeholder="Soil Max"
+              value={formData.OptimalSoilMoistureMax}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              name="OptimalTempMinC"
+              type="number"
+              placeholder="Temp Min"
+              value={formData.OptimalTempMinC}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+            <input
+              name="OptimalTempMaxC"
+              type="number"
+              placeholder="Temp Max"
+              value={formData.OptimalTempMaxC}
+              onChange={handleChange}
+              className="border rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <input
+            name="OptimalSunlightHours"
+            type="number"
+            placeholder="Sunlight Hours"
+            value={formData.OptimalSunlightHours}
+            onChange={handleChange}
+            className="w-full border rounded-xl px-4 py-3"
+          />
+
+          <input
+            name="ImageUrl"
+            placeholder="Image URL"
+            value={formData.ImageUrl}
+            onChange={handleChange}
+            className="w-full border rounded-xl px-4 py-3"
+          />
+
+          <input
+            type="file"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            className="w-full"
+          />
+
+          <input
+            name="Zone"
+            placeholder="Zone"
+            value={formData.Zone}
+            onChange={handleChange}
+            className="w-full border rounded-xl px-4 py-3"
+          />
+
+          <textarea
+            name="GeneralDescription"
+            placeholder="Description"
+            value={formData.GeneralDescription}
+            onChange={handleChange}
+            rows={4}
+            className="w-full border rounded-xl px-4 py-3"
+          />
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              name="IsActive"
+              type="checkbox"
+              checked={formData.IsActive}
+              onChange={handleChange}
+            />
+            Active
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading || uploadingImage}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold"
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
-        <input name="PepperName" placeholder="Pepper Name" value={formData.PepperName} onChange={handleChange} required />
-        <input name="ScientificName" placeholder="Scientific Name" value={formData.ScientificName} onChange={handleChange} />
-        <input name="HeatLevelScovilleMin" type="number" step="1" placeholder="Heat Level Scoville Min" value={formData.HeatLevelScovilleMin} onChange={handleChange} />
-        <input name="HeatLevelScovilleMax" type="number" step="1" placeholder="Heat Level Scoville Max" value={formData.HeatLevelScovilleMax} onChange={handleChange} />
-        <input name="OptimalSoilMoistureMin" type="number" step="0.01" placeholder="Optimal Soil Moisture Min" value={formData.OptimalSoilMoistureMin} onChange={handleChange} />
-        <input name="OptimalSoilMoistureMax" type="number" step="0.01" placeholder="Optimal Soil Moisture Max" value={formData.OptimalSoilMoistureMax} onChange={handleChange} />
-        <input name="OptimalTempMinC" type="number" step="0.01" placeholder="Optimal Temp Min (C)" value={formData.OptimalTempMinC} onChange={handleChange} />
-        <input name="OptimalTempMaxC" type="number" step="0.01" placeholder="Optimal Temp Max (C)" value={formData.OptimalTempMaxC} onChange={handleChange} />
-        <input name="OptimalSunlightHours" type="number" step="0.01" placeholder="Optimal Sunlight Hours" value={formData.OptimalSunlightHours} onChange={handleChange} />
-        <input name="ImageUrl" placeholder="Image URL (optional)" value={formData.ImageUrl} onChange={handleChange} />
-        <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-        <input name="Zone" placeholder="Zone" value={formData.Zone} onChange={handleChange} />
-        <textarea name="GeneralDescription" placeholder="General Description" value={formData.GeneralDescription} onChange={handleChange} rows={5} />
-        <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <input name="IsActive" type="checkbox" checked={formData.IsActive} onChange={handleChange} />
-          Active
-        </label>
-
-        <button type="submit" disabled={loading || uploadingImage}>
-          {uploadingImage ? "Uploading image..." : loading ? "Saving..." : "Save Changes"}
-        </button>
-
-        {successMessage && <p style={{ color: "green", fontWeight: 600 }}>{successMessage}</p>}
-        {errorMessage && <p style={{ color: "red", fontWeight: 600 }}>{errorMessage}</p>}
-      </form>
     </div>
-  );
+  </div>
+);
 }

@@ -43,13 +43,13 @@ def update_pepper(db: Session, pepper_id: int, data: PepperUpdate) -> PepperVari
     for field, value in update_fields.items():
         setattr(pepper, field, value)
 
-    if update_fields:
-        db.add(
-            PepperEditLog(
-                PepperId=pepper_id,
-                ChangedFields=",".join(update_fields.keys()),
-            )
-        )
+   # if update_fields:
+    #    db.add(
+     #       PepperEditLog(
+      #          PepperId=pepper_id,
+       #         ChangedFields=",".join(update_fields.keys()),
+        #    )
+        #)
 
     db.commit()
     db.refresh(pepper)
