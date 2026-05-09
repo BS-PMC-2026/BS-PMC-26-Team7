@@ -9,13 +9,18 @@ Flow:
         query Plant[]                 - find all active plants in that zone
         for each distinct PepperId:
             query PepperVariety       - get optimal thresholds from the pepper itself
-            if no variety             - skip this pepper
+            if no active variety      - check if any variety exists at all:
+                                          inactive variety → skip silently
+                                          no variety at all → generic alert
             _rule_based_check()       - compare reading values against variety thresholds
             create_alert() x N        - persist each anomaly (dedup inside)
         db.commit()                   - single atomic commit
 
 Every reading is saved regardless of ReadingType.
-Thresholds come from PepperVariety.OptimalTempMinC/MaxC and OptimalSoilMoistureMin/Max.
+Thresholds come exclusively from PepperVariety:
+  Temperature  → OptimalTempMinC / OptimalTempMaxC
+  Soil moisture→ OptimalSoilMoistureMin / OptimalSoilMoistureMax
+  PAR          → OptimalPARMin / OptimalPARMax
 Deduplication key: (ReadingId, MetricName, PepperId).
 """
 
@@ -66,6 +71,17 @@ def _compute_severity_leak(value: float, max_val) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Metric → PepperVariety field mapping (for trigger-based checks)
+# ---------------------------------------------------------------------------
+
+_METRIC_CONFIG: dict[str, tuple[str, str, str]] = {
+    "Temperature": ("Temperature", "OptimalTempMinC",        "OptimalTempMaxC"),
+    "Humidity":    ("Humidity",    "OptimalSoilMoistureMin", "OptimalSoilMoistureMax"),
+    "PAR":         ("PAR",         "OptimalPARMin",          "OptimalPARMax"),
+}
+
+
+# ---------------------------------------------------------------------------
 # Rule-based anomaly detection (against PepperVariety thresholds)
 # ---------------------------------------------------------------------------
 
@@ -75,9 +91,9 @@ def _rule_based_check(
 ) -> list[dict]:
     """Compare a reading against a pepper variety's optimal thresholds.
 
-    Uses OptimalTempMinC/MaxC for temperature and
-    OptimalSoilMoistureMin/Max for humidity.
-    Returns a list of anomaly dicts with keys:
+    Checks Temperature (OptimalTempMinC/MaxC), soil moisture via Humidity
+    (OptimalSoilMoistureMin/Max), and PAR (OptimalPARMin/Max).
+    Returns anomaly dicts with keys:
       metric, actual, min_allowed, max_allowed, severity, message
     """
     anomalies: list[dict] = []
@@ -104,16 +120,8 @@ def _rule_based_check(
         })
 
     # --- Humidity (mapped from OptimalSoilMoistureMin/Max) ---
-    min_moisture = (
-        float(pepper.OptimalSoilMoistureMin)
-        if pepper.OptimalSoilMoistureMin is not None
-        else None
-    )
-    max_moisture = (
-        float(pepper.OptimalSoilMoistureMax)
-        if pepper.OptimalSoilMoistureMax is not None
-        else None
-    )
+    min_moisture = float(pepper.OptimalSoilMoistureMin) if pepper.OptimalSoilMoistureMin is not None else None
+    max_moisture = float(pepper.OptimalSoilMoistureMax) if pepper.OptimalSoilMoistureMax is not None else None
     if (
         reading.Humidity is not None
         and min_moisture is not None
@@ -129,6 +137,80 @@ def _rule_based_check(
             "message": (
                 f"Humidity {reading.Humidity}% is outside the optimal soil moisture range "
                 f"[{min_moisture}, {max_moisture}] % for {pepper.PepperName}"
+            ),
+        })
+
+    # --- PAR ---
+    min_par = float(pepper.OptimalPARMin) if pepper.OptimalPARMin is not None else None
+    max_par = float(pepper.OptimalPARMax) if pepper.OptimalPARMax is not None else None
+    if (
+        reading.PAR is not None
+        and min_par is not None
+        and max_par is not None
+        and (reading.PAR < min_par or reading.PAR > max_par)
+    ):
+        anomalies.append({
+            "metric": "PAR",
+            "actual": reading.PAR,
+            "min_allowed": min_par,
+            "max_allowed": max_par,
+            "severity": _compute_severity_range(reading.PAR, min_par, max_par),
+            "message": (
+                f"PAR {reading.PAR} µmol/m²/s is outside the optimal range "
+                f"[{min_par}, {max_par}] for {pepper.PepperName}"
+            ),
+        })
+
+    return anomalies
+
+
+# ---------------------------------------------------------------------------
+# Trigger-based anomaly detection (TriggersJson-driven, against PepperVariety)
+# ---------------------------------------------------------------------------
+
+def _trigger_based_check(
+    reading: SensorReading,
+    pepper: Optional[PepperVariety],
+) -> list[dict]:
+    """Create anomaly dicts only for metrics flagged true in TriggersJson.
+
+    Thresholds come from PepperVariety via _METRIC_CONFIG.
+    Metrics absent from TriggersJson are ignored even if out of range.
+    """
+    anomalies: list[dict] = []
+    try:
+        triggers: dict = json.loads(reading.TriggersJson or "{}")
+    except (json.JSONDecodeError, TypeError):
+        triggers = {}
+
+    for metric, (reading_attr, min_attr, max_attr) in _METRIC_CONFIG.items():
+        if not triggers.get(metric):
+            continue
+        actual = getattr(reading, reading_attr, None)
+        if actual is None:
+            continue
+
+        min_val = (
+            float(getattr(pepper, min_attr))
+            if pepper is not None and getattr(pepper, min_attr, None) is not None
+            else None
+        )
+        max_val = (
+            float(getattr(pepper, max_attr))
+            if pepper is not None and getattr(pepper, max_attr, None) is not None
+            else None
+        )
+
+        pepper_name = pepper.PepperName if pepper is not None else "unknown pepper"
+        anomalies.append({
+            "metric": metric,
+            "actual": actual,
+            "min_allowed": min_val,
+            "max_allowed": max_val,
+            "severity": _compute_severity_range(actual, min_val, max_val),
+            "message": (
+                f"{metric} {actual} triggered; optimal range "
+                f"[{min_val}, {max_val}] for {pepper_name}"
             ),
         })
 
@@ -293,7 +375,32 @@ def process_sensor_reading(
             )
 
             if pepper is None:
-                continue  # pepper not found or inactive -- skip
+                # Distinguish: inactive variety (skip) vs no variety record (generic alert)
+                any_pepper = (
+                    db.query(PepperVariety)
+                    .filter(PepperVariety.PepperId == pepper_id)
+                    .first()
+                )
+                if any_pepper is not None:
+                    continue  # variety exists but is inactive — skip silently
+                # No variety record at all — create a generic sensor-level alert
+                for metric, val in [("Temperature", reading.Temperature), ("Humidity", reading.Humidity)]:
+                    if val is not None:
+                        alert = create_alert(
+                            db=db,
+                            reading=reading,
+                            pepper_id=pepper_id,
+                            metric=metric,
+                            actual=val,
+                            min_allowed=None,
+                            max_allowed=None,
+                            severity="Medium",
+                            message=(
+                                f"{metric} {val} recorded; no variety configured for pepper_id={pepper_id}"
+                            ),
+                        )
+                        alerts_created.append(alert)
+                continue
 
             # 4b. Detect threshold violations
             anomalies = _rule_based_check(reading, pepper)

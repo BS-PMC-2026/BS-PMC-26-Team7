@@ -31,6 +31,7 @@ from schemas.sensor_reading import SensorReadingCreate
 from services.anomaly_detection_service import (
     _compute_severity_range,
     _rule_based_check,
+    _trigger_based_check,
     create_sensor_reading,
     create_alert,
     process_sensor_reading,
@@ -70,6 +71,7 @@ def make_reading_mock(**kwargs):
     reading = MagicMock(spec=SensorReading)
     reading.Temperature = kwargs.get("Temperature", 35.0)
     reading.Humidity = kwargs.get("Humidity", 60.0)
+    reading.PAR = kwargs.get("PAR", None)
     return reading
 
 
@@ -158,13 +160,15 @@ def make_reading(triggers_json='{"Temperature": true}', **kwargs):
 
 
 def make_threshold():
-    threshold = MagicMock(spec=PepperThreshold)
-    threshold.MinTemperature = 18.0
-    threshold.MaxTemperature = 30.0
-    threshold.MinHumidity = 40.0
-    threshold.MaxHumidity = 80.0
-    threshold.MaxLeak = 2.0
-    return threshold
+    pepper = MagicMock(spec=PepperVariety)
+    pepper.PepperName = "Test Pepper"
+    pepper.OptimalTempMinC = 18.0
+    pepper.OptimalTempMaxC = 30.0
+    pepper.OptimalSoilMoistureMin = 40.0
+    pepper.OptimalSoilMoistureMax = 80.0
+    pepper.OptimalPARMin = None
+    pepper.OptimalPARMax = None
+    return pepper
 
 
 def test_trigger_based_check_returns_anomaly_when_metric_triggered():
@@ -419,14 +423,6 @@ def test_process_creates_separate_alerts_per_pepper(db):
     db.add(assignment)
     db.commit()
 
-    threshold = PepperThreshold(
-        PepperId=1,
-        MinTemperature=18.0, MaxTemperature=30.0,
-        MinHumidity=40.0, MaxHumidity=80.0,
-        MaxLeak=2.0,
-        IsActive=True,
-    )
-    db.add(threshold)
     pepper1 = PepperVariety(PepperId=1, PepperName="Pepper-1", OptimalTempMinC=18.0, OptimalTempMaxC=30.0, IsActive=True)
     pepper2 = PepperVariety(PepperId=2, PepperName="Pepper-2", OptimalTempMinC=20.0, OptimalTempMaxC=28.0, IsActive=True)
     plant1 = Plant(PlantCode="P1", ZoneId=1, PepperId=1, IsActive=True)

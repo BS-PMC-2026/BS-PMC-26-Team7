@@ -12,7 +12,7 @@ import models.task  # noqa: F401
 import models.plant  # noqa: F401
 import models.product    # noqa: F401
 import models.inventory  # noqa: F401
-import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, SensorReading, SensorSyncState, PepperThreshold, SensorAlert
+import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, SensorReading, SensorSyncState, SensorAlert
 import models.spray  # noqa: F401  — registers Pesticide, SprayReport
 from database import SessionLocal
 from sqlalchemy import text

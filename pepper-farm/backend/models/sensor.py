@@ -93,25 +93,6 @@ class SensorSyncState(Base):
     LastError = Column(Text, nullable=True)
 
 
-class PepperThreshold(Base):
-    __tablename__ = "PepperThresholds"
-
-    ThresholdId = Column(Integer, primary_key=True, autoincrement=True)
-    PepperId = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=False)
-
-    MinTemperature = Column(Float, nullable=True)
-    MaxTemperature = Column(Float, nullable=True)
-
-    MinHumidity = Column(Float, nullable=True)
-    MaxHumidity = Column(Float, nullable=True)
-
-    MaxLeak = Column(Float, nullable=True)
-
-    IsActive = Column(Boolean, nullable=False, default=True)
-    CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
-    UpdatedAtUtc = Column(DateTime, nullable=True)
-
-
 class SensorAlert(Base):
     __tablename__ = "SensorAlerts"
 
