@@ -109,6 +109,9 @@ export default function ManagerTasksPage() {
                 <Link href="/manager/reports/open-tasks">
                   <Button variant="secondary">📊 Report</Button>
                 </Link>
+                <Link href="/manager/tasks/history">
+                <Button variant="secondary">📜 History</Button>
+                </Link>
                 <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
               </div>
             ) : undefined
