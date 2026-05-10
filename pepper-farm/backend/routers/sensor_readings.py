@@ -18,12 +18,12 @@ def create_reading_endpoint(
     Ingest a new sensor reading and automatically detect anomalies.
 
     - Saves the reading to SensorReadings.
-    - Finds the active SensorAssignment and PepperThresholds.
-    - Compares each metric against its allowed range.
+    - Finds the active SensorAssignment and resolves PepperVariety thresholds.
+    - Compares each metric against the variety's optimal range.
     - Inserts one SensorAlert row per violated metric (dedup safe).
     - Returns the reading ID and all alerts created in this call.
 
-    If the sensor has no active assignment or no thresholds configured,
+    If the sensor has no active assignment or no variety is configured,
     the reading is still saved and the response contains zero alerts.
     """
     try:
