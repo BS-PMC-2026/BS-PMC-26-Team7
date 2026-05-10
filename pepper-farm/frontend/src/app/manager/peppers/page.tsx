@@ -16,6 +16,7 @@ export default function ManagerPeppersPage() {
   const [peppers, setPeppers] = useState<Pepper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadPeppers = useCallback(async () => {
     setIsLoading(true);
@@ -41,9 +42,17 @@ export default function ManagerPeppersPage() {
 
   if (!confirmDelete) return;
 
+  setError(null);
+  setSuccessMessage(null);
+
+
   try {
-    await deletePepper(pepperId);
-    await loadPeppers();
+   await deletePepper(pepperId);
+
+setPeppers((prevPeppers) =>
+  prevPeppers.filter((pepper) => pepper.PepperId !== pepperId)
+);
+setSuccessMessage('Pepper deleted successfully.');
   } catch {
     setError('Failed to delete pepper.');
   }
@@ -75,6 +84,11 @@ export default function ManagerPeppersPage() {
       </div>
 
       {error && <Alert className="mb-4">{error}</Alert>}
+      {successMessage && (
+  <div className="mb-4 rounded-xl border border-green-500 bg-green-50 px-4 py-3 text-green-700">
+    {successMessage}
+  </div>
+)}
 
       {isLoading ? (
         <p className="text-sm text-gray-400 text-center py-12">Loading peppers...</p>
