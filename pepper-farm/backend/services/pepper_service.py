@@ -28,7 +28,7 @@ def create_pepper(db: Session, pepper_data: PepperCreate) -> PepperVariety:
     return pepper
 
 def get_all_peppers(db: Session) -> list[PepperVariety]:
-    return db.query(PepperVariety).order_by(PepperVariety.PepperName.asc()).all()
+    return db.query(PepperVariety).filter(PepperVariety.IsActive == True).order_by(PepperVariety.PepperName.asc()).all()
 
 
 def get_pepper_by_id(db: Session, pepper_id: int) -> PepperVariety | None:
@@ -54,4 +54,19 @@ def update_pepper(db: Session, pepper_id: int, data: PepperUpdate) -> PepperVari
 
     db.commit()
     db.refresh(pepper)
+    return pepper
+
+
+def delete_pepper(db: Session, pepper_id: int) -> PepperVariety | None:
+    pepper = get_pepper_by_id(db, pepper_id)
+
+    if pepper is None:
+        return None
+
+    pepper.IsActive = False
+
+    db.add(pepper)
+    db.commit()
+    db.refresh(pepper)
+
     return pepper
