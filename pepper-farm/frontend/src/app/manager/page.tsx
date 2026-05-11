@@ -79,6 +79,11 @@ export default function ManagerPage() {
             <h2 className="text-lg font-semibold text-gray-800">📡 Sensors</h2>
             <p className="text-sm text-gray-500 mt-1">Monitor farm sensors and live readings</p>
           </Link>
+          <Link href="/manager/anomalies"
+            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
+            <h2 className="text-lg font-semibold text-gray-800">🚨 Sensor Anomalies</h2>
+            <p className="text-sm text-gray-500 mt-1">Live anomaly dashboard</p>
+          </Link>
         </div>
       </div>
     </main>
