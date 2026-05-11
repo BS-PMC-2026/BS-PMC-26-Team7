@@ -149,6 +149,7 @@ def test_rule_based_check_detects_temperature_below_min():
 # ------------------------------------------------------------------ #
 # 3. _trigger_based_check
 # ------------------------------------------------------------------ #
+
 def make_reading(triggers_json='{"Temperature": true}', **kwargs):
     """Build a SensorReading mock with sensible defaults."""
     reading = MagicMock(spec=SensorReading)
@@ -196,6 +197,11 @@ def test_trigger_based_check_skips_metrics_not_in_triggers():
     metrics = [a["metric"] for a in anomalies]
     assert "Temperature" in metrics
     assert "Humidity" not in metrics
+
+
+# ------------------------------------------------------------------ #
+# 4. _rule_based_check — None / threshold guard cases
+# ------------------------------------------------------------------ #
 def test_rule_based_check_skips_temperature_when_reading_is_none():
     reading = make_reading_mock()
     reading.Temperature = None
@@ -450,7 +456,7 @@ def test_process_skips_pepper_with_no_variety_record(db):
     response, error = process_sensor_reading(db, data)
 
     assert error is None
-    assert response.alertsCreated == 1
+    assert response.alertsCreated == 1  # generic alert created when no variety record exists
 
 
 def test_process_skips_pepper_with_no_temperature_thresholds(db):

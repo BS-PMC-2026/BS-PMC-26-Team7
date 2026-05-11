@@ -21,12 +21,14 @@ Thresholds come exclusively from PepperVariety:
   Temperature  → OptimalTempMinC / OptimalTempMaxC
   Soil moisture→ OptimalSoilMoistureMin / OptimalSoilMoistureMax
   PAR          → OptimalPARMin / OptimalPARMax
+
 Deduplication key: (ReadingId, MetricName, PepperId).
 """
 
 import json
 from datetime import datetime
 from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from models.sensor import (
@@ -43,17 +45,16 @@ from schemas.sensor_reading import AlertResult, SensorReadingCreate, SensorReadi
 # Severity helpers
 # ---------------------------------------------------------------------------
 
-def _compute_severity_range(value: float, min_val, max_val) -> str:
-    """Return 'High' when value is outside [min_val, max_val], 'Medium' otherwise."""
+def _compute_severity_range(actual: float, min_val, max_val) -> str:
+    """'High' when actual is outside [min_val, max_val], 'Medium' when within range.
+    Equal min/max always returns 'High'."""
     if (
         min_val is not None
         and max_val is not None
         and float(min_val) == float(max_val)
     ):
         return "High"
-    if min_val is not None and value < float(min_val):
-        return "High"
-    if max_val is not None and value > float(max_val):
+    if actual < float(min_val) or actual > float(max_val):
         return "High"
     return "Medium"
 
@@ -98,68 +99,30 @@ def _rule_based_check(
     """
     anomalies: list[dict] = []
 
-    # --- Temperature ---
-    min_temp = float(pepper.OptimalTempMinC) if pepper.OptimalTempMinC is not None else None
-    max_temp = float(pepper.OptimalTempMaxC) if pepper.OptimalTempMaxC is not None else None
-    if (
-        reading.Temperature is not None
-        and min_temp is not None
-        and max_temp is not None
-        and (reading.Temperature < min_temp or reading.Temperature > max_temp)
-    ):
-        anomalies.append({
-            "metric": "Temperature",
-            "actual": reading.Temperature,
-            "min_allowed": min_temp,
-            "max_allowed": max_temp,
-            "severity": _compute_severity_range(reading.Temperature, min_temp, max_temp),
-            "message": (
-                f"Temperature {reading.Temperature}°C is outside the optimal range "
-                f"[{min_temp}, {max_temp}] °C for {pepper.PepperName}"
-            ),
-        })
+    def _check(metric: str, actual, min_col, max_col, unit: str):
+        min_v = float(min_col) if min_col is not None else None
+        max_v = float(max_col) if max_col is not None else None
+        if actual is None or min_v is None or max_v is None:
+            return
+        if actual < min_v or actual > max_v:
+            anomalies.append({
+                "metric": metric,
+                "actual": actual,
+                "min_allowed": min_v,
+                "max_allowed": max_v,
+                "severity": _compute_severity_range(actual, min_v, max_v),
+                "message": (
+                    f"{metric} {actual}{unit} is outside the optimal range "
+                    f"[{min_v}, {max_v}]{unit} for {pepper.PepperName}"
+                ),
+            })
 
-    # --- Humidity (mapped from OptimalSoilMoistureMin/Max) ---
-    min_moisture = float(pepper.OptimalSoilMoistureMin) if pepper.OptimalSoilMoistureMin is not None else None
-    max_moisture = float(pepper.OptimalSoilMoistureMax) if pepper.OptimalSoilMoistureMax is not None else None
-    if (
-        reading.Humidity is not None
-        and min_moisture is not None
-        and max_moisture is not None
-        and (reading.Humidity < min_moisture or reading.Humidity > max_moisture)
-    ):
-        anomalies.append({
-            "metric": "Humidity",
-            "actual": reading.Humidity,
-            "min_allowed": min_moisture,
-            "max_allowed": max_moisture,
-            "severity": _compute_severity_range(reading.Humidity, min_moisture, max_moisture),
-            "message": (
-                f"Humidity {reading.Humidity}% is outside the optimal soil moisture range "
-                f"[{min_moisture}, {max_moisture}] % for {pepper.PepperName}"
-            ),
-        })
-
-    # --- PAR ---
-    min_par = float(pepper.OptimalPARMin) if pepper.OptimalPARMin is not None else None
-    max_par = float(pepper.OptimalPARMax) if pepper.OptimalPARMax is not None else None
-    if (
-        reading.PAR is not None
-        and min_par is not None
-        and max_par is not None
-        and (reading.PAR < min_par or reading.PAR > max_par)
-    ):
-        anomalies.append({
-            "metric": "PAR",
-            "actual": reading.PAR,
-            "min_allowed": min_par,
-            "max_allowed": max_par,
-            "severity": _compute_severity_range(reading.PAR, min_par, max_par),
-            "message": (
-                f"PAR {reading.PAR} µmol/m²/s is outside the optimal range "
-                f"[{min_par}, {max_par}] for {pepper.PepperName}"
-            ),
-        })
+    _check("Temperature", reading.Temperature,
+           pepper.OptimalTempMinC,        pepper.OptimalTempMaxC,        " °C")
+    _check("Humidity",    reading.Humidity,
+           pepper.OptimalSoilMoistureMin, pepper.OptimalSoilMoistureMax, "%")
+    _check("PAR",         reading.PAR,
+           pepper.OptimalPARMin,          pepper.OptimalPARMax,          " µmol/m²/s")
 
     return anomalies
 
@@ -231,8 +194,6 @@ def create_sensor_reading(
         if data.rawJson:
             triggers = data.rawJson.get("triggers", {})
 
-        raw_json_str = json.dumps(data.rawJson or {})
-
         reading = SensorReading(
             SensorId=data.sensorId,
             MacAddress=data.macAddress,
@@ -244,7 +205,7 @@ def create_sensor_reading(
             ReadingType=data.readingType,
             TriggersJson=json.dumps(triggers),
             SampleTimeUtc=datetime.utcnow(),
-            RawJson=raw_json_str,
+            RawJson=json.dumps(data.rawJson or {}),
         )
 
         db.add(reading)
@@ -324,6 +285,7 @@ def process_sensor_reading(
     If no assignment exists or no plants are found, the reading is still saved
     and the response contains zero alerts.
     """
+    # 1. Save the reading
     reading, error = create_sensor_reading(db, data)
     if error:
         return None, f"Failed to create sensor reading: {error}"
@@ -344,7 +306,7 @@ def process_sensor_reading(
         )
         .first()
     )
-    if not assignment:
+    if assignment is None:
         return base_response, None
 
     alerts_created: list[SensorAlert] = []

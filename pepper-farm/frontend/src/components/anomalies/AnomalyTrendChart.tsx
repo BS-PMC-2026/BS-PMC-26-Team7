@@ -47,7 +47,8 @@ export default function AnomalyTrendChart({ data }: Props) {
   const totalCoords = toCoords(data.map((d) => d.count), maxCount);
   const highCoords = toCoords(data.map((d) => d.highCount), maxCount);
 
-  const yTicks = [0, Math.round(maxCount / 2), maxCount];
+  const midTick = Math.round(maxCount / 2);
+  const yTicks = maxCount <= 1 ? [0, maxCount] : [0, midTick, maxCount];
 
   return (
     <div className="w-full">
