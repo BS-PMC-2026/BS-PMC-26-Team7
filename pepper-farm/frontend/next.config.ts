@@ -9,6 +9,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  serverExternalPackages: [
+    "lightningcss",
+    "lightningcss-darwin-arm64",
+    "lightningcss-darwin-x64",
+    "lightningcss-linux-x64-gnu",
+    "lightningcss-linux-arm64-gnu",
+    "lightningcss-linux-x64-musl",
+    "lightningcss-linux-arm64-musl",
+    "lightningcss-win32-x64-msvc",
+    "lightningcss-win32-arm64-msvc",
+  ],
 };
 
 export default nextConfig;

@@ -1,9 +1,41 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPepper, uploadPepperImage } from "@/services/peppers";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Alert from "@/components/ui/Alert";
+import Input from "@/components/ui/Input";
+import PageHeader from "@/components/ui/PageHeader";
+
+// ---------------------------------------------------------------------------
+// Field helpers
+// ---------------------------------------------------------------------------
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">
+      {children}
+    </p>
+  );
+}
+
+function FieldGroup({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function CreatePepperPage() {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     PepperName: "",
     ScientificName: "",
@@ -13,7 +45,8 @@ export default function CreatePepperPage() {
     OptimalSoilMoistureMax: "",
     OptimalTempMinC: "",
     OptimalTempMaxC: "",
-    OptimalSunlightHours: "",
+    OptimalPARMin: "",
+    OptimalPARMax: "",
     ImageUrl: "",
     Zone: "",
     GeneralDescription: "",
@@ -30,19 +63,11 @@ export default function CreatePepperPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
-
     if (type === "checkbox" && "checked" in e.target) {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: (e.target as HTMLInputElement).checked,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
       return;
     }
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const toOptionalNumber = (value: string): number | undefined => {
@@ -51,97 +76,54 @@ export default function CreatePepperPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setSelectedFile(file);
+    setSelectedFile(e.target.files?.[0] || null);
   };
 
-  const validateForm = () => {
-  if (!formData.PepperName.trim()) {
-    return "Pepper name is required.";
-  }
+  const validateForm = (): string | null => {
+    if (!formData.PepperName.trim()) return "Pepper name is required.";
+    if (formData.PepperName.trim().length > 100) return "Pepper name cannot exceed 100 characters.";
+    if (formData.ScientificName.trim().length > 150) return "Scientific name cannot exceed 150 characters.";
+    if (formData.ImageUrl.trim().length > 500) return "Image URL cannot exceed 500 characters.";
+    if (formData.Zone.trim().length > 500) return "Zone cannot exceed 500 characters.";
+    if (formData.GeneralDescription.trim().length > 1000) return "General description cannot exceed 1000 characters.";
 
-  if (formData.PepperName.trim().length > 100) {
-    return "Pepper name cannot exceed 100 characters.";
-  }
+    const scovilleMin = toOptionalNumber(formData.HeatLevelScovilleMin);
+    const scovilleMax = toOptionalNumber(formData.HeatLevelScovilleMax);
+    const soilMin = toOptionalNumber(formData.OptimalSoilMoistureMin);
+    const soilMax = toOptionalNumber(formData.OptimalSoilMoistureMax);
+    const tempMin = toOptionalNumber(formData.OptimalTempMinC);
+    const tempMax = toOptionalNumber(formData.OptimalTempMaxC);
+    const parMin = toOptionalNumber(formData.OptimalPARMin);
+    const parMax = toOptionalNumber(formData.OptimalPARMax);
 
-  if (formData.ScientificName.trim().length > 150) {
-    return "Scientific name cannot exceed 150 characters.";
-  }
+    if (scovilleMin !== undefined && scovilleMin < 0) return "Scoville min cannot be negative.";
+    if (scovilleMax !== undefined && scovilleMax < 0) return "Scoville max cannot be negative.";
+    if (scovilleMin !== undefined && scovilleMax !== undefined && scovilleMin > scovilleMax)
+      return "Scoville min cannot be greater than max.";
 
-  if (formData.ImageUrl.trim().length > 500) {
-    return "Image URL cannot exceed 500 characters.";
-  }
+    if (soilMin !== undefined && (soilMin < 0 || soilMin > 100)) return "Soil moisture min must be between 0 and 100.";
+    if (soilMax !== undefined && (soilMax < 0 || soilMax > 100)) return "Soil moisture max must be between 0 and 100.";
+    if (soilMin !== undefined && soilMax !== undefined && soilMin > soilMax)
+      return "Soil moisture min cannot be greater than max.";
 
-  if (formData.Zone.trim().length > 500) {
-    return "Zone cannot exceed 500 characters.";
-  }
+    if (tempMin !== undefined && (tempMin < -50 || tempMin > 80)) return "Temperature min must be between -50 and 80°C.";
+    if (tempMax !== undefined && (tempMax < -50 || tempMax > 80)) return "Temperature max must be between -50 and 80°C.";
+    if (tempMin !== undefined && tempMax !== undefined && tempMin > tempMax)
+      return "Temperature min cannot be greater than max.";
 
-  if (formData.GeneralDescription.trim().length > 1000) {
-    return "General description cannot exceed 1000 characters.";
-  }
+    if (parMin !== undefined && (parMin < 0 || parMin > 2000)) return "PAR min must be between 0 and 2000 µmol/m²/s.";
+    if (parMax !== undefined && (parMax < 0 || parMax > 2000)) return "PAR max must be between 0 and 2000 µmol/m²/s.";
+    if (parMin !== undefined && parMax !== undefined && parMin > parMax)
+      return "PAR min cannot be greater than PAR max.";
 
-  const scovilleMin = toOptionalNumber(formData.HeatLevelScovilleMin);
-  const scovilleMax = toOptionalNumber(formData.HeatLevelScovilleMax);
-  const soilMin = toOptionalNumber(formData.OptimalSoilMoistureMin);
-  const soilMax = toOptionalNumber(formData.OptimalSoilMoistureMax);
-  const tempMin = toOptionalNumber(formData.OptimalTempMinC);
-  const tempMax = toOptionalNumber(formData.OptimalTempMaxC);
-  const sunlight = toOptionalNumber(formData.OptimalSunlightHours);
-
-  if (scovilleMin !== undefined && scovilleMin < 0) {
-    return "Scoville min cannot be negative.";
-  }
-
-  if (scovilleMax !== undefined && scovilleMax < 0) {
-    return "Scoville max cannot be negative.";
-  }
-
-  if (scovilleMin !== undefined && scovilleMax !== undefined && scovilleMin > scovilleMax) {
-    return "Scoville min cannot be greater than max.";
-  }
-
-  if (soilMin !== undefined && (soilMin < 0 || soilMin > 100)) {
-    return "Soil moisture min must be between 0 and 100.";
-  }
-
-  if (soilMax !== undefined && (soilMax < 0 || soilMax > 100)) {
-    return "Soil moisture max must be between 0 and 100.";
-  }
-
-  if (soilMin !== undefined && soilMax !== undefined && soilMin > soilMax) {
-    return "Soil moisture min cannot be greater than max.";
-  }
-
-  if (tempMin !== undefined && (tempMin < -50 || tempMin > 80)) {
-    return "Temperature min must be between -50 and 80.";
-  }
-
-  if (tempMax !== undefined && (tempMax < -50 || tempMax > 80)) {
-    return "Temperature max must be between -50 and 80.";
-  }
-
-  if (tempMin !== undefined && tempMax !== undefined && tempMin > tempMax) {
-    return "Temperature min cannot be greater than max.";
-  }
-
-  if (sunlight !== undefined && (sunlight < 0 || sunlight > 24)) {
-    return "Sunlight hours must be between 0 and 24.";
-  }
-
-  if (formData.ImageUrl.trim()) {
-    const imageUrl = formData.ImageUrl.trim();
-    const isValidUrl =
-      imageUrl.startsWith("http://") ||
-      imageUrl.startsWith("https://") ||
-      imageUrl.startsWith("/uploads/");
-
-    if (!isValidUrl) {
-      return "Image URL must start with http://, https://, or /uploads/.";
+    if (formData.ImageUrl.trim()) {
+      const u = formData.ImageUrl.trim();
+      if (!u.startsWith("http://") && !u.startsWith("https://") && !u.startsWith("/uploads/"))
+        return "Image URL must start with http://, https://, or /uploads/.";
     }
-  }
 
-  return null;
-};
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,9 +133,9 @@ export default function CreatePepperPage() {
 
     const validationError = validateForm();
     if (validationError) {
-    setErrorMessage(validationError);
-    setLoading(false);
-    return;
+      setErrorMessage(validationError);
+      setLoading(false);
+      return;
     }
 
     try {
@@ -166,7 +148,7 @@ export default function CreatePepperPage() {
         setUploadingImage(false);
       }
 
-      const payload = {
+      await createPepper({
         PepperName: formData.PepperName.trim(),
         ScientificName: formData.ScientificName.trim() || undefined,
         HeatLevelScovilleMin: toOptionalNumber(formData.HeatLevelScovilleMin),
@@ -175,14 +157,13 @@ export default function CreatePepperPage() {
         OptimalSoilMoistureMax: toOptionalNumber(formData.OptimalSoilMoistureMax),
         OptimalTempMinC: toOptionalNumber(formData.OptimalTempMinC),
         OptimalTempMaxC: toOptionalNumber(formData.OptimalTempMaxC),
-        OptimalSunlightHours: toOptionalNumber(formData.OptimalSunlightHours),
+        OptimalPARMin: toOptionalNumber(formData.OptimalPARMin),
+        OptimalPARMax: toOptionalNumber(formData.OptimalPARMax),
         ImageUrl: finalImageUrl,
         Zone: formData.Zone.trim() || undefined,
         GeneralDescription: formData.GeneralDescription.trim() || undefined,
         IsActive: formData.IsActive,
-      };
-
-      await createPepper(payload);
+      });
 
       setSuccessMessage("Pepper variety created successfully.");
       setSelectedFile(null);
@@ -195,16 +176,15 @@ export default function CreatePepperPage() {
         OptimalSoilMoistureMax: "",
         OptimalTempMinC: "",
         OptimalTempMaxC: "",
-        OptimalSunlightHours: "",
+        OptimalPARMin: "",
+        OptimalPARMax: "",
         ImageUrl: "",
         Zone: "",
         GeneralDescription: "",
         IsActive: true,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create pepper.";
-      setErrorMessage(message);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to create pepper.");
     } finally {
       setLoading(false);
       setUploadingImage(false);
@@ -212,143 +192,275 @@ export default function CreatePepperPage() {
   };
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px" }}>
-      <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "24px" }}>
-        Create Pepper Variety
-      </h1>
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      {/* Page header */}
+      <PageHeader
+        label="Pepper Varieties"
+        title="Add Pepper Variety"
+        subtitle="Register a new pepper variety in the farm management system."
+        action={
+          <Button variant="outline" onClick={() => router.push("/manager/peppers")}>
+            ← Back to Varieties
+          </Button>
+        }
+      />
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
-        <input
-          name="PepperName"
-          placeholder="Pepper Name"
-          value={formData.PepperName}
-          onChange={handleChange}
-          required
-        />
+      {/* Global messages */}
+      {successMessage && (
+        <Alert variant="success">{successMessage}</Alert>
+      )}
+      {errorMessage && (
+        <Alert variant="error">{errorMessage}</Alert>
+      )}
 
-        <input
-          name="ScientificName"
-          placeholder="Scientific Name"
-          value={formData.ScientificName}
-          onChange={handleChange}
-        />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ── Section 1: Basic Information ── */}
+        <Card>
+          <SectionLabel>Basic Information</SectionLabel>
+          <FieldGroup>
+            <div className="sm:col-span-2">
+              <Input
+                id="PepperName"
+                name="PepperName"
+                label="Pepper Name *"
+                placeholder="e.g. Jalapeño"
+                value={formData.PepperName}
+                onChange={handleChange}
+                maxLength={100}
+                required
+              />
+            </div>
+            <Input
+              id="ScientificName"
+              name="ScientificName"
+              label="Scientific Name"
+              placeholder="e.g. Capsicum annuum"
+              value={formData.ScientificName}
+              onChange={handleChange}
+              maxLength={150}
+            />
+            <Input
+              id="Zone"
+              name="Zone"
+              label="Growing Zone"
+              placeholder="e.g. tropical, temperate"
+              value={formData.Zone}
+              onChange={handleChange}
+            />
+          </FieldGroup>
+        </Card>
 
-        <input
-          name="HeatLevelScovilleMin"
-          type="number"
-          step="1"
-          placeholder="Heat Level Scoville Min"
-          value={formData.HeatLevelScovilleMin}
-          onChange={handleChange}
-        />
+        {/* ── Section 2: Heat Level ── */}
+        <Card>
+          <SectionLabel>Heat Level — Scoville Scale</SectionLabel>
+          <FieldGroup>
+            <Input
+              id="HeatLevelScovilleMin"
+              name="HeatLevelScovilleMin"
+              type="number"
+              step="1"
+              min="0"
+              label="Min Scoville (SHU)"
+              placeholder="e.g. 2 500"
+              value={formData.HeatLevelScovilleMin}
+              onChange={handleChange}
+            />
+            <Input
+              id="HeatLevelScovilleMax"
+              name="HeatLevelScovilleMax"
+              type="number"
+              step="1"
+              min="0"
+              label="Max Scoville (SHU)"
+              placeholder="e.g. 8 000"
+              value={formData.HeatLevelScovilleMax}
+              onChange={handleChange}
+            />
+          </FieldGroup>
+        </Card>
 
-        <input
-          name="HeatLevelScovilleMax"
-          type="number"
-          step="1"
-          placeholder="Heat Level Scoville Max"
-          value={formData.HeatLevelScovilleMax}
-          onChange={handleChange}
-        />
+        {/* ── Section 3: Growing Conditions ── */}
+        <Card>
+          <SectionLabel>Growing Conditions</SectionLabel>
+          <FieldGroup>
+            <Input
+              id="OptimalSoilMoistureMin"
+              name="OptimalSoilMoistureMin"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              label="Min Soil Moisture (%)"
+              placeholder="e.g. 40"
+              value={formData.OptimalSoilMoistureMin}
+              onChange={handleChange}
+            />
+            <Input
+              id="OptimalSoilMoistureMax"
+              name="OptimalSoilMoistureMax"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              label="Max Soil Moisture (%)"
+              placeholder="e.g. 60"
+              value={formData.OptimalSoilMoistureMax}
+              onChange={handleChange}
+            />
+            <Input
+              id="OptimalTempMinC"
+              name="OptimalTempMinC"
+              type="number"
+              step="0.01"
+              min="-50"
+              max="80"
+              label="Min Temperature (°C)"
+              placeholder="e.g. 18"
+              value={formData.OptimalTempMinC}
+              onChange={handleChange}
+            />
+            <Input
+              id="OptimalTempMaxC"
+              name="OptimalTempMaxC"
+              type="number"
+              step="0.01"
+              min="-50"
+              max="80"
+              label="Max Temperature (°C)"
+              placeholder="e.g. 30"
+              value={formData.OptimalTempMaxC}
+              onChange={handleChange}
+            />
+          </FieldGroup>
+        </Card>
 
-        <input
-          name="OptimalSoilMoistureMin"
-          type="number"
-          step="0.01"
-          placeholder="Optimal Soil Moisture Min"
-          value={formData.OptimalSoilMoistureMin}
-          onChange={handleChange}
-        />
+        {/* ── Section 4: PAR ── */}
+        <Card tinted>
+          <SectionLabel>Optimal PAR Range</SectionLabel>
+          <p className="text-xs text-gray-500 -mt-3 mb-5">
+            PAR (Photosynthetically Active Radiation) is the portion of light that plants use for
+            photosynthesis — wavelengths 400–700 nm. Measured in µmol/m²/s. Typical range: 0–2 000.
+          </p>
+          <FieldGroup>
+            <Input
+              id="OptimalPARMin"
+              name="OptimalPARMin"
+              type="number"
+              step="0.01"
+              min="0"
+              max="2000"
+              label="Minimum optimal PAR (µmol/m²/s)"
+              placeholder="e.g. 200"
+              value={formData.OptimalPARMin}
+              onChange={handleChange}
+            />
+            <Input
+              id="OptimalPARMax"
+              name="OptimalPARMax"
+              type="number"
+              step="0.01"
+              min="0"
+              max="2000"
+              label="Maximum optimal PAR (µmol/m²/s)"
+              placeholder="e.g. 800"
+              value={formData.OptimalPARMax}
+              onChange={handleChange}
+            />
+          </FieldGroup>
+        </Card>
 
-        <input
-          name="OptimalSoilMoistureMax"
-          type="number"
-          step="0.01"
-          placeholder="Optimal Soil Moisture Max"
-          value={formData.OptimalSoilMoistureMax}
-          onChange={handleChange}
-        />
+        {/* ── Section 5: Image & Description ── */}
+        <Card>
+          <SectionLabel>Image &amp; Description</SectionLabel>
+          <div className="space-y-4">
+            <Input
+              id="ImageUrl"
+              name="ImageUrl"
+              label="Image URL (optional)"
+              placeholder="https://example.com/pepper.jpg or /uploads/..."
+              value={formData.ImageUrl}
+              onChange={handleChange}
+              maxLength={500}
+            />
 
-        <input
-          name="OptimalTempMinC"
-          type="number"
-          step="0.01"
-          placeholder="Optimal Temp Min (C)"
-          value={formData.OptimalTempMinC}
-          onChange={handleChange}
-        />
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                Upload Image (optional)
+              </label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleFileChange}
+                className="text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-[#DDE5DC] file:text-xs file:font-medium file:text-[#2F6F4E] file:bg-white hover:file:bg-[#E8F3EC] file:cursor-pointer"
+              />
+              {selectedFile && (
+                <p className="text-xs text-gray-400">
+                  Selected: {selectedFile.name}
+                </p>
+              )}
+            </div>
 
-        <input
-          name="OptimalTempMaxC"
-          type="number"
-          step="0.01"
-          placeholder="Optimal Temp Max (C)"
-          value={formData.OptimalTempMaxC}
-          onChange={handleChange}
-        />
+            <div className="flex flex-col gap-1">
+              <label htmlFor="GeneralDescription" className="text-sm font-medium text-gray-700">
+                General Description
+              </label>
+              <textarea
+                id="GeneralDescription"
+                name="GeneralDescription"
+                rows={4}
+                placeholder="Describe the pepper variety, flavour profile, common uses…"
+                value={formData.GeneralDescription}
+                onChange={handleChange}
+                maxLength={1000}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              />
+              <p className="text-xs text-gray-400 text-right">
+                {formData.GeneralDescription.length}/1000
+              </p>
+            </div>
+          </div>
+        </Card>
 
-        <input
-          name="OptimalSunlightHours"
-          type="number"
-          step="0.01"
-          placeholder="Optimal Sunlight Hours"
-          value={formData.OptimalSunlightHours}
-          onChange={handleChange}
-        />
+        {/* ── Section 6: Status & Actions ── */}
+        <Card>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex items-center gap-3 cursor-pointer select-none">
+              <input
+                id="IsActive"
+                name="IsActive"
+                type="checkbox"
+                checked={formData.IsActive}
+                onChange={handleChange}
+                className="w-4 h-4 accent-[#2F6F4E] cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Active — visible in the system
+              </span>
+            </label>
 
-        <input
-          name="ImageUrl"
-          placeholder="Image URL (optional)"
-          value={formData.ImageUrl}
-          onChange={handleChange}
-        />
-
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
-          onChange={handleFileChange}
-        />
-
-        <input
-          name="Zone"
-          placeholder="Zone"
-          value={formData.Zone}
-          onChange={handleChange}
-        />
-
-        <textarea
-          name="GeneralDescription"
-          placeholder="General Description"
-          value={formData.GeneralDescription}
-          onChange={handleChange}
-          rows={5}
-        />
-
-        <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <input
-            name="IsActive"
-            type="checkbox"
-            checked={formData.IsActive}
-            onChange={handleChange}
-          />
-          Active
-        </label>
-
-        <button type="submit" disabled={loading || uploadingImage}>
-          {uploadingImage
-            ? "Uploading image..."
-            : loading
-            ? "Creating..."
-            : "Create Pepper"}
-        </button>
-
-        {successMessage && (
-          <p style={{ color: "green", fontWeight: 600 }}>{successMessage}</p>
-        )}
-
-        {errorMessage && (
-          <p style={{ color: "red", fontWeight: 600 }}>{errorMessage}</p>
-        )}
+            <div className="flex gap-3 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push("/manager/peppers")}
+                disabled={loading || uploadingImage}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={loading || uploadingImage}
+              >
+                {uploadingImage
+                  ? "Uploading image…"
+                  : loading
+                  ? "Creating…"
+                  : "Create Pepper Variety"}
+              </Button>
+            </div>
+          </div>
+        </Card>
       </form>
     </div>
   );

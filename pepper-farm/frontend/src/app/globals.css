@@ -1,1 +1,186 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Raleway:wght@300;400;500;600;700&display=swap');
+
+/* ============================================================
+   PEPPER FARM — Design System
+   Nature-inspired · Smart Agriculture · Modern SaaS
+   ============================================================ */
+
+@theme {
+  /* ── Core Surfaces ─────────────────────────────────────── */
+  --color-background:       #F5F2EB;   /* warm beige — page background   */
+  --color-foreground:       #1A2E22;   /* deep forest — primary text      */
+  --color-surface:          #FFFFFF;   /* pure white — cards, panels      */
+  --color-surface-tint:     #E8F3EC;   /* soft green tint — sections      */
+
+  /* ── Brand Primary — Deep Green ─────────────────────────── */
+  --color-primary:          #2F6F4E;   /* main brand, nav, headings       */
+  --color-primary-hover:    #245C3F;   /* darker on hover                 */
+  --color-primary-light:    #D6EBE0;   /* tinted bg for badges/chips      */
+  --color-primary-foreground: #FFFFFF; /* text on primary bg              */
+
+  /* ── Brand Accent — Pepper Red ──────────────────────────── */
+  --color-accent:           #D64545;   /* CTAs, highlights, alerts        */
+  --color-accent-hover:     #B83939;   /* darker on hover                 */
+  --color-accent-light:     #FDEAEA;   /* tinted bg for error states      */
+  --color-accent-foreground: #FFFFFF;  /* text on accent bg               */
+
+  /* ── Secondary — Olive Green ────────────────────────────── */
+  --color-secondary:        #6FA36F;   /* secondary buttons, tags         */
+  --color-secondary-hover:  #5C8F5C;   /* darker on hover                 */
+  --color-secondary-light:  #EEF5EE;   /* subtle section fill             */
+  --color-secondary-foreground: #1A2E22;
+
+  /* ── Tertiary — Earth Brown ─────────────────────────────── */
+  --color-earth:            #8B5E3C;   /* accents, dividers, soil palette */
+  --color-earth-hover:      #744E31;
+  --color-earth-light:      #F5EDE6;   /* warm card backgrounds           */
+
+  /* ── Muted / Text Scale ──────────────────────────────────── */
+  --color-muted:            #EEF0EC;   /* subtle hover fills              */
+  --color-muted-foreground: #6B7280;   /* secondary / placeholder text    */
+  --color-subtle:           #9CA3AF;   /* disabled text, captions         */
+
+  /* ── Border & Dividers ───────────────────────────────────── */
+  --color-border:           #DDE5DC;   /* default border — warm green-gray */
+  --color-border-strong:    #B8C9B4;   /* emphasis borders                */
+
+  /* ── Functional — System Colors ─────────────────────────── */
+  --color-success:          #4CAF50;   /* IoT OK state, healthy readings  */
+  --color-success-bg:       #EDFAEE;
+  --color-warning:          #F59E0B;   /* threshold alerts, caution       */
+  --color-warning-bg:       #FFFBEB;
+  --color-error:            #EF4444;   /* critical alerts, sensor failure */
+  --color-error-bg:         #FEF2F2;
+  --color-info:             #3B82F6;   /* info tooltips, data notes       */
+  --color-info-bg:          #EFF6FF;
+
+  /* ── Pepper Heat Scale — Catalog Tags ───────────────────── */
+  --color-heat-mild:        #7ED957;   /* mild peppers                    */
+  --color-heat-mild-bg:     #F0FBE8;
+  --color-heat-medium:      #FFC857;   /* medium heat                     */
+  --color-heat-medium-bg:   #FFFBEB;
+  --color-heat-hot:         #FF8C42;   /* hot peppers                     */
+  --color-heat-hot-bg:      #FFF4EC;
+  --color-heat-extreme:     #D7263D;   /* extreme / ghost pepper          */
+  --color-heat-extreme-bg:  #FEE8EB;
+
+  /* ── Chart / Data Visualization Palette ─────────────────── */
+  --color-chart-1:          #2F6F4E;   /* temperature — green             */
+  --color-chart-2:          #D64545;   /* humidity — red                  */
+  --color-chart-3:          #F59E0B;   /* soil moisture — amber           */
+  --color-chart-4:          #3B82F6;   /* water — blue                    */
+  --color-chart-5:          #6FA36F;   /* growth — olive                  */
+  --color-chart-6:          #8B5E3C;   /* soil pH — earth                 */
+
+  /* ── Gradient Stops ──────────────────────────────────────── */
+  --color-gradient-start:   #2F6F4E;
+  --color-gradient-mid:     #4A9068;
+  --color-gradient-end:     #6FA36F;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-heading: 'Lora', Georgia, serif;
+  --font-body:    'Raleway', system-ui, sans-serif;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-sm:   0 1px 3px 0 rgb(47 111 78 / 0.08);
+  --shadow-md:   0 4px 12px 0 rgb(47 111 78 / 0.10);
+  --shadow-lg:   0 10px 30px 0 rgb(47 111 78 / 0.14);
+  --shadow-card: 0 2px 8px 0 rgb(26 46 34 / 0.07), 0 1px 2px 0 rgb(26 46 34 / 0.04);
+
+  /* ── Radius ──────────────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ─────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-base:   200ms ease;
+  --transition-slow:   300ms ease;
+}
+
+/* ── CSS Custom Properties (for non-Tailwind usage) ──────────── */
+:root {
+  /* Core */
+  --background:          #F5F2EB;
+  --foreground:          #1A2E22;
+  --surface:             #FFFFFF;
+  --surface-tint:        #E8F3EC;
+
+  /* Brand */
+  --primary:             #2F6F4E;
+  --primary-hover:       #245C3F;
+  --primary-light:       #D6EBE0;
+  --accent:              #D64545;
+  --accent-hover:        #B83939;
+  --accent-light:        #FDEAEA;
+  --secondary:           #6FA36F;
+  --earth:               #8B5E3C;
+
+  /* Text */
+  --muted:               #EEF0EC;
+  --muted-foreground:    #6B7280;
+  --subtle:              #9CA3AF;
+
+  /* Border */
+  --border:              #DDE5DC;
+  --border-strong:       #B8C9B4;
+
+  /* System */
+  --success:             #4CAF50;
+  --warning:             #F59E0B;
+  --error:               #EF4444;
+  --info:                #3B82F6;
+
+  /* Heat */
+  --heat-mild:           #7ED957;
+  --heat-medium:         #FFC857;
+  --heat-hot:            #FF8C42;
+  --heat-extreme:        #D7263D;
+}
+
+/* ── Base Styles ─────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Utility: Heat Badge ─────────────────────────────────────── */
+.badge-mild    { background: var(--heat-mild-bg,    #F0FBE8); color: #3A7A1A; }
+.badge-medium  { background: var(--heat-medium-bg,  #FFFBEB); color: #92600A; }
+.badge-hot     { background: var(--heat-hot-bg,     #FFF4EC); color: #C25010; }
+.badge-extreme { background: var(--heat-extreme-bg, #FEE8EB); color: #A0102A; }
+
+/* ── Utility: Brand Gradient ─────────────────────────────────── */
+.gradient-brand {
+  background: linear-gradient(135deg, #2F6F4E 0%, #4A9068 50%, #6FA36F 100%);
+}
+.gradient-brand-text {
+  background: linear-gradient(135deg, #2F6F4E 0%, #6FA36F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-warm {
+  background: linear-gradient(135deg, #F5F2EB 0%, #E8F3EC 100%);
+}
+
+/* ── Reduced Motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -10,17 +10,23 @@ export type PepperCreate = {
   OptimalSoilMoistureMax?: number;
   OptimalTempMinC?: number;
   OptimalTempMaxC?: number;
-  OptimalSunlightHours?: number;
+  OptimalPARMin?: number;
+  OptimalPARMax?: number;
   ImageUrl?: string;
   Zone?: string;
   GeneralDescription?: string;
   IsActive: boolean;
 };
 
-export async function getAllPeppers(): Promise<Pepper[]> {
-  return apiFetch<Pepper[]>('/api/peppers');
-}
+export async function getAllPeppers(search?: string): Promise<Pepper[]> {
+  const query = search?.trim();
 
+  if (!query) {
+    return apiFetch<Pepper[]>('/api/peppers');
+  }
+
+  return apiFetch<Pepper[]>(`/api/peppers?search=${encodeURIComponent(query)}`);
+}
 export async function createPepper(data: PepperCreate): Promise<Pepper> {
   return apiFetch<Pepper>('/api/peppers', {
     method: 'POST',
@@ -58,4 +64,14 @@ export async function updatePepper(id: number, data: Partial<PepperCreate>): Pro
 /** @deprecated use getAllPeppers() */
 export async function getPepperVarieties(): Promise<Pepper[]> {
   return getAllPeppers();
+}
+
+export async function deletePepper(pepperId: number): Promise<void> {
+  const response = await fetch(`/api/peppers/${pepperId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete pepper');
+  }
 }
