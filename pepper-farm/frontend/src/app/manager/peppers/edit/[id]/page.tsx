@@ -494,5 +494,6 @@ export default function EditPepperPage() {
         </form>
       )}
     </div>
-  );
+  </div>
+);
 }
