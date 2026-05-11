@@ -37,12 +37,13 @@ from schemas.sensor_reading import AlertResult, SensorReadingCreate, SensorReadi
 # ---------------------------------------------------------------------------
 
 def _compute_severity_range(actual: float, min_val: float, max_val: float) -> str:
-    """'High' when actual is outside [min_val, max_val], 'Medium' when inside."""
+    """'High' when actual is outside [min_val, max_val], 'Medium' when within range.
+    Equal min/max always returns 'High'."""
     if float(min_val) == float(max_val):
         return "High"
-    deviation = max(float(min_val) - actual, actual - float(max_val), 0)
-    half_range = (float(max_val) - float(min_val)) / 2
-    return "High" if deviation > half_range * 0.2 else "Medium"
+    if actual < float(min_val) or actual > float(max_val):
+        return "High"
+    return "Medium"
 
 
 # ---------------------------------------------------------------------------
