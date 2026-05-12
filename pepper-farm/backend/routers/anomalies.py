@@ -1,11 +1,14 @@
+import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, text, case, cast, Date
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
+from sse_starlette.sse import EventSourceResponse
 
 from database import get_db
 from models.sensor import SensorAlert
@@ -123,14 +126,16 @@ def get_anomaly_summary(db: Session = Depends(get_db)):
 @router.get("/recent", response_model=list[RecentAlertResponse])
 def get_recent_alerts(
     limit: int = Query(default=50, ge=1, le=200),
+    since: Optional[datetime] = Query(default=None, description="ISO UTC timestamp — only return alerts created after this time"),
     db: Session = Depends(get_db),
 ):
     """
     Returns the most recent sensor alerts enriched with zone, plant,
     and pepper variety names for display in the anomaly table.
+    Pass `since` to fetch only alerts newer than a given UTC timestamp.
     """
     try:
-        rows = (
+        q = (
             db.query(
                 SensorAlert,
                 FarmZone.ZoneName,
@@ -142,11 +147,14 @@ def get_recent_alerts(
             .outerjoin(FarmZone, FarmZone.ZoneId == SensorAssignment.ZoneId)
             .outerjoin(Plant, Plant.PlantId == SensorAssignment.PlantId)
             .outerjoin(PepperVariety, PepperVariety.PepperId == SensorAlert.PepperId)
-            .filter(SensorAssignment.IsActive == True)  # noqa: E712
-            .order_by(SensorAlert.CreatedAtUtc.desc())
-            .limit(limit)
-            .all()
+            .filter(
+                SensorAssignment.IsActive == True,       # noqa: E712
+                SensorAssignment.AssignedToUtc == None,  # noqa: E711
+            )
         )
+        if since:
+            q = q.filter(SensorAlert.CreatedAtUtc > since)
+        rows = q.order_by(SensorAlert.CreatedAtUtc.desc()).limit(limit).all()
 
         return [
             RecentAlertResponse(
@@ -263,6 +271,79 @@ def get_zone_health(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail="Database connection timeout.")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# SSE stream endpoint
+# ---------------------------------------------------------------------------
+
+@router.get("/stream")
+async def stream_alerts(
+    request: Request,
+    last_alert_id: int = Query(default=0, description="Highest AlertId the client has seen; server streams rows with AlertId > this value"),
+    db: Session = Depends(get_db),
+):
+    """
+    Server-Sent Events endpoint that streams new SensorAlert rows as they appear.
+    The client passes last_alert_id (the highest AlertId it has seen).
+    The server polls the DB every 2 s and yields new rows as SSE events.
+
+    Note: Authorization header is intentionally not required here because the
+    browser EventSource API cannot set custom headers. Manager routes are
+    protected at the Next.js navigation level.
+    """
+    async def event_generator():
+        cursor = last_alert_id
+        while True:
+            if await request.is_disconnected():
+                break
+            try:
+                rows = (
+                    db.query(
+                        SensorAlert,
+                        FarmZone.ZoneName,
+                        FarmZone.ZoneCode,
+                        Plant.PlantCode,
+                        PepperVariety.PepperName,
+                    )
+                    .join(SensorAssignment, SensorAssignment.SensorId == SensorAlert.SensorId)
+                    .outerjoin(FarmZone, FarmZone.ZoneId == SensorAssignment.ZoneId)
+                    .outerjoin(Plant, Plant.PlantId == SensorAssignment.PlantId)
+                    .outerjoin(PepperVariety, PepperVariety.PepperId == SensorAlert.PepperId)
+                    .filter(
+                        SensorAssignment.IsActive == True,       # noqa: E712
+                        SensorAssignment.AssignedToUtc == None,  # noqa: E711
+                        SensorAlert.AlertId > cursor,
+                    )
+                    .order_by(SensorAlert.AlertId.asc())
+                    .limit(20)
+                    .all()
+                )
+                for alert, zone_name, zone_code, plant_code, pepper_name in rows:
+                    cursor = alert.AlertId
+                    payload = json.dumps({
+                        "alertId": alert.AlertId,
+                        "sensorId": alert.SensorId,
+                        "readingId": alert.ReadingId,
+                        "metricName": alert.MetricName,
+                        "actualValue": alert.ActualValue,
+                        "minAllowed": alert.MinAllowed,
+                        "maxAllowed": alert.MaxAllowed,
+                        "severity": alert.Severity,
+                        "message": alert.Message,
+                        "isResolved": bool(alert.IsResolved),
+                        "createdAtUtc": alert.CreatedAtUtc.isoformat() if alert.CreatedAtUtc else None,
+                        "zoneName": zone_name,
+                        "zoneCode": zone_code,
+                        "plantCode": plant_code,
+                        "pepperName": pepper_name,
+                    })
+                    yield {"event": "alert", "data": payload}
+            except Exception:
+                pass  # DB hiccup — retry next cycle
+            await asyncio.sleep(2)
+
+    return EventSourceResponse(event_generator())
 
 
 # ---------------------------------------------------------------------------

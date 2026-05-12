@@ -112,6 +112,39 @@ test('getRecentAlerts returns array of alerts', async () => {
   expect(result[0].metricName).toBe('Temperature');
 });
 
+test('getRecentAlerts appends since param when provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => [],
+  });
+
+  await getRecentAlerts(50, '2026-05-01T00:00:00');
+
+  const calledUrl = (fetch as jest.Mock).mock.calls[0][0];
+  expect(calledUrl).toContain('since=2026-05-01T00%3A00%3A00');
+});
+
+test('getRecentAlerts does not append since param when not provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => [],
+  });
+
+  await getRecentAlerts(50);
+
+  const calledUrl = (fetch as jest.Mock).mock.calls[0][0];
+  expect(calledUrl).not.toContain('since=');
+});
+
+test('getRecentAlerts throws on API error', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: false,
+    json: async () => ({ detail: 'Failed to fetch recent alerts.' }),
+  });
+
+  await expect(getRecentAlerts()).rejects.toThrow('Failed to fetch recent alerts.');
+});
+
 // ---------- getAnomalyTrends ----------
 
 test('getAnomalyTrends uses default 7 days', async () => {

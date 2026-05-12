@@ -21,8 +21,10 @@ export async function getAnomalySummary(): Promise<AnomalySummary> {
   return json;
 }
 
-export async function getRecentAlerts(limit = 50): Promise<RecentAlert[]> {
-  const res = await fetch(`${API_URL}/api/manager/anomalies/recent?limit=${limit}`, {
+export async function getRecentAlerts(limit = 50, since?: string): Promise<RecentAlert[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (since) params.set('since', since);
+  const res = await fetch(`${API_URL}/api/manager/anomalies/recent?${params}`, {
     headers: authHeaders(),
   });
   const json = await res.json();
