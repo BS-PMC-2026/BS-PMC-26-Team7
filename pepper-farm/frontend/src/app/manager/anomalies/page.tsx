@@ -10,11 +10,11 @@ import ZoneHealthOverview from '@/components/anomalies/ZoneHealthOverview';
 import RecentAnomaliesTable from '@/components/anomalies/RecentAnomaliesTable';
 import {
   getAnomalySummary,
-  getRecentAlerts,
   getAnomalyTrends,
   getZoneHealth,
 } from '@/services/anomalies';
 import type { AnomalySummary, RecentAlert, TrendPoint, ZoneHealth } from '@/types/anomaly';
+import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -140,6 +140,8 @@ function IconArrowLeft({ className }: { className?: string }) {
 // Page
 // ---------------------------------------------------------------------------
 export default function AnomalyDashboardPage() {
+  const { liveAlerts, clearUnread } = useAnomalyNotification();
+
   const [summary, setSummary] = useState<AnomalySummary | null>(null);
   const [alerts, setAlerts] = useState<RecentAlert[]>([]);
   const [trends, setTrends] = useState<TrendPoint[]>([]);
@@ -147,18 +149,41 @@ export default function AnomalyDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Clear unread badge when this page is open
+  useEffect(() => {
+    clearUnread();
+  }, [clearUnread]);
+
+  // Keep local alerts in sync with the live polling feed
+  useEffect(() => {
+    setAlerts(liveAlerts);
+  }, [liveAlerts]);
+
+  const loadSilent = useCallback(async () => {
     try {
-      const [summaryData, alertsData, trendsData, zonesData] = await Promise.all([
+      const [summaryData, trendsData, zonesData] = await Promise.all([
         getAnomalySummary(),
-        getRecentAlerts(100),
         getAnomalyTrends(7),
         getZoneHealth(),
       ]);
       setSummary(summaryData);
-      setAlerts(alertsData);
+      setTrends(trendsData);
+      setZones(zonesData);
+    } catch {
+      // silent — don't overwrite existing data on background refresh failure
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [summaryData, trendsData, zonesData] = await Promise.all([
+        getAnomalySummary(),
+        getAnomalyTrends(7),
+        getZoneHealth(),
+      ]);
+      setSummary(summaryData);
       setTrends(trendsData);
       setZones(zonesData);
     } catch {
@@ -168,7 +193,14 @@ export default function AnomalyDashboardPage() {
     }
   }, []);
 
+  // Initial load (shows skeleton)
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh overview & analytics whenever the polling feed updates
+  useEffect(() => {
+    if (loading) return; // skip during initial load
+    loadSilent();
+  }, [liveAlerts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAlertResolved = (alertId: number) => {
     setAlerts((prev) =>
