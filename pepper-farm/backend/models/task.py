@@ -19,6 +19,7 @@ class Task(Base):
     CompletedAt      = Column(DateTime, nullable=True)
     PepperId         = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=True)
     ZoneId           = Column(Integer, ForeignKey("FarmZones.ZoneId"), nullable=True)
+    AnomalyId        = Column(Integer, ForeignKey("SensorAlerts.AlertId"), nullable=True)
     CreatedAt        = Column(DateTime, nullable=False, server_default=func.sysdatetime())
     UpdatedAt        = Column(DateTime, nullable=False, server_default=func.sysdatetime())
 

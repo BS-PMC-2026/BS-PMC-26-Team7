@@ -14,6 +14,7 @@ class CreateTaskRequest(BaseModel):
     pepperId: Optional[int] = None
     zoneId: Optional[int] = None
     zoneCode: Optional[str] = None  # alternative to zoneId; resolved server-side
+    anomalyId: Optional[int] = None  # links task to the source SensorAlert
 
 
 class UpdateTaskRequest(BaseModel):
@@ -55,6 +56,7 @@ class TaskResponse(BaseModel):
     pepperId: Optional[int]
     zoneId: Optional[int]
     zoneCode: Optional[str]
+    anomalyId: Optional[int]
     createdAt: datetime
     updatedAt: datetime
 
