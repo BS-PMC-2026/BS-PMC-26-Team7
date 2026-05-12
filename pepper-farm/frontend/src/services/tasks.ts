@@ -2,6 +2,7 @@ import { apiFetch } from './api';
 import { API_URL } from '@/lib/constants';
 import { CreateTaskFormData, Task } from '@/types/task';
 
+
 interface CreateTaskPayload {
   title: string;
   description: string | null;
@@ -95,4 +96,14 @@ export async function getTasksReportByWorker(token: string, workerId: number): P
   const json = await res.json();
   if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
   return json;
+}
+
+export async function getCompletedTasks(): Promise<Task[]> {
+  const token = localStorage.getItem('token') ?? '';
+
+  return apiFetch<Task[]>('/api/tasks/completed', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }

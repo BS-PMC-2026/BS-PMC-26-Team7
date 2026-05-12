@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from services.task_service import create_task, get_all_tasks, get_tasks_by_user, update_task, get_open_tasks_report, get_open_tasks_by_worker
+from services.task_service import create_task, get_all_tasks, get_tasks_by_user, update_task, get_open_tasks_report, get_open_tasks_by_worker ,get_completed_tasks
 from schemas.task import CreateTaskRequest, UpdateTaskRequest, TaskResponse
 from utils.jwt import get_current_user, require_role
 
@@ -27,6 +27,20 @@ def get_tasks_report(
         return get_open_tasks_by_worker(db, worker_id)
     return get_open_tasks_report(db)
 
+@router.get("/completed", response_model=list[TaskResponse])
+def get_completed_tasks_endpoint(
+    worker_id: int | None = None,
+    task_type: str | None = None,
+    zone_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    return get_completed_tasks(
+        db=db,
+        worker_id=worker_id,
+        task_type=task_type,
+        zone_id=zone_id,
+    )
 
 @router.get("", response_model=list[TaskResponse])
 def list_tasks_endpoint(db: Session = Depends(get_db)):
