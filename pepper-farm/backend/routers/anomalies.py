@@ -142,10 +142,7 @@ def get_recent_alerts(
             .outerjoin(FarmZone, FarmZone.ZoneId == SensorAssignment.ZoneId)
             .outerjoin(Plant, Plant.PlantId == SensorAssignment.PlantId)
             .outerjoin(PepperVariety, PepperVariety.PepperId == SensorAlert.PepperId)
-            .filter(
-                SensorAssignment.IsActive == True,       # noqa: E712
-                SensorAssignment.AssignedToUtc == None,  # noqa: E711
-            )
+            .filter(SensorAssignment.IsActive == True)  # noqa: E712
             .order_by(SensorAlert.CreatedAtUtc.desc())
             .limit(limit)
             .all()
