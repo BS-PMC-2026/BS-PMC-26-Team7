@@ -159,3 +159,24 @@ def _to_response(task: Task) -> TaskResponse:
         createdAt=task.CreatedAt,
         updatedAt=task.UpdatedAt,
     )
+
+def get_completed_tasks(
+    db: Session,
+    worker_id: int | None = None,
+    task_type: str | None = None,
+    zone_id: int | None = None,
+) -> list[TaskResponse]:
+    query = db.query(Task).filter(Task.Status == "done")
+
+    if worker_id is not None:
+        query = query.filter(Task.AssignedToUserId == worker_id)
+
+    if task_type:
+        query = query.filter(Task.TaskType == task_type)
+
+    if zone_id is not None:
+        query = query.filter(Task.ZoneId == zone_id)
+
+    tasks = query.order_by(Task.CompletedAt.desc()).all()
+
+    return [_to_response(t) for t in tasks]
