@@ -26,3 +26,4 @@ class Task(Base):
     created_by  = relationship("User", foreign_keys=[CreatedByUserId], lazy="joined")
     assigned_to = relationship("User", foreign_keys=[AssignedToUserId], lazy="joined")
     zone        = relationship("FarmZone", foreign_keys=[ZoneId], lazy="joined")
+    alert       = relationship("SensorAlert", foreign_keys=[AnomalyId], lazy="joined")
