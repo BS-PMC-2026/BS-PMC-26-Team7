@@ -9,7 +9,8 @@
       "Bash(xargs grep -l \"Drawer\\\\|Alert\\\\|Anomaly\")",
       "Bash(python -m pytest tests/test_tasks_api.py -v)",
       "Bash(npx jest *)",
-      "Bash(python -m pytest tests/test_tasks_api.py tests/test_anomalies_api.py -v --tb=no)"
+      "Bash(python -m pytest tests/test_tasks_api.py tests/test_anomalies_api.py -v --tb=no)",
+      "Bash(python -m pytest tests/test_task_report.py -v --tb=short)"
     ]
   }
 }
