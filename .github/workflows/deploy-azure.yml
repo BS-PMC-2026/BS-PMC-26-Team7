@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.11"
 
       - name: Install Backend Dependencies
         run: |
@@ -53,18 +53,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: ./pepper-farm/frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build Frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_BASE_URL: https://hadinerim.azurewebsites.net
 
+      - name: Prepare Frontend Package
+        run: |
+          rm -rf node_modules
+          rm -rf .next/cache
+          zip -r ../../frontend-package.zip . \
+            -x "node_modules/*" \
+            -x ".next/cache/*" \
+            -x ".env" \
+            -x ".git/*"
+
+      - name: Wait before Azure Deploy
+        run: sleep 30
+        working-directory: .
+
       - name: Deploy Frontend to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: Hadinerimfront
           publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          package: ./pepper-farm/frontend
+          package: ./frontend-package.zip
