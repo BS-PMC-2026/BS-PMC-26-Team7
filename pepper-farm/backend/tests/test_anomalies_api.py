@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
 
 from main import app
 from database import get_db
@@ -400,3 +401,145 @@ def test_stream_endpoint_zero_is_valid_last_alert_id():
     )
     assert stream_route is not None, "stream route not found"
     # The route exists and uses `last_alert_id: int` — confirmed by route registration.
+
+
+# ------------------------------------------------------------------ #
+# 8. Error handling — OperationalError → 503
+# ------------------------------------------------------------------ #
+
+def _db_op_error():
+    """A mock DB session whose first query raises OperationalError."""
+    mock_db = MagicMock()
+    mock_db.query.side_effect = OperationalError("timeout", {}, Exception("timeout"))
+    return mock_db
+
+
+def test_get_summary_returns_503_on_db_timeout():
+    app.dependency_overrides[get_db] = lambda: _db_op_error()
+    try:
+        res = client.get("/api/manager/anomalies/summary")
+        assert res.status_code == 503
+        assert "database" in res.json()["detail"].lower() or "timeout" in res.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_recent_returns_503_on_db_timeout():
+    app.dependency_overrides[get_db] = lambda: _db_op_error()
+    try:
+        res = client.get("/api/manager/anomalies/recent")
+        assert res.status_code == 503
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_trends_returns_503_on_db_timeout():
+    app.dependency_overrides[get_db] = lambda: _db_op_error()
+    try:
+        res = client.get("/api/manager/anomalies/trends")
+        assert res.status_code == 503
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_by_zone_returns_503_on_db_timeout():
+    app.dependency_overrides[get_db] = lambda: _db_op_error()
+    try:
+        res = client.get("/api/manager/anomalies/by-zone")
+        assert res.status_code == 503
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_resolve_alert_returns_503_on_db_timeout():
+    app.dependency_overrides[get_db] = lambda: _db_op_error()
+    try:
+        res = client.patch("/api/sensor-alerts/1/resolve")
+        assert res.status_code == 503
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# 9. Error handling — unexpected Exception → 500
+# ------------------------------------------------------------------ #
+
+def _db_generic_error():
+    """A mock DB session whose first query raises a generic RuntimeError."""
+    mock_db = MagicMock()
+    mock_db.query.side_effect = RuntimeError("unexpected failure")
+    return mock_db
+
+
+def test_get_summary_returns_500_on_unexpected_error():
+    app.dependency_overrides[get_db] = lambda: _db_generic_error()
+    try:
+        res = client.get("/api/manager/anomalies/summary")
+        assert res.status_code == 500
+        assert "unexpected failure" in res.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_recent_returns_500_on_unexpected_error():
+    app.dependency_overrides[get_db] = lambda: _db_generic_error()
+    try:
+        res = client.get("/api/manager/anomalies/recent")
+        assert res.status_code == 500
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_trends_returns_500_on_unexpected_error():
+    app.dependency_overrides[get_db] = lambda: _db_generic_error()
+    try:
+        res = client.get("/api/manager/anomalies/trends")
+        assert res.status_code == 500
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_by_zone_returns_500_on_unexpected_error():
+    app.dependency_overrides[get_db] = lambda: _db_generic_error()
+    try:
+        res = client.get("/api/manager/anomalies/by-zone")
+        assert res.status_code == 500
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# 10. resolve_alert rolls back on error and does not leave a dirty session
+# ------------------------------------------------------------------ #
+
+def test_resolve_alert_rolls_back_on_unexpected_error():
+    """If an unexpected error occurs after the alert is found, the session is rolled back."""
+    mock_db = MagicMock()
+    alert = make_mock_alert(alert_id=7, resolved=False)
+    mock_db.query.return_value.filter.return_value.first.return_value = alert
+    # Simulate commit blowing up
+    mock_db.commit.side_effect = RuntimeError("disk full")
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        res = client.patch("/api/sensor-alerts/7/resolve")
+        assert res.status_code == 500
+        mock_db.rollback.assert_called_once()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_resolve_alert_rolls_back_on_operational_error():
+    """OperationalError during commit triggers rollback and returns 503."""
+    mock_db = MagicMock()
+    alert = make_mock_alert(alert_id=8, resolved=False)
+    mock_db.query.return_value.filter.return_value.first.return_value = alert
+    mock_db.commit.side_effect = OperationalError("timeout", {}, Exception())
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        res = client.patch("/api/sensor-alerts/8/resolve")
+        assert res.status_code == 503
+        mock_db.rollback.assert_called_once()
+    finally:
+        app.dependency_overrides.clear()
