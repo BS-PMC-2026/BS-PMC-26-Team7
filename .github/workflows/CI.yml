@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-test-package:
     runs-on: ubuntu-latest
 
     defaults:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -32,3 +32,18 @@ jobs:
 
       - name: Run tests
         run: pytest tests
+
+      - name: Create backend package
+        run: |
+          mkdir -p ../../artifacts
+          zip -r ../../artifacts/backend-package.zip . \
+            -x "__pycache__/*" \
+            -x ".pytest_cache/*" \
+            -x "*.pyc" \
+            -x ".env"
+
+      - name: Upload backend package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-package
+          path: artifacts/backend-package.zip
