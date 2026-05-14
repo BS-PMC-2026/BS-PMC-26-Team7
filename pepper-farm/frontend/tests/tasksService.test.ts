@@ -41,6 +41,7 @@ const mockTask = {
   zoneId: null,
   zoneCode: 'GH-01',
   anomalyId: null,
+  alertInfo: null,
   createdAt: '2026-05-12T00:00:00',
   updatedAt: '2026-05-12T00:00:00',
 };

@@ -6,10 +6,12 @@ import { getAllUsers } from '@/services/users';
 import { getZones } from '@/services/zones';
 import type { Task } from '@/types/task';
 
-const mockRouter = { replace: jest.fn() };
+const mockRouter = { replace: jest.fn(), push: jest.fn() };
+const mockSearchParams = { get: jest.fn().mockReturnValue(null) };
 
 jest.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
+  useSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('@/components/map/FarmMap', () => ({
@@ -32,6 +34,15 @@ jest.mock('@/services/zones', () => ({
   getZones: jest.fn(),
 }));
 
+jest.mock('@/services/plants', () => ({
+  getAllPlants: jest.fn().mockResolvedValue([]),
+  createPlant: jest.fn(),
+}));
+
+jest.mock('@/services/peppers', () => ({
+  getAllPeppers: jest.fn().mockResolvedValue([]),
+}));
+
 const tasks: Task[] = [
   {
     id: 1,
@@ -48,6 +59,8 @@ const tasks: Task[] = [
     pepperId: null,
     zoneId: null,
     zoneCode: 'GH-01',
+    anomalyId: null,
+    alertInfo: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -66,6 +79,8 @@ const tasks: Task[] = [
     pepperId: null,
     zoneId: null,
     zoneCode: 'GH-02',
+    anomalyId: null,
+    alertInfo: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },

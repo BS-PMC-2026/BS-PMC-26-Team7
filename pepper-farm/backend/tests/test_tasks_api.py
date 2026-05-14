@@ -65,10 +65,11 @@ def _fake_response(anomaly_id=None, zone_id=None, pepper_id=None, description=No
         "createdByUserId": 1, "assignedToUserId": None, "dueDate": None,
         "startedAt": None, "completedAt": None,
         "pepperId": pepper_id, "zoneId": zone_id, "zoneCode": None,
-        "anomalyId": anomaly_id,
+        "anomalyId": anomaly_id, "alertInfo": None,
         "createdAt": "2026-05-01T00:00:00", "updatedAt": "2026-05-01T00:00:00",
     }
     m = MagicMock(**d)
+    m.alertInfo = None  # prevent MagicMock auto-attribute from polluting serialisation
     m.model_dump = lambda mode=None: d
     return m
 
@@ -321,3 +322,153 @@ def test_explicit_zone_overrides_sensor_assignment():
         assert added_task.ZoneId == 7, "Explicit zoneCode must override SensorAssignment"
     finally:
         app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# US25 — Worker receives and handles task
+# ------------------------------------------------------------------ #
+
+def make_mock_task(task_id=1, assigned_to=2, status="todo", anomaly_id=None, alert=None):
+    task = MagicMock()
+    task.Id = task_id
+    task.Title = "Test task"
+    task.Description = None
+    task.Status = status
+    task.Priority = "medium"
+    task.TaskType = "inspection"
+    task.CreatedByUserId = 1
+    task.AssignedToUserId = assigned_to
+    task.DueDate = None
+    task.StartedAt = None
+    task.CompletedAt = None
+    task.PepperId = None
+    task.ZoneId = None
+    task.AnomalyId = anomaly_id
+    task.alert = alert
+    task.zone = None
+    task.CreatedAt = MagicMock()
+    task.CreatedAt.isoformat.return_value = "2026-05-01T00:00:00"
+    task.UpdatedAt = MagicMock()
+    task.UpdatedAt.isoformat.return_value = "2026-05-01T00:00:00"
+    return task
+
+
+def make_mock_sensor_alert(severity="High", metric="Temperature", value=45.0,
+                            min_allowed=10.0, max_allowed=35.0,
+                            message="Too hot", is_resolved=False):
+    a = MagicMock()
+    a.Severity = severity
+    a.MetricName = metric
+    a.ActualValue = value
+    a.MinAllowed = min_allowed
+    a.MaxAllowed = max_allowed
+    a.Message = message
+    a.IsResolved = is_resolved
+    a.CreatedAtUtc = MagicMock()
+    a.CreatedAtUtc.isoformat.return_value = "2026-05-01T10:00:00"
+    return a
+
+
+# ------------------------------------------------------------------ #
+# 8. Worker fetches only their own tasks (GET /api/tasks/my)
+# ------------------------------------------------------------------ #
+
+def test_worker_fetches_own_tasks():
+    """GET /api/tasks/my returns tasks for the authenticated worker."""
+    from services import task_service
+
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=10, assigned_to=2, status="todo")
+
+    mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [task]
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        with patch.object(task_service, "_to_response",
+                          return_value=_fake_response()):
+            res = client.get("/api/tasks/my")
+        assert res.status_code == 200
+        assert isinstance(res.json(), list)
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# 9. Unauthenticated request to /api/tasks/my is rejected
+# ------------------------------------------------------------------ #
+
+def test_unauthenticated_cannot_fetch_my_tasks():
+    """GET /api/tasks/my without a valid token returns 401 or 403."""
+    # No dependency override — default JWT check will fire
+    res = client.get("/api/tasks/my")
+    assert res.status_code in (401, 403, 422)
+
+
+# ------------------------------------------------------------------ #
+# 10. Worker can update task status via PATCH
+# ------------------------------------------------------------------ #
+
+def test_worker_can_update_task_status():
+    """Worker PATCH /api/tasks/{id} with status=in_progress succeeds."""
+    from services import task_service
+
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, assigned_to=2, status="todo")
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        with patch.object(task_service, "_to_response",
+                          return_value=_fake_response()):
+            res = client.patch("/api/tasks/5", json={"status": "in_progress"})
+        assert res.status_code == 200
+        assert task.Status == "in_progress"
+        assert task.StartedAt is not None
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# 11. Alert-linked task serialisation includes alertInfo
+# ------------------------------------------------------------------ #
+
+def test_alert_linked_task_includes_alert_info():
+    """_to_response populates alertInfo when the task has an associated SensorAlert."""
+    from services.task_service import _to_response
+
+    alert = make_mock_sensor_alert(
+        severity="High", metric="Temperature", value=45.0,
+        min_allowed=10.0, max_allowed=35.0,
+        message="Too hot", is_resolved=False,
+    )
+    task = make_mock_task(task_id=1, anomaly_id=7, alert=alert)
+
+    response = _to_response(task)
+
+    assert response.anomalyId == 7
+    assert response.alertInfo is not None
+    assert response.alertInfo.severity == "High"
+    assert response.alertInfo.metricName == "Temperature"
+    assert response.alertInfo.actualValue == 45.0
+    assert response.alertInfo.minAllowed == 10.0
+    assert response.alertInfo.maxAllowed == 35.0
+    assert response.alertInfo.message == "Too hot"
+    assert response.alertInfo.isResolved is False
+
+
+# ------------------------------------------------------------------ #
+# 12. Task without anomalyId has alertInfo=None
+# ------------------------------------------------------------------ #
+
+def test_regular_task_has_no_alert_info():
+    """_to_response leaves alertInfo as None when AnomalyId is not set."""
+    from services.task_service import _to_response
+
+    task = make_mock_task(task_id=2, anomaly_id=None, alert=None)
+
+    response = _to_response(task)
+
+    assert response.anomalyId is None
+    assert response.alertInfo is None
