@@ -69,7 +69,7 @@ function ManagerTasksPageContent() {
         getZones(),
       ]);
       setTasks(fetchedTasks);
-      setWorkers(fetchedWorkers);
+      setWorkers(fetchedWorkers.filter((u) => u.roleName === 'Worker'));
       setZones(fetchedZones);
     } catch {
       setLoadError('Failed to load tasks. Is the backend running?');

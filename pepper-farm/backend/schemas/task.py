@@ -4,6 +4,17 @@ from typing import Optional
 
 ALLOWED_PRIORITIES = {"low", "medium", "high", "critical"}
 
+
+class AlertInfo(BaseModel):
+    severity: str
+    metricName: str
+    actualValue: float
+    minAllowed: Optional[float]
+    maxAllowed: Optional[float]
+    message: str
+    isResolved: bool
+    createdAtUtc: str
+
 class CreateTaskRequest(BaseModel):
     title: str
     taskType: str
@@ -57,6 +68,7 @@ class TaskResponse(BaseModel):
     zoneId: Optional[int]
     zoneCode: Optional[str]
     anomalyId: Optional[int]
+    alertInfo: Optional[AlertInfo] = None
     createdAt: datetime
     updatedAt: datetime
 

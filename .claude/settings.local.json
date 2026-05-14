@@ -5,21 +5,12 @@
       "Bash(python -m pytest tests/test_sensor_service.py tests/test_sensors_api.py -v)",
       "Bash(python -m pytest tests/test_anomaly_detection_service.py -v)",
       "Bash(python -m pytest)",
-      "Bash(python -m pytest tests/test_anomalies_api.py -v)",
-      "Bash(npx jest tests/anomaliesService.test.ts --no-coverage)",
-      "Bash(timeout 90 npx jest tests/anomaliesService.test.ts --no-coverage --forceExit)",
-      "Bash(npm install --silent)",
-      "Bash(npm install)",
-      "Bash(echo \"EXIT:$?\")",
-      "Bash(npx jest tests/anomaliesService.test.ts)",
-      "Bash(node -e \":*)",
-      "Bash(python3 -m json.tool)",
-      "Bash(node -e \"require\\(''./node_modules/.bin/concurrently''\\); console.log\\(''concurrently ok''\\)\")",
-      "Bash(head:*)",
-      "Bash(npm run build)",
-      "Bash(grep -n \"<div\\\\|</div\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/src/app/manager/peppers/edit/[id]/page.tsx)",
-      "Bash(python3 -c \":*)",
-      "Bash(grep -n \"Severity\\\\|severity\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/backend/models/*.py)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\nevoi\\\\Documents\\\\GitHub\\\\BS-PMC-26-Team7\" -Recurse -Directory | Where-Object { $_.Name -match \"\\(worker|employee|task\\)\" } | Sort-Object FullName)",
+      "Bash(xargs grep -l \"Drawer\\\\|Alert\\\\|Anomaly\")",
+      "Bash(python -m pytest tests/test_tasks_api.py -v)",
+      "Bash(npx jest *)",
+      "Bash(python -m pytest tests/test_tasks_api.py tests/test_anomalies_api.py -v --tb=no)",
+      "Bash(python -m pytest tests/test_task_report.py -v --tb=short)"
     ]
   }
 }

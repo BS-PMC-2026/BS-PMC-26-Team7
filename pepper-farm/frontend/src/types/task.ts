@@ -1,6 +1,17 @@
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
+export interface AlertInfo {
+  severity: string;
+  metricName: string;
+  actualValue: number;
+  minAllowed: number | null;
+  maxAllowed: number | null;
+  message: string;
+  isResolved: boolean;
+  createdAtUtc: string;
+}
+
 export interface CreateTaskFormData {
   title: string;
   description: string;
@@ -27,6 +38,7 @@ export interface Task {
   zoneId: number | null;
   zoneCode: string | null;
   anomalyId: number | null;
+  alertInfo: AlertInfo | null;
   createdAt: string;
   updatedAt: string;
 }
