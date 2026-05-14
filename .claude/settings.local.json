@@ -19,7 +19,9 @@
       "Bash(npm run build)",
       "Bash(grep -n \"<div\\\\|</div\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/src/app/manager/peppers/edit/[id]/page.tsx)",
       "Bash(python3 -c \":*)",
-      "Bash(grep -n \"Severity\\\\|severity\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/backend/models/*.py)"
+      "Bash(grep -n \"Severity\\\\|severity\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/backend/models/*.py)",
+      "Bash(git -C /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7 status --short)",
+      "Bash(find . -name \"* 2.*\" -not -path \"./.git/*\" -print -delete)"
     ]
   }
 }
