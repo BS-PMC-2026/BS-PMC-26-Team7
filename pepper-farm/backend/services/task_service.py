@@ -4,7 +4,7 @@ from models.task import Task
 from models.user import User
 from models.farm_zone import FarmZone
 from models.sensor import SensorAlert, SensorAssignment
-from schemas.task import CreateTaskRequest, UpdateTaskRequest, TaskResponse
+from schemas.task import AlertInfo, CreateTaskRequest, UpdateTaskRequest, TaskResponse
 
 ALLOWED_PRIORITIES = {"low", "medium", "high", "critical"}
 ALLOWED_STATUSES = {"todo", "in_progress", "done", "cancelled"}
@@ -175,6 +175,19 @@ def get_open_tasks_by_worker(db: Session, worker_id: int) -> list[TaskResponse]:
 
 
 def _to_response(task: Task) -> TaskResponse:
+    alert_info = None
+    if task.AnomalyId is not None and task.alert is not None:
+        a = task.alert
+        alert_info = AlertInfo(
+            severity=a.Severity,
+            metricName=a.MetricName,
+            actualValue=a.ActualValue,
+            minAllowed=a.MinAllowed,
+            maxAllowed=a.MaxAllowed,
+            message=a.Message,
+            isResolved=bool(a.IsResolved),
+            createdAtUtc=a.CreatedAtUtc.isoformat() if a.CreatedAtUtc else "",
+        )
     return TaskResponse(
         id=task.Id,
         title=task.Title,
@@ -191,6 +204,7 @@ def _to_response(task: Task) -> TaskResponse:
         zoneId=task.ZoneId,
         zoneCode=task.zone.ZoneCode if task.zone else None,
         anomalyId=task.AnomalyId,
+        alertInfo=alert_info,
         createdAt=task.CreatedAt,
         updatedAt=task.UpdatedAt,
     )

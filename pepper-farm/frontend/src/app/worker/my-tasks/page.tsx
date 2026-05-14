@@ -6,11 +6,13 @@ import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
-import { Task } from '@/types/task';
-import { getMyTasks } from '@/services/tasks';
+import { Task, TaskStatus } from '@/types/task';
+import { getMyTasks, updateTask } from '@/services/tasks';
+import { useToast } from '@/context/ToastContext';
 
 export default function MyTasksPage() {
   const router = useRouter();
+  const { show } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,28 @@ export default function MyTasksPage() {
     loadTasks();
   }, [loadTasks]);
 
+  const handleStatusChange = useCallback(async (task: Task, newStatus: TaskStatus) => {
+    const token = localStorage.getItem('token') ?? '';
+    try {
+      const updated = await updateTask(task.id, { status: newStatus }, token);
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      const label = newStatus === 'in_progress' ? 'Started' : 'Completed';
+      show({
+        title: label,
+        body: `"${task.title}" marked as ${newStatus.replace('_', ' ')}.`,
+        severity: 'Medium',
+        autoDismissMs: 4000,
+      });
+    } catch (err) {
+      show({
+        title: 'Error',
+        body: err instanceof Error ? err.message : 'Failed to update task status.',
+        severity: 'High',
+        autoDismissMs: 6000,
+      });
+    }
+  }, [show]);
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -51,7 +75,7 @@ export default function MyTasksPage() {
       ) : tasks.length === 0 ? (
         <EmptyState title="No tasks yet." description="You have no tasks assigned." />
       ) : (
-        <TaskList tasks={tasks} />
+        <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
       )}
     </div>
   );
