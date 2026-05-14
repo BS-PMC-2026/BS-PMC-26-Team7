@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from models.task import Task
 from models.user import User
 from models.farm_zone import FarmZone
+from models.sensor import SensorAlert, SensorAssignment
 from schemas.task import CreateTaskRequest, UpdateTaskRequest, TaskResponse
 
 ALLOWED_PRIORITIES = {"low", "medium", "high", "critical"}
@@ -40,20 +41,53 @@ def create_task(db: Session, created_by_user_id: int, data: CreateTaskRequest) -
         if assignee.role.RoleName != "Worker":
             return None, "Tasks can only be assigned to Workers."
 
+    # Start with explicit values; they will be overridden by SensorAssignment only when absent.
     zone_id = _resolve_zone_id(db, data.zoneId, data.zoneCode)
+    pepper_id = data.pepperId
+    description = data.description
+
+    if data.anomalyId is not None:
+        alert = db.query(SensorAlert).filter(SensorAlert.AlertId == data.anomalyId).first()
+        if not alert:
+            return None, f"Alert #{data.anomalyId} not found."
+
+        # Auto-fill ZoneId and PepperId from the active SensorAssignment for this sensor.
+        # Explicit values from the request always take precedence.
+        assignment = (
+            db.query(SensorAssignment)
+            .filter(
+                SensorAssignment.SensorId == alert.SensorId,
+                SensorAssignment.IsActive == True,
+            )
+            .first()
+        )
+        if assignment:
+            if zone_id is None and assignment.ZoneId:
+                zone_id = assignment.ZoneId
+            if pepper_id is None and assignment.PepperId:
+                pepper_id = assignment.PepperId
+            # Task has no PlantId column; append the FK to description so it is not lost.
+            if assignment.PlantId is not None:
+                plant_tag = f"PlantId:{assignment.PlantId}"
+                if description:
+                    if plant_tag not in description:
+                        description = f"{description}\n{plant_tag}"
+                else:
+                    description = plant_tag
 
     now = datetime.now(timezone.utc)
     task = Task(
         Title=data.title,
-        Description=data.description,
+        Description=description,
         TaskType=data.taskType,
         Priority=data.priority,
         Status="todo",
         CreatedByUserId=created_by_user_id,
         AssignedToUserId=data.assignedToUserId,
         DueDate=data.dueDate,
-        PepperId=data.pepperId,
+        PepperId=pepper_id,
         ZoneId=zone_id,
+        AnomalyId=data.anomalyId,
         CreatedAt=now,
         UpdatedAt=now,
     )
@@ -156,6 +190,7 @@ def _to_response(task: Task) -> TaskResponse:
         pepperId=task.PepperId,
         zoneId=task.ZoneId,
         zoneCode=task.zone.ZoneCode if task.zone else None,
+        anomalyId=task.AnomalyId,
         createdAt=task.CreatedAt,
         updatedAt=task.UpdatedAt,
     )

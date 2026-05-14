@@ -8,6 +8,7 @@ import AlertDetailsDrawer from './AlertDetailsDrawer';
 interface Props {
   alerts: RecentAlert[];
   onAlertResolved: (alertId: number) => void;
+  onCreateTask?: (alert: RecentAlert) => void;
 }
 
 const SEVERITY_BADGE: Record<string, string> = {
@@ -23,7 +24,7 @@ function IconCheck({ className }: { className?: string }) {
   );
 }
 
-export default function RecentAnomaliesTable({ alerts, onAlertResolved }: Props) {
+export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreateTask }: Props) {
   const [selected, setSelected] = useState<RecentAlert | null>(null);
   const [resolvingId, setResolvingId] = useState<number | null>(null);
 
@@ -115,13 +116,23 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved }: Props)
                   </td>
                   <td className="px-4 py-3 text-right">
                     {!alert.isResolved && (
-                      <button
-                        onClick={(e) => handleQuickResolve(e, alert.alertId)}
-                        disabled={resolvingId === alert.alertId}
-                        className="text-xs text-[#2F6F4E] border border-[#2F6F4E] px-3 py-1 rounded-lg hover:bg-[#D6EBE0] transition-colors duration-150 disabled:opacity-40 cursor-pointer font-medium opacity-0 group-hover:opacity-100"
-                      >
-                        {resolvingId === alert.alertId ? '…' : 'Resolve'}
-                      </button>
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100">
+                        {onCreateTask && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onCreateTask(alert); }}
+                            className="text-xs text-blue-600 border border-blue-300 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors duration-150 cursor-pointer font-medium"
+                          >
+                            Create Task
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => handleQuickResolve(e, alert.alertId)}
+                          disabled={resolvingId === alert.alertId}
+                          className="text-xs text-[#2F6F4E] border border-[#2F6F4E] px-3 py-1 rounded-lg hover:bg-[#D6EBE0] transition-colors duration-150 disabled:opacity-40 cursor-pointer font-medium"
+                        >
+                          {resolvingId === alert.alertId ? '…' : 'Resolve'}
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

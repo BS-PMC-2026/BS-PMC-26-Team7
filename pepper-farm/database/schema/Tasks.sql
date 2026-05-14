@@ -1,5 +1,6 @@
 -- Table: Tasks
 -- Description: Tasks assigned by managers to employees, optionally linked to a pepper or zone
+--              and optionally linked to the SensorAlert that triggered them.
 
 -- | Column           | Type           | Nullable | Default           | Notes                              |
 -- |------------------|----------------|----------|-------------------|------------------------------------|
@@ -16,5 +17,8 @@
 -- | CompletedAt      | DATETIME2      | YES      |                   | Must be >= StartedAt               |
 -- | PepperId         | INT            | YES      |                   | FK -> PepperVarieties.PepperId     |
 -- | ZoneId           | INT            | YES      |                   | FK -> FarmZones.ZoneId             |
+-- | AnomalyId        | INT            | YES      |                   | FK -> SensorAlerts.AlertId (US24)  |
 -- | CreatedAt        | DATETIME2      | NO       | SYSDATETIME()     |                                    |
 -- | UpdatedAt        | DATETIME2      | NO       | SYSDATETIME()     |                                    |
+--
+-- Migration required: run database/migrations/add_anomaly_id_to_tasks.sql

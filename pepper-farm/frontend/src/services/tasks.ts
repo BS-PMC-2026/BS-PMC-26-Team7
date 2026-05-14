@@ -11,9 +11,10 @@ interface CreateTaskPayload {
   assignedToUserId: number | null;
   dueDate: string | null;
   zoneCode: string | null;
+  anomalyId?: number;
 }
 
-function toPayload(data: CreateTaskFormData): CreateTaskPayload {
+function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId'> {
   return {
     title: data.title.trim(),
     description: data.description.trim() || null,
@@ -38,15 +39,19 @@ export async function getTasks(): Promise<Task[]> {
   return apiFetch<Task[]>('/api/tasks');
 }
 
-export async function createTask(data: CreateTaskFormData): Promise<Task> {
+export async function createTask(data: CreateTaskFormData, anomalyId?: number): Promise<Task> {
   const token = localStorage.getItem('token') ?? '';
+  const payload: CreateTaskPayload = {
+    ...toPayload(data),
+    ...(anomalyId !== undefined ? { anomalyId } : {}),
+  };
   const res = await fetch(`${API_URL}/api/tasks`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(toPayload(data)),
+    body: JSON.stringify(payload),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.detail ?? 'Failed to create task.');

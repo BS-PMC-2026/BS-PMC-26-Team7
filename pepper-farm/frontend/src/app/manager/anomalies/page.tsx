@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { buildAlertTaskQueryString } from '@/lib/alertToTask';
 import Alert from '@/components/ui/Alert';
 import AnomalySummaryCards from '@/components/anomalies/AnomalySummaryCards';
 import AnomalyTrendChart from '@/components/anomalies/AnomalyTrendChart';
@@ -140,6 +142,7 @@ function IconArrowLeft({ className }: { className?: string }) {
 // Page
 // ---------------------------------------------------------------------------
 export default function AnomalyDashboardPage() {
+  const router = useRouter();
   const { liveAlerts, clearUnread } = useAnomalyNotification();
 
   const [summary, setSummary] = useState<AnomalySummary | null>(null);
@@ -201,6 +204,10 @@ export default function AnomalyDashboardPage() {
     if (loading) return; // skip during initial load
     loadSilent();
   }, [liveAlerts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCreateTask = useCallback((alert: RecentAlert) => {
+    router.push(`/manager/tasks?${buildAlertTaskQueryString(alert)}`);
+  }, [router]);
 
   const handleAlertResolved = (alertId: number) => {
     setAlerts((prev) =>
@@ -319,6 +326,7 @@ export default function AnomalyDashboardPage() {
             <RecentAnomaliesTable
               alerts={alerts}
               onAlertResolved={handleAlertResolved}
+              onCreateTask={handleCreateTask}
             />
           )}
         </Section>

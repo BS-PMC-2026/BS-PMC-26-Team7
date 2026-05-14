@@ -26,6 +26,7 @@ export interface Task {
   pepperId: number | null;
   zoneId: number | null;
   zoneCode: string | null;
+  anomalyId: number | null;
   createdAt: string;
   updatedAt: string;
 }
