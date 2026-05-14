@@ -28,3 +28,4 @@ Thumbs.db
 .vscode/
 .idea/
 pepper-farm/backend.zip
+.claude/settings.local.json
