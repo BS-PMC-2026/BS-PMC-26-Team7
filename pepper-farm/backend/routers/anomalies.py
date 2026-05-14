@@ -44,10 +44,16 @@ class RecentAlertResponse(BaseModel):
     message: str
     isResolved: bool
     createdAtUtc: str
+    resolvedAtUtc: Optional[str]
     zoneName: Optional[str]
     zoneCode: Optional[str]
     plantCode: Optional[str]
     pepperName: Optional[str]
+
+
+class PaginatedAlertResponse(BaseModel):
+    total: int
+    items: list[RecentAlertResponse]
 
 
 class TrendPointResponse(BaseModel):
@@ -123,16 +129,19 @@ def get_anomaly_summary(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/recent", response_model=list[RecentAlertResponse])
+@router.get("/recent", response_model=PaginatedAlertResponse)
 def get_recent_alerts(
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     since: Optional[datetime] = Query(default=None, description="ISO UTC timestamp — only return alerts created after this time"),
+    severity: Optional[str] = Query(default=None, pattern="^(High|Medium)$"),
+    status: Optional[str] = Query(default=None, pattern="^(active|resolved|all)$"),
+    zone_id: Optional[int] = Query(default=None, ge=1),
     db: Session = Depends(get_db),
 ):
     """
-    Returns the most recent sensor alerts enriched with zone, plant,
-    and pepper variety names for display in the anomaly table.
-    Pass `since` to fetch only alerts newer than a given UTC timestamp.
+    Returns paginated sensor alerts enriched with zone, plant, and pepper variety names.
+    Supports filtering by severity, status (active/resolved/all), zone, and timestamp.
     """
     try:
         q = (
@@ -154,28 +163,42 @@ def get_recent_alerts(
         )
         if since:
             q = q.filter(SensorAlert.CreatedAtUtc > since)
-        rows = q.order_by(SensorAlert.CreatedAtUtc.desc()).limit(limit).all()
+        if severity:
+            q = q.filter(SensorAlert.Severity == severity)
+        if status == "active":
+            q = q.filter(SensorAlert.IsResolved == False)   # noqa: E712
+        elif status == "resolved":
+            q = q.filter(SensorAlert.IsResolved == True)    # noqa: E712
+        if zone_id:
+            q = q.filter(SensorAssignment.ZoneId == zone_id)
 
-        return [
-            RecentAlertResponse(
-                alertId=alert.AlertId,
-                sensorId=alert.SensorId,
-                readingId=alert.ReadingId,
-                metricName=alert.MetricName,
-                actualValue=alert.ActualValue,
-                minAllowed=alert.MinAllowed,
-                maxAllowed=alert.MaxAllowed,
-                severity=alert.Severity,
-                message=alert.Message,
-                isResolved=bool(alert.IsResolved),
-                createdAtUtc=alert.CreatedAtUtc.isoformat(),
-                zoneName=zone_name,
-                zoneCode=zone_code,
-                plantCode=plant_code,
-                pepperName=pepper_name,
-            )
-            for alert, zone_name, zone_code, plant_code, pepper_name in rows
-        ]
+        total = q.with_entities(func.count(SensorAlert.AlertId)).scalar() or 0
+        rows = q.order_by(SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
+
+        return PaginatedAlertResponse(
+            total=total,
+            items=[
+                RecentAlertResponse(
+                    alertId=alert.AlertId,
+                    sensorId=alert.SensorId,
+                    readingId=alert.ReadingId,
+                    metricName=alert.MetricName,
+                    actualValue=alert.ActualValue,
+                    minAllowed=alert.MinAllowed,
+                    maxAllowed=alert.MaxAllowed,
+                    severity=alert.Severity,
+                    message=alert.Message,
+                    isResolved=bool(alert.IsResolved),
+                    createdAtUtc=alert.CreatedAtUtc.isoformat(),
+                    resolvedAtUtc=alert.ResolvedAtUtc.isoformat() if alert.ResolvedAtUtc else None,
+                    zoneName=zone_name,
+                    zoneCode=zone_code,
+                    plantCode=plant_code,
+                    pepperName=pepper_name,
+                )
+                for alert, zone_name, zone_code, plant_code, pepper_name in rows
+            ],
+        )
     except OperationalError:
         raise HTTPException(status_code=503, detail="Database connection timeout.")
     except Exception as exc:

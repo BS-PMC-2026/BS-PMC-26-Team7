@@ -1,5 +1,5 @@
 import { API_URL } from '@/lib/constants';
-import { AnomalySummary, RecentAlert, TrendPoint, ZoneHealth } from '@/types/anomaly';
+import { AnomalySummary, PaginatedAlertResponse, TrendPoint, ZoneHealth } from '@/types/anomaly';
 
 function getToken(): string {
   return typeof window !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
@@ -21,15 +21,28 @@ export async function getAnomalySummary(): Promise<AnomalySummary> {
   return json;
 }
 
-export async function getRecentAlerts(limit = 50, since?: string): Promise<RecentAlert[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
+export interface AlertFilters {
+  limit?: number;
+  offset?: number;
+  since?: string;
+  severity?: 'High' | 'Medium';
+  status?: 'active' | 'resolved' | 'all';
+  zoneId?: number;
+}
+
+export async function getRecentAlerts(filters: AlertFilters = {}): Promise<PaginatedAlertResponse> {
+  const { limit = 50, offset = 0, since, severity, status, zoneId } = filters;
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (since) params.set('since', since);
+  if (severity) params.set('severity', severity);
+  if (status) params.set('status', status);
+  if (zoneId) params.set('zone_id', String(zoneId));
   const res = await fetch(`${API_URL}/api/manager/anomalies/recent?${params}`, {
     headers: authHeaders(),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch recent alerts.');
-  return json;
+  return json as PaginatedAlertResponse;
 }
 
 export async function getAnomalyTrends(days = 7): Promise<TrendPoint[]> {

@@ -100,6 +100,9 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
           { label: 'Plant',          value: alert.plantCode ?? '—' },
           { label: 'Pepper Variety', value: alert.pepperName ?? '—' },
           { label: 'Time',           value: new Date(alert.createdAtUtc).toLocaleString() },
+          ...(alert.resolvedAtUtc
+            ? [{ label: 'Resolved At', value: new Date(alert.resolvedAtUtc).toLocaleString() }]
+            : []),
         ].map((row, i) => (
           <div
             key={row.label}

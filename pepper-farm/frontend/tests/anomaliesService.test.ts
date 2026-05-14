@@ -69,7 +69,7 @@ test('getAnomalySummary sends Authorization header', async () => {
 test('getRecentAlerts uses default limit of 50', async () => {
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
-    json: async () => [],
+    json: async () => ({ total: 0, items: [] }),
   });
 
   await getRecentAlerts();
@@ -81,44 +81,45 @@ test('getRecentAlerts uses default limit of 50', async () => {
 test('getRecentAlerts uses custom limit when provided', async () => {
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
-    json: async () => [],
+    json: async () => ({ total: 0, items: [] }),
   });
 
-  await getRecentAlerts(25);
+  await getRecentAlerts({ limit: 25 });
 
   const calledUrl = (fetch as jest.Mock).mock.calls[0][0];
   expect(calledUrl).toContain('limit=25');
 });
 
-test('getRecentAlerts returns array of alerts', async () => {
+test('getRecentAlerts returns paginated response with items', async () => {
   const mockAlerts = [
     {
       alertId: 1, sensorId: 1, readingId: 1,
       metricName: 'Temperature', actualValue: 35,
       minAllowed: 18, maxAllowed: 30,
       severity: 'High', message: 'Too hot', isResolved: false,
-      createdAtUtc: '2026-04-27T09:00:00',
+      resolvedAtUtc: null, createdAtUtc: '2026-04-27T09:00:00',
       zoneName: 'Greenhouse A', zoneCode: 'ZONE-A',
       plantCode: null, pepperName: 'Sweet Bell',
     },
   ];
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
-    json: async () => mockAlerts,
+    json: async () => ({ total: 1, items: mockAlerts }),
   });
 
   const result = await getRecentAlerts();
-  expect(result).toHaveLength(1);
-  expect(result[0].metricName).toBe('Temperature');
+  expect(result.total).toBe(1);
+  expect(result.items).toHaveLength(1);
+  expect(result.items[0].metricName).toBe('Temperature');
 });
 
 test('getRecentAlerts appends since param when provided', async () => {
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
-    json: async () => [],
+    json: async () => ({ total: 0, items: [] }),
   });
 
-  await getRecentAlerts(50, '2026-05-01T00:00:00');
+  await getRecentAlerts({ limit: 50, since: '2026-05-01T00:00:00' });
 
   const calledUrl = (fetch as jest.Mock).mock.calls[0][0];
   expect(calledUrl).toContain('since=2026-05-01T00%3A00%3A00');
@@ -127,10 +128,10 @@ test('getRecentAlerts appends since param when provided', async () => {
 test('getRecentAlerts does not append since param when not provided', async () => {
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
-    json: async () => [],
+    json: async () => ({ total: 0, items: [] }),
   });
 
-  await getRecentAlerts(50);
+  await getRecentAlerts({ limit: 50 });
 
   const calledUrl = (fetch as jest.Mock).mock.calls[0][0];
   expect(calledUrl).not.toContain('since=');
@@ -143,6 +144,61 @@ test('getRecentAlerts throws on API error', async () => {
   });
 
   await expect(getRecentAlerts()).rejects.toThrow('Failed to fetch recent alerts.');
+});
+
+test('getRecentAlerts appends severity param when provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ total: 0, items: [] }),
+  });
+  await getRecentAlerts({ severity: 'High' });
+  expect((fetch as jest.Mock).mock.calls[0][0]).toContain('severity=High');
+});
+
+test('getRecentAlerts appends status param when provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ total: 0, items: [] }),
+  });
+  await getRecentAlerts({ status: 'active' });
+  expect((fetch as jest.Mock).mock.calls[0][0]).toContain('status=active');
+});
+
+test('getRecentAlerts appends offset param when provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ total: 0, items: [] }),
+  });
+  await getRecentAlerts({ offset: 50 });
+  expect((fetch as jest.Mock).mock.calls[0][0]).toContain('offset=50');
+});
+
+test('getRecentAlerts appends zone_id param when provided', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ total: 0, items: [] }),
+  });
+  await getRecentAlerts({ zoneId: 3 });
+  expect((fetch as jest.Mock).mock.calls[0][0]).toContain('zone_id=3');
+});
+
+test('getRecentAlerts includes resolvedAtUtc in returned items', async () => {
+  const mockResponse = {
+    total: 1,
+    items: [{
+      alertId: 1, sensorId: 1, readingId: 1,
+      metricName: 'Temperature', actualValue: 35,
+      minAllowed: 18, maxAllowed: 30,
+      severity: 'High', message: 'Too hot',
+      isResolved: true, resolvedAtUtc: '2026-04-28T10:00:00',
+      createdAtUtc: '2026-04-27T09:00:00',
+      zoneName: 'Greenhouse A', zoneCode: 'ZONE-A',
+      plantCode: null, pepperName: 'Sweet Bell',
+    }],
+  };
+  (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => mockResponse });
+  const result = await getRecentAlerts();
+  expect(result.items[0].resolvedAtUtc).toBe('2026-04-28T10:00:00');
 });
 
 // ---------- getAnomalyTrends ----------

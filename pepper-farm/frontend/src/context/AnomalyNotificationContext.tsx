@@ -74,8 +74,8 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
     if (fallbackRef.current) return; // already running
     fallbackRef.current = setInterval(async () => {
       try {
-        const alerts = await getRecentAlerts(20, lastSeenTime.current);
-        alerts.forEach((a) => {
+        const result = await getRecentAlerts({ limit: 20, since: lastSeenTime.current });
+        result.items.forEach((a) => {
           if (a.createdAtUtc > (lastSeenTime.current ?? '')) {
             lastSeenTime.current = a.createdAtUtc;
           }
@@ -134,8 +134,9 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
 
     async function init() {
       try {
-        const alerts = await getRecentAlerts(100);
+        const result = await getRecentAlerts({ limit: 100 });
         if (cancelled) return;
+        const alerts = result.items;
 
         // Seed state silently — no toasts for existing alerts
         setLiveAlerts(alerts);
