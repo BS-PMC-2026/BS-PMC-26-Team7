@@ -65,6 +65,31 @@ export async function getZoneHealth(): Promise<ZoneHealth[]> {
   return json;
 }
 
+export interface RecurrenceConfig {
+  minCount: number;
+  windowHours: number;
+}
+
+export async function getRecurrenceConfig(): Promise<RecurrenceConfig> {
+  const res = await fetch(`${API_URL}/api/manager/anomalies/recurrence-config`, {
+    headers: authHeaders(),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch recurrence config.');
+  return json;
+}
+
+export async function updateRecurrenceConfig(config: Partial<RecurrenceConfig>): Promise<RecurrenceConfig> {
+  const res = await fetch(`${API_URL}/api/manager/anomalies/recurrence-config`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(config),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to update recurrence config.');
+  return json;
+}
+
 export async function resolveAlert(alertId: number): Promise<{ alertId: number; isResolved: boolean }> {
   const res = await fetch(`${API_URL}/api/sensor-alerts/${alertId}/resolve`, {
     method: 'PATCH',

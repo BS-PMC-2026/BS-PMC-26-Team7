@@ -114,3 +114,16 @@ class SensorAlert(Base):
     CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
     ResolvedAtUtc = Column(DateTime, nullable=True)
     IsRecurring = Column(Boolean, nullable=True, default=False)
+
+
+class RecurrenceConfig(Base):
+    """
+    Single-row global configuration for recurrence detection thresholds.
+    ConfigId is always 1 (enforced by application layer).
+    """
+    __tablename__ = "RecurrenceConfig"
+
+    ConfigId = Column(Integer, primary_key=True, default=1)
+    MinCount = Column(Integer, nullable=False, default=3)    # RECUR-03: min occurrences to flag recurring
+    WindowHours = Column(Integer, nullable=False, default=24)  # RECUR-04: rolling time window in hours
+    UpdatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime(), onupdate=func.sysutcdatetime())
