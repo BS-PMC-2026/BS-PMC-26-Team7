@@ -83,3 +83,27 @@ def check_recurrence(
         )
         or is_reappearance_recurring(db, sensor_id, metric_name)
     )
+
+
+def get_occurrence_count(
+    db: Session,
+    sensor_id: int,
+    metric_name: str,
+    window_hours: int = DEFAULT_WINDOW_HOURS,
+) -> int:
+    """
+    Returns the total number of SensorAlert rows for the given sensor+metric
+    within the rolling window_hours window. Used to populate occurrenceCount
+    in the API response for the recurring badge tooltip.
+    N+1 is acceptable at page size 50; document as known limitation.
+    """
+    cutoff = datetime.utcnow() - timedelta(hours=window_hours)
+    return (
+        db.query(func.count(SensorAlert.AlertId))
+        .filter(
+            SensorAlert.SensorId == sensor_id,
+            SensorAlert.MetricName == metric_name,
+            SensorAlert.CreatedAtUtc >= cutoff,
+        )
+        .scalar() or 0
+    )
