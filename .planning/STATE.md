@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 2 of 2 (Manager UI)
-Plan: 1 of ? in current phase
+Plan: 3 of ? in current phase
 Status: In progress
-Last activity: 2026-05-16 — Completed 02-01 (extend /recent API with recurring alert data)
+Last activity: 2026-05-16 — Completed 02-03 (RecurringBadge TDD component)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -28,13 +28,14 @@ Progress: [████░░░░░░] 40%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-detection-engine | 3 | ~18m | ~6m |
-| 02-manager-ui | 1 | ~8m | ~8m |
+| 02-manager-ui | 3 | ~26m | ~9m |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03, 02-01
+- Last 5 plans: 01-01, 01-02, 01-03, 02-01, 02-02, 02-03
 - Trend: stable
 
 *Updated after each plan completion*
+| Phase 02-manager-ui P03 | 10 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -51,6 +52,7 @@ Recent decisions affecting current work:
 - Import all FK-chain models in test files (role, pepper_variety, farm_zone, user, plant, sensor) to avoid NoReferencedTableError during SQLAlchemy create_all
 - [Phase 02-manager-ui]: N+1 acceptable at page size 50 for occurrenceCount — only called when IsRecurring=True
 - [Phase 02-manager-ui]: nullslast() used on IsRecurring.desc() to push NULL rows below True rows
+- [Phase 02-manager-ui]: RecurringBadge is self-contained (no Badge.tsx composition), uses native title tooltip, defaults windowHours=168
 
 ### Pending Todos
 
@@ -63,5 +65,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed 02-01-PLAN.md — extend /recent API with recurring alert data
+Stopped at: Completed 02-03-PLAN.md — RecurringBadge component TDD
 Resume file: None
