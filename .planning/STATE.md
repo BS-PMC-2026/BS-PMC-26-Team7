@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Managers can immediately identify sensors and zones with persistent problems so chronic issues get prioritized before they damage crops.
-**Current focus:** Phase 1 — Detection Engine
+**Current focus:** Phase 2 — Manager UI
 
 ## Current Position
 
-Phase: 1 of 2 (Detection Engine)
-Plan: 3 of ? in current phase
+Phase: 2 of 2 (Manager UI)
+Plan: 2 of ? in current phase
 Status: In progress
-Last activity: 2026-05-16 — Completed 01-03 (recurrence detection service unit tests)
+Last activity: 2026-05-16 — Completed 02-02 (frontend type contract and service layer update)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -34,6 +34,8 @@ Progress: [███░░░░░░░] 30%
 - Trend: stable
 
 *Updated after each plan completion*
+| Phase 02-manager-ui P01 | 8 | 2 tasks | 2 files |
+| Phase 02-manager-ui P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -48,6 +50,8 @@ Recent decisions affecting current work:
 - flush-check-flag-commit pattern: db.flush() to assign AlertIds, check_recurrence per alert, set IsRecurring, single db.commit()
 - IsRecurring only set to True explicitly — model default=False handles non-recurring cases
 - Import all FK-chain models in test files (role, pepper_variety, farm_zone, user, plant, sensor) to avoid NoReferencedTableError during SQLAlchemy create_all
+- [Phase 02-manager-ui]: N+1 acceptable at page size 50 for occurrenceCount — only called when IsRecurring=True
+- [Phase 02-manager-ui]: isRecurring and occurrenceCount added directly to RecentAlert type; recurring param uses !== undefined guard to allow false as a valid filter
 
 ### Pending Todos
 
@@ -60,5 +64,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed 01-03-PLAN.md — recurrence detection service unit tests
+Stopped at: Completed 02-02-PLAN.md — frontend type contract and service layer update
 Resume file: None
