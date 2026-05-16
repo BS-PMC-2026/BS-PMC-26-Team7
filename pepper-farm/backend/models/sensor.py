@@ -113,3 +113,4 @@ class SensorAlert(Base):
     IsResolved = Column(Boolean, nullable=False, default=False)
     CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
     ResolvedAtUtc = Column(DateTime, nullable=True)
+    IsRecurring = Column(Boolean, nullable=True, default=False)
