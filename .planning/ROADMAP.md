@@ -6,7 +6,7 @@ This milestone delivers recurring anomaly detection for the Pepper Farm platform
 
 ## Phases
 
-- [ ] **Phase 1: Detection Engine** - Backend detects recurring anomalies by frequency and reappearance after resolution
+- [x] **Phase 1: Detection Engine** - Backend detects recurring anomalies by frequency and reappearance after resolution (completed 2026-05-16)
 - [ ] **Phase 2: Manager UI** - Managers see recurring anomalies visually distinguished with configurable thresholds
 
 ## Phase Details
@@ -27,19 +27,24 @@ Plans:
 - [ ] 01-03-PLAN.md — Unit tests for recurrence detection service (SQLite in-memory, 11 test cases)
 
 ### Phase 2: Manager UI
-**Goal**: Managers can immediately distinguish recurring from first-time anomalies and configure detection thresholds without touching code
+**Goal**: Managers can immediately distinguish recurring from first-time anomalies — recurring alerts show an amber badge with occurrence count and sort to the top; a filter toggle isolates them instantly
 **Depends on**: Phase 1
 **Requirements**: RECUR-03, RECUR-04, UI-01, UI-02
 **Success Criteria** (what must be TRUE):
-  1. Recurring anomalies show a distinct badge or icon in the Manager anomaly list
+  1. Recurring anomalies show a distinct amber badge with occurrence count inline next to the metric name in the Manager anomaly list
   2. A Manager can look at the anomaly list and immediately tell which entries are recurring vs first-time without opening any detail view
-  3. Manager can set the minimum occurrence count threshold (globally or per sensor) and it takes effect on new detections
-  4. Manager can set the recurrence time window (e.g., last X days) and it takes effect on new detections
-**Plans**: TBD
+  3. RECUR-03 and RECUR-04 satisfied by Phase 1 constants (DEFAULT_RECURRENCE_COUNT, DEFAULT_WINDOW_HOURS) — no config UI in this phase per user decision
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Backend: add get_occurrence_count helper + extend /recent API with isRecurring, occurrenceCount, recurring filter, sort-to-top
+- [ ] 02-02-PLAN.md — Frontend contract: add isRecurring + occurrenceCount to RecentAlert type, recurring filter to AlertFilters + service
+- [ ] 02-03-PLAN.md — RecurringBadge component (TDD): amber pill badge with ×N text and tooltip
+- [ ] 02-04-PLAN.md — Wire: RecurringBadge into table + "Recurring only" toggle in page + human-verify checkpoint
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Detection Engine | 0/3 | Ready to execute | - |
-| 2. Manager UI | 0/? | Not started | - |
+| 1. Detection Engine | 3/3 | Complete    | 2026-05-16 |
+| 2. Manager UI | 0/4 | Not started | - |
