@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 1 of 2 (Detection Engine)
-Plan: 2 of ? in current phase
+Plan: 3 of ? in current phase
 Status: In progress
-Last activity: 2026-05-16 — Completed 01-02 (recurrence_detection_service + anomaly pipeline integration)
+Last activity: 2026-05-16 — Completed 01-03 (recurrence detection service unit tests)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: ~7 minutes
-- Total execution time: ~13 minutes
+- Total plans completed: 3
+- Average duration: ~6 minutes
+- Total execution time: ~18 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-detection-engine | 2 | ~13m | ~7m |
+| 01-detection-engine | 3 | ~18m | ~6m |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02
-- Trend: -
+- Last 5 plans: 01-01, 01-02, 01-03
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -47,6 +47,7 @@ Recent decisions affecting current work:
 - Manager-only visibility — Workers excluded from recurrence context
 - flush-check-flag-commit pattern: db.flush() to assign AlertIds, check_recurrence per alert, set IsRecurring, single db.commit()
 - IsRecurring only set to True explicitly — model default=False handles non-recurring cases
+- Import all FK-chain models in test files (role, pepper_variety, farm_zone, user, plant, sensor) to avoid NoReferencedTableError during SQLAlchemy create_all
 
 ### Pending Todos
 
@@ -59,5 +60,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed 01-02-PLAN.md — recurrence_detection_service and anomaly pipeline integration
+Stopped at: Completed 01-03-PLAN.md — recurrence detection service unit tests
 Resume file: None
