@@ -11,6 +11,7 @@ from sqlalchemy.exc import OperationalError
 from sse_starlette.sse import EventSourceResponse
 
 from database import get_db
+from services.recurrence_detection_service import get_occurrence_count
 from models.sensor import SensorAlert
 from models.sensor import SensorAssignment
 from models.sensor import SensorReading
@@ -49,6 +50,8 @@ class RecentAlertResponse(BaseModel):
     zoneCode: Optional[str]
     plantCode: Optional[str]
     pepperName: Optional[str]
+    isRecurring: bool
+    occurrenceCount: int
 
 
 class PaginatedAlertResponse(BaseModel):
@@ -137,6 +140,7 @@ def get_recent_alerts(
     severity: Optional[str] = Query(default=None, pattern="^(High|Medium)$"),
     status: Optional[str] = Query(default=None, pattern="^(active|resolved|all)$"),
     zone_id: Optional[int] = Query(default=None, ge=1),
+    recurring: Optional[bool] = Query(default=None, description="If true, return only recurring alerts"),
     db: Session = Depends(get_db),
 ):
     """
@@ -171,9 +175,11 @@ def get_recent_alerts(
             q = q.filter(SensorAlert.IsResolved == True)    # noqa: E712
         if zone_id:
             q = q.filter(SensorAssignment.ZoneId == zone_id)
+        if recurring is True:
+            q = q.filter(SensorAlert.IsRecurring == True)   # noqa: E712
 
         total = q.with_entities(func.count(SensorAlert.AlertId)).scalar() or 0
-        rows = q.order_by(SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
+        rows = q.order_by(SensorAlert.IsRecurring.desc().nullslast(), SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
 
         return PaginatedAlertResponse(
             total=total,
@@ -195,6 +201,8 @@ def get_recent_alerts(
                     zoneCode=zone_code,
                     plantCode=plant_code,
                     pepperName=pepper_name,
+                    isRecurring=bool(alert.IsRecurring) if alert.IsRecurring is not None else False,
+                    occurrenceCount=get_occurrence_count(db, alert.SensorId, alert.MetricName) if alert.IsRecurring else 0,
                 )
                 for alert, zone_name, zone_code, plant_code, pepper_name in rows
             ],
