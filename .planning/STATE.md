@@ -10,32 +10,31 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 2 of 2 (Manager UI)
-Plan: 2 of ? in current phase
+Plan: 1 of ? in current phase
 Status: In progress
-Last activity: 2026-05-16 — Completed 02-02 (frontend type contract and service layer update)
+Last activity: 2026-05-16 — Completed 02-01 (extend /recent API with recurring alert data)
 
 Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~6 minutes
-- Total execution time: ~18 minutes
+- Total plans completed: 4
+- Average duration: ~7 minutes
+- Total execution time: ~26 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-detection-engine | 3 | ~18m | ~6m |
+| 02-manager-ui | 1 | ~8m | ~8m |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03
+- Last 5 plans: 01-01, 01-02, 01-03, 02-01
 - Trend: stable
 
 *Updated after each plan completion*
-| Phase 02-manager-ui P01 | 8 | 2 tasks | 2 files |
-| Phase 02-manager-ui P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -51,7 +50,7 @@ Recent decisions affecting current work:
 - IsRecurring only set to True explicitly — model default=False handles non-recurring cases
 - Import all FK-chain models in test files (role, pepper_variety, farm_zone, user, plant, sensor) to avoid NoReferencedTableError during SQLAlchemy create_all
 - [Phase 02-manager-ui]: N+1 acceptable at page size 50 for occurrenceCount — only called when IsRecurring=True
-- [Phase 02-manager-ui]: isRecurring and occurrenceCount added directly to RecentAlert type; recurring param uses !== undefined guard to allow false as a valid filter
+- [Phase 02-manager-ui]: nullslast() used on IsRecurring.desc() to push NULL rows below True rows
 
 ### Pending Todos
 
@@ -64,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed 02-02-PLAN.md — frontend type contract and service layer update
+Stopped at: Completed 02-01-PLAN.md — extend /recent API with recurring alert data
 Resume file: None
