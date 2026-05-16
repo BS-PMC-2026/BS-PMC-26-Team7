@@ -28,15 +28,17 @@ export interface AlertFilters {
   severity?: 'High' | 'Medium';
   status?: 'active' | 'resolved' | 'all';
   zoneId?: number;
+  recurring?: boolean;
 }
 
 export async function getRecentAlerts(filters: AlertFilters = {}): Promise<PaginatedAlertResponse> {
-  const { limit = 50, offset = 0, since, severity, status, zoneId } = filters;
+  const { limit = 50, offset = 0, since, severity, status, zoneId, recurring } = filters;
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (since) params.set('since', since);
   if (severity) params.set('severity', severity);
   if (status) params.set('status', status);
   if (zoneId) params.set('zone_id', String(zoneId));
+  if (recurring !== undefined) params.set('recurring', String(recurring));
   const res = await fetch(`${API_URL}/api/manager/anomalies/recent?${params}`, {
     headers: authHeaders(),
   });
