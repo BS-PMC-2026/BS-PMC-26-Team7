@@ -26,7 +26,19 @@
       "Bash(xargs ls)",
       "Bash(printf 'import { redirect } from \"\"next/navigation\"\";\\\\n\\\\nexport default function TaskHistoryRedirect\\(\\) {\\\\n  redirect\\(\"\"/manager/tasks?tab=history\"\"\\);\\\\n}\\\\n')",
       "Bash(printf 'import { redirect } from \"\"next/navigation\"\";\\\\n\\\\nexport default function AnomaliesRedirect\\(\\) {\\\\n  redirect\\(\"\"/manager/sensors?tab=anomalies\"\"\\);\\\\n}\\\\n')",
-      "Bash(printf 'import { redirect } from \"\"next/navigation\"\";\\\\n\\\\nexport default function OpenTasksReportRedirect\\(\\) {\\\\n  redirect\\(\"\"/manager/reports?tab=open-tasks\"\"\\);\\\\n}\\\\n')"
+      "Bash(printf 'import { redirect } from \"\"next/navigation\"\";\\\\n\\\\nexport default function OpenTasksReportRedirect\\(\\) {\\\\n  redirect\\(\"\"/manager/reports?tab=open-tasks\"\"\\);\\\\n}\\\\n')",
+      "Bash(npx jest tests/ManagerNavbar.test.tsx tests/WorkerNavbar.test.tsx tests/LandingNavbar.test.tsx --no-coverage)",
+      "Bash(npx jest tests/LandingNavbar.test.tsx --no-coverage)",
+      "Bash(npx jest tests/ManagerNavbar.test.tsx --no-coverage --verbose)",
+      "Bash(npx jest tests/ManagerNavbar.test.tsx --no-coverage)",
+      "Bash(npx jest tests/WorkerNavbar.test.tsx --no-coverage --verbose)",
+      "Bash(npx jest tests/ManagerNavbar.test.tsx tests/WorkerNavbar.test.tsx tests/LandingNavbar.test.tsx --no-coverage --verbose)",
+      "Bash(npx jest ManagerNavbar WorkerNavbar LandingNavbar --no-coverage)",
+      "Bash(ls /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/tests/Manager*)",
+      "Bash(ls /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/tests/Worker*)",
+      "Bash(ls /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/tests/Landing*)",
+      "Bash(npx jest --testPathPattern=\"ManagerNavbar|WorkerNavbar|LandingNavbar\" --no-coverage)",
+      "Bash(npx jest --testPathPatterns=\"ManagerNavbar|WorkerNavbar|LandingNavbar\" --no-coverage)"
     ]
   }
 }

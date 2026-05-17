@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   ClipboardList,
-  Map,
   Radio,
   Leaf,
   ShoppingBag,
@@ -56,7 +55,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Stock',    href: '/manager/inventory',        icon: <Boxes size={14} />,       description: 'Warehouse stock levels' },
       { label: 'Plants',   href: '/manager/inventory/plants', icon: <Sprout size={14} />,      description: 'Plant tracking' },
-      { label: 'Farm Map', href: '/manager/map',              icon: <Map size={14} />,         description: 'Zone layout and plant locations' },
       { label: 'Peppers',  href: '/manager/peppers',          icon: <Leaf size={14} />,        description: 'Pepper variety catalog' },
       { label: 'Products', href: '/manager/products',         icon: <ShoppingBag size={14} />, description: 'Product catalog' },
     ],
