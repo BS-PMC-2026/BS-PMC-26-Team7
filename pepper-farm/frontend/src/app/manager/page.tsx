@@ -1,84 +1,177 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getAnomalySummary } from '@/services/anomalies';
-import type { AnomalySummary } from '@/types/anomaly';
 import { useLanguage } from '@/context/LanguageContext';
+import FarmMap, { FarmSection, MapFilter } from '@/components/map/FarmMap';
+import { getAllPlants, PlantData, createPlant } from '@/services/plants';
+import { getAllPeppers } from '@/services/peppers';
+import { getTasks } from '@/services/tasks';
+import { getZoneHealth } from '@/services/anomalies';
+import { Pepper } from '@/types/pepper';
+import { Task } from '@/types/task';
+import { ZoneHealth } from '@/types/anomaly';
+
+const ZONE_CODE_TO_ID: Record<string, number> = {
+  'GH-01': 1,  'GH-02': 2,  'GH-03': 3,  'GH-04': 4,
+  'GH-05': 5,  'GH-06': 6,  'GH-07': 7,  'GH-08': 8,
+  'NURSERY': 9, 'SHED-MAIN': 10, 'GH-09': 11, 'GH-10': 12,
+  'GERM-01': 13, 'GERM-02': 14, 'VIS-CENTER': 15,
+  'GERM-03': 16, 'GERM-04': 17, 'FACTORY': 18,
+};
 
 export default function ManagerPage() {
-  const [summary, setSummary] = useState<AnomalySummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
   const { t } = useLanguage();
+  const mp = t.map;
+
+  const [peppers,        setPeppers]        = useState<Pepper[]>([]);
+  const [plants,         setPlants]         = useState<PlantData[]>([]);
+  const [tasks,          setTasks]          = useState<Task[]>([]);
+  const [zoneHealth,     setZoneHealth]     = useState<ZoneHealth[]>([]);
+  const [selectedPepper, setSelectedPepper] = useState<number | "">("");
+  const [message,        setMessage]        = useState<{ text: string; ok: boolean } | null>(null);
+  const [saving,         setSaving]         = useState(false);
+  const [activeFilter,   setActiveFilter]   = useState<MapFilter>(null);
+
+  const token = typeof window !== "undefined"
+    ? localStorage.getItem("token") ?? ""
+    : "";
 
   useEffect(() => {
-    getAnomalySummary()
-      .then(setSummary)
-      .catch(() => setSummary(null))
-      .finally(() => setSummaryLoading(false));
-  }, []);
+    getAllPeppers().then(setPeppers).catch(() => {});
+    getAllPlants(token).then(setPlants).catch(() => {});
+    getTasks().then(setTasks).catch(() => {});
+    getZoneHealth().then(setZoneHealth).catch(() => {});
+  }, [token]);
+
+  const handleFilterClick = (filter: MapFilter) => {
+    setActiveFilter(prev => prev === filter ? null : filter);
+    setSelectedPepper("");
+    setMessage(null);
+  };
+
+  const handleAssignToZone = async (section: FarmSection) => {
+    if (!selectedPepper) {
+      setMessage({ text: mp.pleaseSelectPepper, ok: false });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      const zoneId = ZONE_CODE_TO_ID[section.id];
+      const pepper = peppers.find(p => p.PepperId === Number(selectedPepper));
+      const plantCode = `${pepper?.PepperName?.replace(/\s+/g, '-').toUpperCase() ?? 'PLANT'}-${section.id}-${Date.now()}`;
+
+      await createPlant({
+        PlantCode: plantCode,
+        PepperId:  Number(selectedPepper),
+        ZoneId:    zoneId ?? null,
+        Status:    'Growing',
+        IsActive:  true,
+      });
+
+      setMessage({ text: `${pepper?.PepperName} — ${section.name} — ${mp.assignedSuccessfully}`, ok: true });
+      setSelectedPepper("");
+      const updated = await getAllPlants(token);
+      setPlants(updated);
+    } catch (err: unknown) {
+      setMessage({ text: err instanceof Error ? err.message : mp.failedToAssign, ok: false });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const FILTERS: { id: NonNullable<MapFilter>; label: string }[] = [
+    { id: 'pepper', label: mp.filterPlantedPepper },
+    { id: 'task',   label: mp.filterOpenTask       },
+    { id: 'sensor', label: mp.filterSensorAnomaly  },
+  ];
 
   return (
     <main className="min-h-screen">
-      {/* Page header */}
-      <div className="border-b border-gray-200/60">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-bold text-gray-800">🌶️ {t.manager.title}</h1>
-          <p className="text-gray-500 text-sm mt-1">{t.manager.subtitle}</p>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+
+        {/* Filter toolbar */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+            {activeFilter === null ? mp.alertMapTitle : mp.alertMapSubtitle}:
+          </span>
+          {FILTERS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => handleFilterClick(f.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                activeFilter === f.id
+                  ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {activeFilter !== null && (
+            <button
+              onClick={() => handleFilterClick(activeFilter)}
+              className="ml-auto text-xs text-gray-400 hover:text-gray-600 underline"
+            >
+              ✕ {mp.alertMapTitle}
+            </button>
+          )}
         </div>
-      </div>
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link href="/manager/users"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">👥 {t.manager.userManagement}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.userManagementSub}</p>
-          </Link>
-          <Link href="/manager/peppers"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">🌶️ {t.nav.peppers}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.peppersSub}</p>
-          </Link>
-          <Link href="/manager/products"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">🛒 {t.nav.products}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.productsSub}</p>
-          </Link>
-          <Link href="/manager/tasks"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">📋 {t.nav.tasks}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.tasksSub}</p>
-          </Link>
-          <Link href="/manager/inventory"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">📦 {t.nav.inventory}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.inventorySub}</p>
-          </Link>
-          <Link href="/manager/map"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">🗺️ {t.manager.farmMap}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.farmMapSub}</p>
-          </Link>
-          <Link href="/manager/reports/open-tasks"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">📊 {t.manager.openTasksReport}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.openTasksReportSub}</p>
-          </Link>
-          <Link href="/manager/sensors"
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            <h2 className="text-lg font-semibold text-gray-800">📡 {t.nav.sensors}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.sensorsSub}</p>
-          </Link>
-          <Link href="/manager/anomalies"
-            className="relative bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
-            {!summaryLoading && summary && summary.activeAlerts > 0 && (
-              <span className="absolute top-4 right-4 inline-flex items-center text-[11px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">
-                {summary.activeAlerts}
+
+        {/* Pepper assignment sub-toolbar (only when pepper filter active) */}
+        {activeFilter === 'pepper' && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 flex items-center gap-4 flex-wrap">
+            <label className="text-sm font-medium text-green-700 whitespace-nowrap">
+              {mp.selectPepper}
+            </label>
+            <select
+              value={selectedPepper}
+              onChange={e => setSelectedPepper(e.target.value === "" ? "" : Number(e.target.value))}
+              className="border border-green-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-64 bg-white"
+            >
+              <option value="">{mp.choosePepper}</option>
+              {peppers.map(p => (
+                <option key={p.PepperId} value={p.PepperId}>
+                  🌶️ {p.PepperName}
+                </option>
+              ))}
+            </select>
+            {selectedPepper && (
+              <span className="text-sm text-green-600 font-medium">
+                ✅ {mp.clickZoneHint}
               </span>
             )}
-            <h2 className="text-lg font-semibold text-gray-800">🚨 {t.nav.anomalies}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t.manager.sensorAnomaliesSub}</p>
-          </Link>
+          </div>
+        )}
+
+        {message && (
+          <div className={`rounded-lg px-4 py-2 text-sm mb-4 ${
+            message.ok
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-600"
+          }`}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <FarmMap
+            plants={plants}
+            activeFilter={activeFilter}
+            tasks={tasks}
+            zoneHealth={zoneHealth}
+            renderPopupExtra={activeFilter === 'pepper' ? (section) => (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => handleAssignToZone(section)}
+                  disabled={!selectedPepper || saving}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
+                >
+                  {saving ? mp.planting : selectedPepper ? mp.plantHere : mp.selectPepperFirst}
+                </button>
+              </div>
+            ) : undefined}
+          />
         </div>
       </div>
     </main>

@@ -547,6 +547,12 @@ export interface MapDictionary {
   plantHere:                string;
   selectPepperFirst:        string;
   noOpenTasksInZone:        string;
+  // Filter toolbar
+  filterPlantedPepper:      string;
+  filterOpenTask:           string;
+  filterSensorAnomaly:      string;
+  alertMapTitle:            string;
+  alertMapSubtitle:         string;
   // FarmMap popup
   mapArea:                  string;
   mapLoadingCropInfo:       string;
@@ -554,7 +560,29 @@ export interface MapDictionary {
   mapNoCropAssigned:        string;
   mapPlantsInZone:          string;
   mapInteractive:           string;
-  // Legend
+  mapZoneAlerts:            string;
+  mapNoAlerts:              string;
+  mapOpenTasksCount:        string;
+  mapSensorAlertsCount:     string;
+  mapTasksInZone:           string;
+  mapSensorHealthInZone:    string;
+  // Legend — alert view
+  legendBothAlerts:         string;
+  legendTaskAlert:          string;
+  legendSensorAlert:        string;
+  legendNeutral:            string;
+  // Legend — pepper filter
+  legendHasPepper:          string;
+  legendNoPepper:           string;
+  // Legend — task filter
+  legendHasTasks:           string;
+  legendNoTasks:            string;
+  // Legend — sensor filter
+  legendSensorHigh:         string;
+  legendSensorMedium:       string;
+  legendSensorNormal:       string;
+  legendNoSensorData:       string;
+  // Legend — zone type (original)
   legendGreenhouse:         string;
   legendNursery:            string;
   legendSmallGreenhouse:    string;
@@ -1263,12 +1291,35 @@ const en: Dictionary = {
     plantHere:         'Plant here 🌱',
     selectPepperFirst: 'Select a pepper first',
     noOpenTasksInZone: 'No open tasks in this zone',
+    filterPlantedPepper:  '🌱 Planted Pepper',
+    filterOpenTask:       '📋 Open Task',
+    filterSensorAnomaly:  '⚠️ Sensor Anomaly',
+    alertMapTitle:        'Farm Alert Map',
+    alertMapSubtitle:     'Zones requiring attention are highlighted',
     mapArea:                 'Area',
     mapLoadingCropInfo:      'Loading crop info...',
     mapCurrentCrop:          '🌶 Current crop',
     mapNoCropAssigned:       'No crop assigned to this zone.',
     mapPlantsInZone:         '🌿 Plants in this zone',
     mapInteractive:          'Farm map · Interactive',
+    mapZoneAlerts:           'Zone Alerts',
+    mapNoAlerts:             'No alerts — this zone is clear.',
+    mapOpenTasksCount:       'Open Tasks',
+    mapSensorAlertsCount:    'Sensor Alerts',
+    mapTasksInZone:          '📋 Tasks in this zone',
+    mapSensorHealthInZone:   '⚠️ Sensor health',
+    legendBothAlerts:        'Task + Sensor alert',
+    legendTaskAlert:         'Open task',
+    legendSensorAlert:       'Sensor anomaly',
+    legendNeutral:           'No alerts',
+    legendHasPepper:         'Has planted pepper',
+    legendNoPepper:          'No pepper assigned',
+    legendHasTasks:          'Has open tasks',
+    legendNoTasks:           'No open tasks',
+    legendSensorHigh:        'High severity alert',
+    legendSensorMedium:      'Medium severity alert',
+    legendSensorNormal:      'Normal',
+    legendNoSensorData:      'No sensor data',
     legendGreenhouse:        'Greenhouse',
     legendNursery:           'Nursery',
     legendSmallGreenhouse:   'Small Greenhouse',
@@ -1946,12 +1997,35 @@ const he: Dictionary = {
     plantHere:         'שתול כאן 🌱',
     selectPepperFirst: 'בחר פלפל תחילה',
     noOpenTasksInZone: 'אין משימות פתוחות באזור זה',
+    filterPlantedPepper:  '🌱 פלפל שתול',
+    filterOpenTask:       '📋 משימה פתוחה',
+    filterSensorAnomaly:  '⚠️ אנומליית חיישן',
+    alertMapTitle:        'מפת התראות חווה',
+    alertMapSubtitle:     'אזורים הדורשים תשומת לב מסומנים',
     mapArea:                 'שטח',
     mapLoadingCropInfo:      'טוען מידע על גידול...',
     mapCurrentCrop:          '🌶 גידול נוכחי',
     mapNoCropAssigned:       'אין גידול משויך לאזור זה.',
     mapPlantsInZone:         '🌿 צמחים באזור זה',
     mapInteractive:          'מפת חווה · אינטראקטיבי',
+    mapZoneAlerts:           'התראות אזור',
+    mapNoAlerts:             'אין התראות — אזור זה תקין.',
+    mapOpenTasksCount:       'משימות פתוחות',
+    mapSensorAlertsCount:    'התראות חיישן',
+    mapTasksInZone:          '📋 משימות באזור זה',
+    mapSensorHealthInZone:   '⚠️ בריאות חיישן',
+    legendBothAlerts:        'משימה + התראת חיישן',
+    legendTaskAlert:         'משימה פתוחה',
+    legendSensorAlert:       'אנומליית חיישן',
+    legendNeutral:           'ללא התראות',
+    legendHasPepper:         'יש פלפל שתול',
+    legendNoPepper:          'לא שויך פלפל',
+    legendHasTasks:          'יש משימות פתוחות',
+    legendNoTasks:           'אין משימות פתוחות',
+    legendSensorHigh:        'התראה חמורה',
+    legendSensorMedium:      'התראה בינונית',
+    legendSensorNormal:      'תקין',
+    legendNoSensorData:      'אין נתוני חיישן',
     legendGreenhouse:        'חממה גדולה',
     legendNursery:           'משתלה',
     legendSmallGreenhouse:   'חממה קטנה',

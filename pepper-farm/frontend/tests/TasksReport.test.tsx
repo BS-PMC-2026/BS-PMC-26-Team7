@@ -1,10 +1,17 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import TasksReportPage from '@/app/manager/reports/open-tasks/page';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import ReportsPage from '@/app/manager/reports/page';
 import * as tasksService from '@/services/tasks';
 import * as usersService from '@/services/users';
 
 jest.mock('@/services/tasks');
 jest.mock('@/services/users');
+jest.mock('@/services/reports', () => ({
+  getInventoryReport: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: jest.fn() }),
+  useSearchParams: () => ({ get: () => null }),
+}));
 
 const mockWorkers = [
   { userId: 3, fullName: 'Field Worker', email: 'worker@farm.com',  roleName: 'Worker', isActive: true },
@@ -22,87 +29,68 @@ describe('TasksReportPage', () => {
     (usersService.getAllUsers as jest.Mock).mockResolvedValue(mockWorkers);
   });
 
-  it('renders page title', () => {
-    render(<TasksReportPage />);
+  it('renders page title', async () => {
+    await act(async () => { render(<ReportsPage />); });
     expect(screen.getByText(/Open Tasks Report/)).toBeInTheDocument();
   });
 
   it('renders worker dropdown', async () => {
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getByText(/Choose a worker/)).toBeInTheDocument();
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getByText(/Choose a worker/)).toBeInTheDocument();
   });
 
   it('renders workers in dropdown', async () => {
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
   });
 
-  it('renders Show Report button', () => {
-    render(<TasksReportPage />);
+  it('renders Show Report button', async () => {
+    await act(async () => { render(<ReportsPage />); });
     expect(screen.getByText('Show Report')).toBeInTheDocument();
   });
 
   it('shows tasks after clicking Show Report', async () => {
     (tasksService.getTasksReportByWorker as jest.Mock).mockResolvedValueOnce(mockTasks);
 
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } });
-    fireEvent.click(screen.getByText('Show Report'));
+    await act(async () => { fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } }); });
+    await act(async () => { fireEvent.click(screen.getByText('Show Report')); });
 
-    await waitFor(() => {
-      expect(screen.getByText('Task A')).toBeInTheDocument();
-      expect(screen.getByText('Task B')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Task A')).toBeInTheDocument();
+    expect(screen.getByText('Task B')).toBeInTheDocument();
   });
 
   it('shows empty state when no tasks', async () => {
     (tasksService.getTasksReportByWorker as jest.Mock).mockResolvedValueOnce([]);
 
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('Show Report')).not.toBeDisabled();
-    });
+    await act(async () => { fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } }); });
+    expect(screen.getByText('Show Report')).not.toBeDisabled();
 
     fireEvent.click(screen.getByText('Show Report'));
-
     await waitFor(() => {
       expect(screen.getByText(/No open tasks for this worker/)).toBeInTheDocument();
     });
   });
 
   it('shows error when no worker selected', async () => {
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
     expect(screen.getByText('Show Report')).toBeDisabled();
   });
 
   it('shows priority badge', async () => {
     (tasksService.getTasksReportByWorker as jest.Mock).mockResolvedValueOnce(mockTasks);
 
-    render(<TasksReportPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
-    });
+    await act(async () => { render(<ReportsPage />); });
+    expect(screen.getAllByText(/Field Worker/).length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } });
+    await act(async () => { fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } }); });
     fireEvent.click(screen.getByText('Show Report'));
-
     await waitFor(() => {
       expect(screen.getByText('medium')).toBeInTheDocument();
       expect(screen.getByText('high')).toBeInTheDocument();

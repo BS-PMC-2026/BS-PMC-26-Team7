@@ -33,6 +33,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const dir = DIR_MAP[locale];
     document.documentElement.lang = locale;
     document.documentElement.dir = dir;
+    document.body.dir = dir;
   }, [locale]);
 
   const setLocale = (next: Locale) => {
@@ -49,8 +50,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const DEFAULT_CONTEXT: LanguageContextValue = {
+  locale: 'en',
+  setLocale: () => {},
+  t: getDictionary('en'),
+  dir: 'ltr',
+};
+
 export function useLanguage(): LanguageContextValue {
-  const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error('useLanguage must be used inside LanguageProvider');
-  return ctx;
+  return useContext(LanguageContext) ?? DEFAULT_CONTEXT;
 }
