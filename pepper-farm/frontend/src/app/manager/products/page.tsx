@@ -35,7 +35,7 @@ export default function ManagerProductsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="bg-white border-b border-gray-200">
+      <div className="border-b border-gray-200/60">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader

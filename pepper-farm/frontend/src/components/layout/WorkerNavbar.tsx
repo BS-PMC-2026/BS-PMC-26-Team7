@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
@@ -70,10 +71,10 @@ function timeAgo(dateStr: string | null | undefined): string {
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  critical: '#EF4444',
-  high:     '#F59E0B',
-  medium:   '#3B82F6',
-  low:      'rgba(255,255,255,0.3)',
+  critical: 'text-red-500',
+  high:     'text-amber-500',
+  medium:   'text-blue-500',
+  low:      'text-gray-300',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -92,7 +93,6 @@ export default function WorkerNavbar() {
   const navRef        = useRef<HTMLElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Show newly assigned tasks in popup; fall back to all active if none new yet
   const popupTasks = newTasks.length > 0 ? newTasks.slice(0, 6) : activeTasks.slice(0, 6);
 
   useEffect(() => {
@@ -140,76 +140,82 @@ export default function WorkerNavbar() {
   };
 
   return (
-    <nav
-      ref={navRef}
+    <motion.header
+      ref={navRef as React.RefObject<HTMLElement>}
       dir="ltr"
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0,
-        zIndex: 9999,
-        height: '52px',
-        backgroundColor: scrolled ? 'rgba(26, 46, 34, 0.97)' : '#1A2E22',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        boxShadow: scrolled
-          ? '0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.35)'
-          : '0 1px 0 rgba(255,255,255,0.05)',
-        transition: 'background-color 0.25s ease, box-shadow 0.25s ease',
-      }}
+      className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-green-100'
+          : 'bg-black/30 backdrop-blur-sm border-b border-white/10'
+      }`}
+      initial={{ y: -64, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Bottom accent line */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '1px',
-        background: 'linear-gradient(90deg, transparent 0%, #2F6F4E 30%, #D64545 50%, #2F6F4E 70%, transparent 100%)',
-        opacity: 0.6,
-      }} />
-
-      <div style={{
-        height: '100%', maxWidth: '1280px', margin: '0 auto',
-        padding: '0 20px', display: 'flex', alignItems: 'center', gap: '2px',
-      }}>
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-1">
 
         {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '12px', textDecoration: 'none', flexShrink: 0 }}>
-          <span style={{ color: '#D64545', display: 'flex' }}><Leaf size={18} /></span>
-          <span style={{ fontFamily: 'Lora, serif', fontWeight: 600, fontSize: '15px', letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.95)' }}>
+        <Link href="/" className="flex items-center gap-2 shrink-0 mr-3 no-underline">
+          <motion.div
+            whileHover={{ rotate: 15 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+            className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center"
+          >
+            <Leaf className="w-4 h-4 text-white" />
+          </motion.div>
+          <span
+            className={`font-semibold text-lg transition-colors duration-300 ${
+              scrolled ? 'text-green-900' : 'text-white'
+            }`}
+            style={{ fontFamily: 'Lora, serif' }}
+          >
             PepperFarm
           </span>
-          <span style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <span
+            className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
+              scrolled
+                ? 'text-green-600 bg-green-50 border-green-200'
+                : 'text-white/50 bg-white/10 border-white/20'
+            }`}
+          >
             Worker
           </span>
         </Link>
 
         {/* Divider */}
-        <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 6px', flexShrink: 0 }} />
+        <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-        <NavLinkDirect href="/worker"           label="Dashboard"    icon={<LayoutDashboard size={14} />} active={pathname === '/worker'} />
-        <NavLinkDirect href="/worker/my-tasks"  label="My Tasks"     icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')} />
-        <NavLinkDirect href="/worker/products"  label="Products"     icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')} />
-        <NavLinkDirect href="/worker/spray-report" label="Spray Report" icon={<Droplets size={14} />}     active={pathname.startsWith('/worker/spray-report')} />
+        <NavLinkDirect href="/worker"              label="Dashboard"    icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
+        <NavLinkDirect href="/worker/my-tasks"     label="My Tasks"     icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')}         scrolled={scrolled} />
+        <NavLinkDirect href="/worker/products"     label="Products"     icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
+        <NavLinkDirect href="/worker/spray-report" label="Spray Report" icon={<Droplets size={14} />}        active={pathname.startsWith('/worker/spray-report')}     scrolled={scrolled} />
 
         {/* Plants dropdown */}
         {NAV_GROUPS.map((group) => {
           const active = isGroupActive(group);
           const open   = openGroup === group.id;
           return (
-            <div key={group.id} style={{ position: 'relative' }}
+            <div key={group.id} className="relative"
               onMouseEnter={() => { cancelClose(); setOpenGroup(group.id); setBellOpen(false); }}
               onMouseLeave={scheduleClose}
             >
               <button
                 onClick={() => { setOpenGroup(open ? null : group.id); setBellOpen(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'Raleway, sans-serif', backgroundColor: active || open ? 'rgba(47,111,78,0.25)' : 'transparent', color: active || open ? '#7CC49A' : 'rgba(255,255,255,0.55)', transition: 'background-color 0.15s, color 0.15s', outline: 'none', userSelect: 'none', whiteSpace: 'nowrap' }}
-                onMouseEnter={(e) => { if (!active && !open) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.85)'; } }}
-                onMouseLeave={(e) => { if (!active && !open) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
+                  active || open
+                    ? scrolled ? 'text-green-700 bg-green-50' : 'text-white bg-white/10'
+                    : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-green-50' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10'
+                }`}
+                style={{ fontFamily: 'Raleway, sans-serif' }}
               >
-                <span style={{ opacity: 0.8 }}>{group.icon}</span>
+                <span className="opacity-80">{group.icon}</span>
                 {group.label}
-                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ display: 'flex', opacity: 0.5 }}>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="flex opacity-50">
                   <ChevronDown size={12} />
                 </motion.span>
               </button>
 
-              {active && <div style={{ position: 'absolute', bottom: '-2px', left: '10px', right: '10px', height: '2px', borderRadius: '1px', backgroundColor: '#2F6F4E' }} />}
+              {active && <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />}
 
               <AnimatePresence>
                 {open && (
@@ -220,23 +226,28 @@ export default function WorkerNavbar() {
                     transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                     onMouseEnter={cancelClose}
                     onMouseLeave={scheduleClose}
-                    style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, minWidth: '224px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#162619', boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)', overflow: 'hidden', zIndex: 100 }}
+                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-gray-100 bg-white overflow-hidden z-[100]"
+                    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
                   >
-                    <div style={{ padding: '6px' }}>
+                    <div className="p-1.5">
                       {group.items.map((item) => {
                         const itemActive = pathname === item.href || pathname.startsWith(item.href + '/');
                         return (
                           <Link key={item.href} href={item.href}
-                            style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '7px', textDecoration: 'none', backgroundColor: itemActive ? 'rgba(47,111,78,0.2)' : 'transparent', transition: 'background-color 0.12s' }}
-                            onMouseEnter={(e) => { if (!itemActive) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.05)'; }}
-                            onMouseLeave={(e) => { if (!itemActive) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent'; }}
+                            className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
+                              itemActive ? 'bg-green-50' : 'hover:bg-gray-50'
+                            }`}
                           >
-                            <span style={{ marginTop: '1px', flexShrink: 0, color: itemActive ? '#7CC49A' : 'rgba(255,255,255,0.35)' }}>{item.icon}</span>
+                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-green-600' : 'text-gray-400'}`}>{item.icon}</span>
                             <span>
-                              <span style={{ display: 'block', fontSize: '13px', fontWeight: 500, fontFamily: 'Raleway, sans-serif', color: itemActive ? '#7CC49A' : 'rgba(255,255,255,0.8)', lineHeight: 1.3 }}>{item.label}</span>
-                              {item.description && <span style={{ display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.28)', marginTop: '1px', lineHeight: 1.4 }}>{item.description}</span>}
+                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-green-700' : 'text-gray-700'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
+                                {item.label}
+                              </span>
+                              {item.description && (
+                                <span className="block text-[11px] text-gray-400 mt-0.5 leading-snug">{item.description}</span>
+                              )}
                             </span>
-                            {itemActive && <span style={{ marginLeft: 'auto', marginTop: '3px', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2F6F4E', flexShrink: 0 }} />}
+                            {itemActive && <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />}
                           </Link>
                         );
                       })}
@@ -249,30 +260,26 @@ export default function WorkerNavbar() {
         })}
 
         {/* Spacer */}
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Bell                                                               */}
-        {/* ---------------------------------------------------------------- */}
-        <div style={{ position: 'relative' }}>
+        {/* Bell */}
+        <div className="relative">
           <button
             onClick={handleBellClick}
             aria-label="Task notifications"
             aria-expanded={bellOpen}
-            style={{
-              position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '32px', height: '32px', borderRadius: '7px', border: 'none', cursor: 'pointer',
-              backgroundColor: bellOpen ? 'rgba(255,255,255,0.1)' : 'transparent',
-              color: unreadCount > 0 ? '#EF8A8A' : 'rgba(255,255,255,0.4)',
-              transition: 'background-color 0.15s, color 0.15s',
-            }}
-            onMouseEnter={(e) => { if (!bellOpen) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.8)'; } }}
-            onMouseLeave={(e) => { if (!bellOpen) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = unreadCount > 0 ? '#EF8A8A' : 'rgba(255,255,255,0.4)'; } }}
+            className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+              bellOpen
+                ? scrolled ? 'bg-green-50 text-green-700' : 'bg-white/15 text-white'
+                : unreadCount > 0
+                  ? scrolled ? 'text-red-500 hover:bg-red-50' : 'text-red-300 hover:bg-white/10'
+                  : scrolled ? 'text-gray-400 hover:bg-gray-100 hover:text-gray-600' : 'text-white/50 hover:bg-white/10 hover:text-white'
+            }`}
           >
             <motion.span
               animate={unreadCount > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
               transition={{ duration: 0.5, ease: 'easeInOut' }}
-              style={{ display: 'flex' }}
+              className="flex"
             >
               <Bell size={15} />
             </motion.span>
@@ -285,7 +292,7 @@ export default function WorkerNavbar() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                  style={{ position: 'absolute', top: '3px', right: '3px', minWidth: '14px', height: '14px', padding: '0 3px', borderRadius: '7px', backgroundColor: '#D64545', color: '#fff', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                  className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </motion.span>
@@ -301,70 +308,65 @@ export default function WorkerNavbar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.96 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: '320px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.09)', backgroundColor: '#111d14', boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)', overflow: 'hidden', zIndex: 100 }}
+                className="absolute top-[calc(100%+10px)] right-0 w-[320px] rounded-xl border border-gray-100 bg-white overflow-hidden z-[100]"
+                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
               >
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', fontFamily: 'Raleway, sans-serif' }}>
+                <div className="flex items-center justify-between px-3.5 py-3 border-b border-gray-100">
+                  <span className="text-sm font-semibold text-gray-800" style={{ fontFamily: 'Raleway, sans-serif' }}>
                     My Tasks
                     {unreadCount > 0 && (
-                      <span style={{ marginLeft: '7px', fontSize: '10px', fontWeight: 700, color: '#EF8A8A' }}>
+                      <span className="ml-1.5 text-[10px] font-bold text-red-400">
                         {unreadCount} new
                       </span>
                     )}
                   </span>
                   <button
                     onClick={() => setBellOpen(false)}
-                    style={{ display: 'flex', padding: '3px', borderRadius: '5px', border: 'none', backgroundColor: 'transparent', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)'; (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.3)'; (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+                    className="flex p-0.5 rounded border-none bg-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors"
                   >
                     <X size={13} />
                   </button>
                 </div>
 
-                {/* Section label */}
-                <div style={{ padding: '10px 14px 4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+                {/* Section */}
+                <div className="px-3.5 pt-2.5 pb-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
                       {newTasks.length > 0 ? 'Newly Assigned' : 'Active Tasks'}
                     </span>
                     <Link
                       href="/worker/my-tasks"
                       onClick={() => setBellOpen(false)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: '#7CC49A', textDecoration: 'none', opacity: 0.8 }}
+                      className="text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
                     >
                       View all
                     </Link>
                   </div>
 
                   {popupTasks.length === 0 ? (
-                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.22)', padding: '6px 0 8px', fontStyle: 'italic' }}>
-                      No active tasks assigned to you
-                    </p>
+                    <p className="text-xs text-gray-400 py-1.5 pb-3 italic">No active tasks assigned to you</p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingBottom: '8px' }}>
+                    <div className="flex flex-col gap-0.5 pb-2">
                       {popupTasks.map((task) => (
                         <Link
                           key={task.id}
                           href="/worker/my-tasks"
                           onClick={() => setBellOpen(false)}
-                          style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', padding: '7px 8px', borderRadius: '7px', textDecoration: 'none', transition: 'background-color 0.1s' }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.04)'; }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent'; }}
+                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors"
                         >
-                          <span style={{ marginTop: '1px', flexShrink: 0, color: PRIORITY_COLOR[task.priority] ?? 'rgba(255,255,255,0.3)' }}>
+                          <span className={`mt-0.5 shrink-0 ${PRIORITY_COLOR[task.priority] ?? 'text-gray-300'}`}>
                             <ClipboardCheck size={13} />
                           </span>
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.78)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
                               {task.title}
                             </span>
-                            <span style={{ display: 'block', fontSize: '10px', color: 'rgba(255,255,255,0.28)', marginTop: '1px' }}>
+                            <span className="block text-[10px] text-gray-400 mt-0.5">
                               {[task.taskType, task.zoneCode].filter(Boolean).join(' · ')}
                             </span>
                           </span>
-                          <span style={{ flexShrink: 0, fontSize: '10px', color: 'rgba(255,255,255,0.22)', marginTop: '1px' }}>
+                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
                             {timeAgo(task.createdAt)}
                           </span>
                         </Link>
@@ -377,22 +379,27 @@ export default function WorkerNavbar() {
           </AnimatePresence>
         </div>
 
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
         {/* Divider */}
-        <div style={{ width: '1px', height: '18px', backgroundColor: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-gray-200' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           title="Sign out"
           aria-label="Sign out"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '7px', border: 'none', cursor: 'pointer', backgroundColor: 'transparent', color: 'rgba(255,255,255,0.3)', transition: 'background-color 0.15s, color 0.15s' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(214,69,69,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#EF8A8A'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.3)'; }}
+          className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+            scrolled
+              ? 'text-gray-400 hover:bg-red-50 hover:text-red-500'
+              : 'text-white/40 hover:bg-white/10 hover:text-white/80'
+          }`}
         >
           <LogOut size={14} />
         </button>
       </div>
-    </nav>
+    </motion.header>
   );
 }
 
@@ -400,19 +407,22 @@ export default function WorkerNavbar() {
 /* Sub-component: direct nav link                                               */
 /* -------------------------------------------------------------------------- */
 
-function NavLinkDirect({ href, label, icon, active }: { href: string; label: string; icon: React.ReactNode; active: boolean }) {
+function NavLinkDirect({ href, label, icon, active, scrolled }: { href: string; label: string; icon: React.ReactNode; active: boolean; scrolled: boolean }) {
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="relative">
       <Link
         href={href}
-        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: 500, fontFamily: 'Raleway, sans-serif', backgroundColor: active ? 'rgba(47,111,78,0.25)' : 'transparent', color: active ? '#7CC49A' : 'rgba(255,255,255,0.55)', transition: 'background-color 0.15s, color 0.15s', whiteSpace: 'nowrap' }}
-        onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.85)'; } }}
-        onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg no-underline text-sm font-medium transition-colors duration-150 whitespace-nowrap ${
+          active
+            ? scrolled ? 'text-green-700 bg-green-50' : 'text-white bg-white/10'
+            : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-green-50 hover:text-green-800' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
+        }`}
+        style={{ fontFamily: 'Raleway, sans-serif' }}
       >
-        <span style={{ opacity: 0.75 }}>{icon}</span>
+        <span className="opacity-75">{icon}</span>
         {label}
       </Link>
-      {active && <div style={{ position: 'absolute', bottom: '-2px', left: '10px', right: '10px', height: '2px', borderRadius: '1px', backgroundColor: '#2F6F4E' }} />}
+      {active && <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />}
     </div>
   );
 }

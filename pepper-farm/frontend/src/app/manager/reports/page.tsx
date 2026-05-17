@@ -216,7 +216,7 @@ function ReportsPageContent() {
 
   return (
     <>
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6 flex">
           {tabs.map(tab => (
             <button
@@ -234,7 +234,7 @@ function ReportsPageContent() {
         </div>
       </div>
 
-      <div className="bg-gray-50 min-h-screen">
+      <div className="min-h-screen">
         {activeTab === 'open-tasks' ? <OpenTasksReport /> : <InventoryReport />}
       </div>
     </>
