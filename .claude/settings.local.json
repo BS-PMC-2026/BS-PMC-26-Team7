@@ -21,7 +21,9 @@
       "Bash(python3 -c \":*)",
       "Bash(grep -n \"Severity\\\\|severity\" /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/backend/models/*.py)",
       "Bash(git -C /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7 status --short)",
-      "Bash(find . -name \"* 2.*\" -not -path \"./.git/*\" -print -delete)"
+      "Bash(find . -name \"* 2.*\" -not -path \"./.git/*\" -print -delete)",
+      "Bash(Get-Content \"d:\\\\Barbershop\\\\BS-PMC-26-Team7\\\\pepper-farm\\\\frontend\\\\src\\\\components\\\\reports\\\\OpenTasksReportTable.tsx\")",
+      "Bash(Measure-Object -Line)"
     ]
   }
 }

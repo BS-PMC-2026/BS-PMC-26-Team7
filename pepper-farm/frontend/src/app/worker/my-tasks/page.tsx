@@ -9,9 +9,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import { Task, TaskStatus } from '@/types/task';
 import { getMyTasks, updateTask } from '@/services/tasks';
 import { useToast } from '@/context/ToastContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function MyTasksPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const wk = t.worker;
   const { show } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +33,7 @@ export default function MyTasksPage() {
       const data = await getMyTasks(token);
       setTasks(data);
     } catch {
-      setError('Failed to load tasks. Is the backend running?');
+      setError(wk.failedToLoad);
     } finally {
       setIsLoading(false);
     }
@@ -65,15 +68,15 @@ export default function MyTasksPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <PageHeader title="My Tasks" subtitle="Tasks assigned to you" />
+        <PageHeader title={wk.myTasksTitle} subtitle={wk.myTasksSubtitle} />
       </div>
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-12">Loading tasks...</p>
+        <p className="text-sm text-gray-400 text-center py-12">{t.tasks.loading}</p>
       ) : tasks.length === 0 ? (
-        <EmptyState title="No tasks yet." description="You have no tasks assigned." />
+        <EmptyState title={wk.noTasksYet} description={wk.youHaveNoTasks} />
       ) : (
         <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
       )}

@@ -19,6 +19,7 @@ import {
 import type { AnomalySummary, RecentAlert, TrendPoint, ZoneHealth } from '@/types/anomaly';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import RecurrenceConfigPanel from '@/components/anomalies/RecurrenceConfigPanel';
+import { useLanguage } from '@/context/LanguageContext';
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -145,6 +146,8 @@ function IconArrowLeft({ className }: { className?: string }) {
 // ---------------------------------------------------------------------------
 export default function AnomalyDashboardPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const a = t.anomalies;
   const { liveAlerts, clearUnread } = useAnomalyNotification();
 
   const PAGE_SIZE = 50;
@@ -235,7 +238,7 @@ export default function AnomalyDashboardPage() {
       setTrends(trendsData);
       setZones(zonesData);
     } catch {
-      setError('Failed to load anomaly data. Is the backend running?');
+      setError(a.failedToLoad);
     } finally {
       setLoading(false);
     }
@@ -297,7 +300,7 @@ export default function AnomalyDashboardPage() {
               <IconArrowLeft className="w-4 h-4" />
             </Link>
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-base font-semibold text-gray-900 truncate">Sensor Anomaly Dashboard</h1>
+              <h1 className="text-base font-semibold text-gray-900 truncate">{a.dashboardTitle}</h1>
               {!loading && summary && summary.activeAlerts > 0 && (
                 <span className="shrink-0 inline-flex items-center text-[11px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">
                   {summary.activeAlerts}
@@ -311,7 +314,7 @@ export default function AnomalyDashboardPage() {
             {!loading && (
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Live
+                {a.live}
               </div>
             )}
             <button
@@ -320,7 +323,7 @@ export default function AnomalyDashboardPage() {
               className="flex items-center gap-2 text-sm font-medium text-gray-600 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors duration-150 disabled:opacity-50 cursor-pointer"
             >
               <IconRefresh className="w-3.5 h-3.5" spinning={loading} />
-              <span className="hidden sm:inline">{loading ? 'Refreshing' : 'Refresh'}</span>
+              <span className="hidden sm:inline">{loading ? a.refreshing : a.refresh}</span>
             </button>
           </div>
         </div>
@@ -332,12 +335,12 @@ export default function AnomalyDashboardPage() {
         {error && <Alert variant="error">{error}</Alert>}
 
         {/* KPI Cards */}
-        <Section label="Overview">
+        <Section label={a.overview}>
           {loading ? <SummarySkeleton /> : summary ? <AnomalySummaryCards summary={summary} /> : null}
         </Section>
 
         {/* Charts */}
-        <Section label="Analytics">
+        <Section label={a.analytics}>
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartSkeleton />
@@ -346,14 +349,14 @@ export default function AnomalyDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                <p className="text-sm font-semibold text-gray-800">Anomalies Over Time</p>
-                <p className="text-xs text-gray-400 mb-5">Last 7 days</p>
+                <p className="text-sm font-semibold text-gray-800">{a.anomaliesOverTime}</p>
+                <p className="text-xs text-gray-400 mb-5">{a.last7Days}</p>
                 <AnomalyTrendChart data={trends} />
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                <p className="text-sm font-semibold text-gray-800">Alerts by Metric</p>
+                <p className="text-sm font-semibold text-gray-800">{a.alertsByMetric}</p>
                 <p className="text-xs text-gray-400 mb-5">
-                  {filterSeverity || filterStatus ? 'Filtered view' : 'All time'}
+                  {filterSeverity || filterStatus ? a.filteredView : a.allTime}
                 </p>
                 <AnomalyMetricChart alerts={chartAlerts} />
               </div>
@@ -362,13 +365,13 @@ export default function AnomalyDashboardPage() {
         </Section>
 
         {/* Zone Health */}
-        <Section label="Zone Health">
+        <Section label={a.zoneHealth}>
           {loading ? <ZoneSkeleton /> : <ZoneHealthOverview zones={zones} />}
         </Section>
 
         {/* Table */}
         <Section
-          label="Alert History"
+          label={a.alertHistory}
           right={
             <div className="flex items-center gap-2">
               <button
@@ -382,7 +385,7 @@ export default function AnomalyDashboardPage() {
                     : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                Recurring only
+                {a.recurringOnly}
               </button>
               <button
                 onClick={() => setShowRecurrenceConfig(true)}
@@ -399,9 +402,9 @@ export default function AnomalyDashboardPage() {
                 }}
                 className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 cursor-pointer"
               >
-                <option value="">All Severities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
+                <option value="">{a.allSeverities}</option>
+                <option value="High">{a.high}</option>
+                <option value="Medium">{a.medium}</option>
               </select>
               <select
                 value={filterStatus}
@@ -411,12 +414,12 @@ export default function AnomalyDashboardPage() {
                 }}
                 className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 cursor-pointer"
               >
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="resolved">Resolved</option>
+                <option value="">{a.allStatuses}</option>
+                <option value="active">{a.activeFilter}</option>
+                <option value="resolved">{a.resolvedFilter}</option>
               </select>
               {!loading && activeCount > 0 && (
-                <span className="text-xs text-gray-400 tabular-nums">{activeCount} active</span>
+                <span className="text-xs text-gray-400 tabular-nums" dir="ltr">{activeCount} {a.activeCount}</span>
               )}
             </div>
           }
@@ -439,14 +442,14 @@ export default function AnomalyDashboardPage() {
                       onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
                       className="px-3 py-1 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 cursor-pointer"
                     >
-                      Prev
+                      {a.prev}
                     </button>
                     <button
                       disabled={offset + PAGE_SIZE >= totalAlerts}
                       onClick={() => setOffset((o) => o + PAGE_SIZE)}
                       className="px-3 py-1 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 cursor-pointer"
                     >
-                      Next
+                      {a.next}
                     </button>
                   </div>
                 </div>

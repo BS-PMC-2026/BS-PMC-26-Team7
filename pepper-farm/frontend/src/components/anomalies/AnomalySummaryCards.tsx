@@ -1,15 +1,22 @@
 'use client';
 
 import { AnomalySummary } from '@/types/anomaly';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   summary: AnomalySummary;
 }
 
-function timeAgo(isoString: string): string {
+function timeAgo(isoString: string, locale: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (locale === 'he') {
+    if (diff < 60)    return `לפני ${diff}ש`;
+    if (diff < 3600)  return `לפני ${Math.floor(diff / 60)}ד`;
+    if (diff < 86400) return `לפני ${Math.floor(diff / 3600)}ש'`;
+    return `לפני ${Math.floor(diff / 86400)}י`;
+  }
+  if (diff < 60)    return `${diff}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
@@ -55,9 +62,12 @@ function IconSignal({ className }: { className?: string }) {
 }
 
 export default function AnomalySummaryCards({ summary }: Props) {
+  const { t, locale } = useLanguage();
+  const a = t.anomalies;
+
   const cards = [
     {
-      label: 'Active Anomalies',
+      label: a.activeAnomalies,
       value: summary.activeAlerts,
       Icon: IconAlert,
       active: summary.activeAlerts > 0,
@@ -66,18 +76,18 @@ export default function AnomalySummaryCards({ summary }: Props) {
         icon: 'bg-orange-100 text-orange-600',
         value: 'text-orange-700',
         badge: 'bg-orange-100 text-orange-700',
-        badgeText: 'Attention',
+        badgeText: a.attention,
       },
       clearClasses: {
         wrapper: 'border-gray-200 bg-white',
         icon: 'bg-gray-100 text-gray-500',
         value: 'text-gray-900',
         badge: 'bg-green-100 text-green-700',
-        badgeText: 'All clear',
+        badgeText: a.allClear,
       },
     },
     {
-      label: 'High Severity',
+      label: a.highSeverity,
       value: summary.highSeverity,
       Icon: IconFlame,
       active: summary.highSeverity > 0,
@@ -86,18 +96,18 @@ export default function AnomalySummaryCards({ summary }: Props) {
         icon: 'bg-red-100 text-red-600',
         value: 'text-red-700',
         badge: 'bg-red-100 text-red-700',
-        badgeText: 'Critical',
+        badgeText: a.critical,
       },
       clearClasses: {
         wrapper: 'border-gray-200 bg-white',
         icon: 'bg-gray-100 text-gray-500',
         value: 'text-gray-900',
         badge: 'bg-green-100 text-green-700',
-        badgeText: 'None',
+        badgeText: a.none,
       },
     },
     {
-      label: 'Affected Zones',
+      label: a.affectedZones,
       value: summary.affectedZones,
       Icon: IconMap,
       active: summary.affectedZones > 0,
@@ -106,19 +116,19 @@ export default function AnomalySummaryCards({ summary }: Props) {
         icon: 'bg-amber-100 text-amber-600',
         value: 'text-amber-700',
         badge: 'bg-amber-100 text-amber-700',
-        badgeText: 'Impacted',
+        badgeText: a.impacted,
       },
       clearClasses: {
         wrapper: 'border-gray-200 bg-white',
         icon: 'bg-gray-100 text-gray-500',
         value: 'text-gray-900',
         badge: 'bg-green-100 text-green-700',
-        badgeText: 'Healthy',
+        badgeText: a.healthy,
       },
     },
     {
-      label: 'Latest Reading',
-      value: summary.latestReadingUtc ? timeAgo(summary.latestReadingUtc) : '—',
+      label: a.latestReading,
+      value: summary.latestReadingUtc ? timeAgo(summary.latestReadingUtc, locale) : '—',
       Icon: IconSignal,
       active: false,
       activeClasses: {
@@ -135,7 +145,7 @@ export default function AnomalySummaryCards({ summary }: Props) {
         badge: 'bg-gray-100 text-gray-500',
         badgeText: summary.latestReadingUtc
           ? new Date(summary.latestReadingUtc).toLocaleTimeString()
-          : 'No data',
+          : a.noDataTime,
       },
     },
   ];
@@ -157,7 +167,7 @@ export default function AnomalySummaryCards({ summary }: Props) {
                 <card.Icon className="w-4 h-4" />
               </div>
             </div>
-            <p className={`text-3xl font-bold tracking-tight ${c.value}`}>
+            <p className={`text-3xl font-bold tracking-tight ${c.value}`} dir="ltr">
               {card.value}
             </p>
             {c.badgeText && (

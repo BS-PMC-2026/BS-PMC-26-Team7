@@ -1,20 +1,19 @@
 'use client';
 
 import { ZoneHealth } from '@/types/anomaly';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   zones: ZoneHealth[];
 }
 
-const HEALTH_CONFIG = {
+const HEALTH_STYLES = {
   high: {
-    label: 'High Risk',
     cardBg: 'bg-red-50 border-red-200',
     headingColor: 'text-red-700',
     dotColor: 'bg-red-500',
     pillBg: 'bg-red-100 text-red-800 border border-red-200',
     countColor: 'text-red-400',
-    emptyText: 'No high-risk zones',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -23,13 +22,11 @@ const HEALTH_CONFIG = {
     ),
   },
   medium: {
-    label: 'Medium Risk',
     cardBg: 'bg-amber-50 border-amber-200',
     headingColor: 'text-amber-700',
     dotColor: 'bg-amber-400',
     pillBg: 'bg-amber-100 text-amber-800 border border-amber-200',
     countColor: 'text-amber-400',
-    emptyText: 'No medium-risk zones',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -38,13 +35,11 @@ const HEALTH_CONFIG = {
     ),
   },
   normal: {
-    label: 'Normal',
     cardBg: 'bg-white border-gray-200',
     headingColor: 'text-gray-700',
     dotColor: 'bg-green-500',
     pillBg: 'bg-green-100 text-green-800 border border-green-200',
     countColor: 'text-gray-400',
-    emptyText: 'No normal zones',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
@@ -55,6 +50,15 @@ const HEALTH_CONFIG = {
 } as const;
 
 export default function ZoneHealthOverview({ zones }: Props) {
+  const { t } = useLanguage();
+  const a = t.anomalies;
+
+  const HEALTH_CONFIG = {
+    high:   { ...HEALTH_STYLES.high,   label: a.zoneHighRisk,   emptyText: a.noHighRiskZones },
+    medium: { ...HEALTH_STYLES.medium, label: a.zoneMediumRisk, emptyText: a.noMediumRiskZones },
+    normal: { ...HEALTH_STYLES.normal, label: a.zoneNormal,     emptyText: a.noNormalZones },
+  };
+
   const grouped: Record<'normal' | 'medium' | 'high', ZoneHealth[]> = {
     high:   zones.filter((z) => z.health === 'high'),
     medium: zones.filter((z) => z.health === 'medium'),
@@ -67,7 +71,7 @@ export default function ZoneHealthOverview({ zones }: Props) {
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
         </svg>
-        All zones operating normally
+        {a.allZonesNormal}
       </div>
     );
   }

@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAllUsers, promoteUser, searchUsers, UserData } from "@/services/users";
+import { useLanguage } from "@/context/LanguageContext";
+import { translateEnum } from "@/i18n/dictionaries";
 
-const WORKER_ROLE_ID = 3;
+const WORKER_ROLE_ID  = 3;
 const VISITOR_ROLE_ID = 4;
 
 export default function UserRoleTable() {
+  const { t } = useLanguage();
   const [users,     setUsers]     = useState<UserData[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
@@ -23,11 +26,11 @@ export default function UserRoleTable() {
       const data = await getAllUsers(token);
       setUsers(data);
     } catch {
-      setMessage({ text: "Failed to load users.", ok: false });
+      setMessage({ text: t.users.failedToLoad, ok: false });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t.users.failedToLoad]);
 
   useEffect(() => {
     loadUsers();
@@ -44,52 +47,41 @@ export default function UserRoleTable() {
       const data = await searchUsers(token, val);
       setUsers(data);
     } catch {
-      setMessage({ text: "Search failed.", ok: false });
+      setMessage({ text: t.users.searchFailed, ok: false });
     }
   };
 
   const handlePromote = async (userId: number) => {
-    const confirmed = window.confirm("Are you sure you want to promote this user to Employee?");
-    if (!confirmed) {
-      return;
-    }
+    const confirmed = window.confirm(t.users.confirmPromote);
+    if (!confirmed) return;
     setPromoting(userId);
     setMessage(null);
     try {
       const updated = await promoteUser(token, userId, WORKER_ROLE_ID);
-      setUsers(prev =>
-        prev.map(u => u.userId === userId ? { ...u, roleName: updated.roleName } : u)
-      );
-      setMessage({ text: "User promoted to Worker successfully.", ok: true });
+      setUsers(prev => prev.map(u => u.userId === userId ? { ...u, roleName: updated.roleName } : u));
+      setMessage({ text: t.users.promotedSuccessfully, ok: true });
     } catch (err: unknown) {
-      setMessage({ text: err instanceof Error ? err.message : "Promotion failed.", ok: false });
+      setMessage({ text: err instanceof Error ? err.message : t.users.promotionFailed, ok: false });
     } finally {
       setPromoting(null);
     }
   };
 
   const handleRevoke = async (userId: number) => {
-    const confirmed = window.confirm("Are you sure you want to revoke this employee's permissions?");
-    if (!confirmed) {
-      return;
+    const confirmed = window.confirm(t.users.confirmRevoke);
+    if (!confirmed) return;
+    setPromoting(userId);
+    setMessage(null);
+    try {
+      const updated = await promoteUser(token, userId, VISITOR_ROLE_ID);
+      setUsers(prev => prev.map(u => u.userId === userId ? { ...u, roleName: updated.roleName } : u));
+      setMessage({ text: t.users.revokedSuccessfully, ok: true });
+    } catch (err: unknown) {
+      setMessage({ text: err instanceof Error ? err.message : t.users.revokeFailed, ok: false });
+    } finally {
+      setPromoting(null);
     }
-  setPromoting(userId);
-  setMessage(null);
-
-  try {
-    const updated = await promoteUser(token, userId, VISITOR_ROLE_ID);
-
-    setUsers(prev =>
-      prev.map(u => u.userId === userId ? { ...u, roleName: updated.roleName } : u)
-    );
-
-    setMessage({ text: "Employee role revoked successfully.", ok: true });
-  } catch (err: unknown) {
-    setMessage({ text: err instanceof Error ? err.message : "Revoke failed.", ok: false });
-  } finally {
-    setPromoting(null);
-  }
-};
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,7 +89,7 @@ export default function UserRoleTable() {
         type="text"
         value={search}
         onChange={handleSearch}
-        placeholder="Search by name..."
+        placeholder={t.users.searchPlaceholder}
         className="border rounded-lg px-3 py-2 text-sm w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-green-400"
       />
 
@@ -112,65 +104,67 @@ export default function UserRoleTable() {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading users...</p>
+        <p className="text-sm text-gray-400">{t.users.loadingUsers}</p>
       ) : users.length === 0 ? (
-        <p className="text-sm text-gray-400">No users found.</p>
+        <p className="text-sm text-gray-400">{t.users.noUsersFound}</p>
       ) : (
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-50 text-left text-gray-600">
-              <th className="px-4 py-2 border-b">Full Name</th>
-              <th className="px-4 py-2 border-b">Email</th>
-              <th className="px-4 py-2 border-b">Role</th>
-              <th className="px-4 py-2 border-b">Status</th>
-              <th className="px-4 py-2 border-b">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.userId} className="hover:bg-gray-50 border-b">
-                <td className="px-4 py-2">{user.fullName}</td>
-                <td className="px-4 py-2 text-gray-500">{user.email}</td>
-                <td className="px-4 py-2">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    user.roleName === "FarmManager"
-                      ? "bg-purple-100 text-purple-700"
-                      : user.roleName === "Worker"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {user.roleName}
-                  </span>
-                </td>
-                <td className="px-4 py-2">
-                  <span className={`text-xs ${user.isActive ? "text-green-600" : "text-red-500"}`}>
-                    {user.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-2">
-                  {user.roleName === "Visitor" && (
-                    <button
-                      onClick={() => handlePromote(user.userId)}
-                      disabled={promoting === user.userId}
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 transition"
-                    >
-                      {promoting === user.userId ? "Promoting..." : "Promote to Employee"}
-                    </button>
-                  )}
-                  {user.roleName === "Worker" && (
-                    <button
-                    onClick={() => handleRevoke(user.userId)}
-                    disabled={promoting === user.userId}
-                    className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition"
-                    >
-                      {promoting === user.userId ? "Updating..." : "Revoke Employee"}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-left text-gray-600">
+                <th className="px-4 py-2 border-b">{t.users.fullName}</th>
+                <th className="px-4 py-2 border-b">{t.users.email}</th>
+                <th className="px-4 py-2 border-b">{t.users.role}</th>
+                <th className="px-4 py-2 border-b">{t.users.status}</th>
+                <th className="px-4 py-2 border-b">{t.users.action}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.userId} className="hover:bg-gray-50 border-b">
+                  <td className="px-4 py-2">{user.fullName}</td>
+                  <td className="px-4 py-2 text-gray-500" dir="ltr">{user.email}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      user.roleName === "FarmManager"
+                        ? "bg-purple-100 text-purple-700"
+                        : user.roleName === "Worker"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {translateEnum(user.roleName, t.enums.roles)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className={`text-xs ${user.isActive ? "text-green-600" : "text-red-500"}`}>
+                      {user.isActive ? t.common.active : t.common.inactive}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    {user.roleName === "Visitor" && (
+                      <button
+                        onClick={() => handlePromote(user.userId)}
+                        disabled={promoting === user.userId}
+                        className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 transition"
+                      >
+                        {promoting === user.userId ? t.users.promoting : t.users.promoteToEmployee}
                       </button>
                     )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {user.roleName === "Worker" && (
+                      <button
+                        onClick={() => handleRevoke(user.userId)}
+                        disabled={promoting === user.userId}
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition"
+                      >
+                        {promoting === user.userId ? t.users.updating : t.users.revokeEmployee}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

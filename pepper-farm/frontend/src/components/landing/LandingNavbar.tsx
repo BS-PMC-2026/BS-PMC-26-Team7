@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Leaf, Menu as MenuIcon, X } from 'lucide-react';
 import NavMenu, { IMenu } from '@/components/ui/navbar';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const NAV_ITEMS: IMenu[] = [
   { id: 1, title: 'Peppers', url: '/#peppers', dropdown: false },
@@ -84,8 +85,9 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           <NavMenu list={NAV_ITEMS} />
         </div>
 
-        {/* Auth buttons — desktop */}
+        {/* Auth buttons + language switcher — desktop */}
         <div className="hidden md:flex items-center gap-2">
+          <LanguageSwitcher />
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/login"
@@ -173,19 +175,24 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   </Link>
                 </motion.div>
               ))}
-              <div className="border-t border-green-100 mt-2 pt-3 flex gap-2">
-                <Link
-                  href="/login"
-                  className="flex-1 text-center py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
-                >
-                  Register
-                </Link>
+              <div className="border-t border-green-100 mt-2 pt-3 flex flex-col gap-2">
+                <div className="flex justify-center">
+                  <LanguageSwitcher />
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    className="flex-1 text-center py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
+                  >
+                    Register
+                  </Link>
+                </div>
               </div>
             </div>
           </motion.div>

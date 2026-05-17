@@ -17,8 +17,11 @@ import { createTask, getTasks, updateTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
 import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
+import { useLanguage } from '@/context/LanguageContext';
 
 function ManagerTasksPageContent() {
+  const { t } = useLanguage();
+  const tk = t.tasks;
   const searchParams = useSearchParams();
 
   const sourceAlertId = useMemo(() => {
@@ -72,7 +75,7 @@ function ManagerTasksPageContent() {
       setWorkers(fetchedWorkers.filter((u) => u.roleName === 'Worker'));
       setZones(fetchedZones);
     } catch {
-      setLoadError('Failed to load tasks. Is the backend running?');
+      setLoadError(tk.failedToLoad);
     } finally {
       setIsLoadingTasks(false);
     }
@@ -93,7 +96,7 @@ function ManagerTasksPageContent() {
         setAlertSuccessId(sourceAlertId);
       }
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to create task.');
+      setSubmitError(err instanceof Error ? err.message : tk.failedToCreate);
     } finally {
       setIsSubmitting(false);
     }
@@ -109,7 +112,7 @@ function ManagerTasksPageContent() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setEditingTask(null);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to update task.');
+      setSubmitError(err instanceof Error ? err.message : tk.failedToUpdate);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,18 +136,18 @@ function ManagerTasksPageContent() {
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
         <PageHeader
-          title="Tasks"
-          subtitle="Manage and assign farm tasks"
+          title={tk.title}
+          subtitle={tk.subtitle}
           action={
             !showCreateForm ? (
               <div className="flex gap-2">
                 <Link href="/manager/reports/open-tasks">
-                  <Button variant="secondary">📊 Report</Button>
+                  <Button variant="secondary">{tk.report}</Button>
                 </Link>
                 <Link href="/manager/tasks/history">
-                <Button variant="secondary">📜 History</Button>
+                  <Button variant="secondary">{tk.history}</Button>
                 </Link>
-                <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
+                <Button onClick={() => setShowCreateForm(true)}>{tk.addTask}</Button>
               </div>
             ) : undefined
           }
@@ -154,9 +157,9 @@ function ManagerTasksPageContent() {
       {alertSuccessId && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
           <span>
-            Task created from{' '}
-            <Link href="/manager/anomalies" className="underline font-medium">
-              alert #{alertSuccessId}
+            {tk.createdFromAlert}
+            <Link href="/manager/anomalies" className="underline font-medium" dir="ltr">
+              #{alertSuccessId}
             </Link>
             .
           </span>
@@ -174,13 +177,13 @@ function ManagerTasksPageContent() {
         <Card className="p-6 mb-6">
           {sourceAlertId && (
             <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              <span>Pre-filled from alert #{sourceAlertId}.</span>
+              <span>{tk.preFilledFromAlert}<span dir="ltr">#{sourceAlertId}</span>.</span>
               <Link href="/manager/anomalies" className="underline ml-auto">
-                Back to anomalies
+                {tk.backToAnomalies}
               </Link>
             </div>
           )}
-          <h2 className="text-lg font-medium text-gray-700 mb-4">New Task</h2>
+          <h2 className="text-lg font-medium text-gray-700 mb-4">{tk.newTask}</h2>
           {submitError && <Alert className="mb-4">{submitError}</Alert>}
           <TaskForm
             onSubmit={handleCreate}
@@ -209,18 +212,18 @@ function ManagerTasksPageContent() {
       )}
 
       {isLoadingTasks ? (
-        <p className="text-sm text-gray-400 text-center py-12">Loading tasks...</p>
+        <p className="text-sm text-gray-400 text-center py-12">{tk.loading}</p>
       ) : tasks.length === 0 ? (
-        <EmptyState title="No tasks yet." description="Click + Add Task to create the first one." />
+        <EmptyState title={tk.noTasksYet} description={tk.clickToCreate} />
       ) : filteredTasks.length === 0 ? (
-        <EmptyState title="No tasks match these filters." description="Clear filters to see all tasks." />
+        <EmptyState title={tk.noTasksMatchFilter} description={tk.clearFilters} />
       ) : (
         <TaskList tasks={filteredTasks} workers={workers} onEdit={setEditingTask} />
       )}
 
       {editingTask && (
         <Modal onClose={() => { setEditingTask(null); setSubmitError(null); }}>
-          <h2 className="text-lg font-medium text-gray-700 mb-4">Edit Task</h2>
+          <h2 className="text-lg font-medium text-gray-700 mb-4">{tk.editTask}</h2>
           {submitError && <Alert className="mb-4">{submitError}</Alert>}
           <TaskForm
             onSubmit={handleEdit}

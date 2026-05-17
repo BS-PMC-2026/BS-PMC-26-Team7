@@ -1,13 +1,13 @@
 'use client';
 
 import { ReactNode } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ToastProvider } from '@/context/ToastContext';
 import {
   AnomalyNotificationProvider,
   useAnomalyNotification,
 } from '@/context/AnomalyNotificationContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 // ---------------------------------------------------------------------------
 // Floating notification bell
@@ -61,6 +61,9 @@ export default function ManagerLayout({ children }: { children: ReactNode }) {
       <AnomalyNotificationProvider>
         {children}
         <NotificationBell />
+        <div className="fixed top-4 right-4 z-[9999]">
+          <LanguageSwitcher />
+        </div>
       </AnomalyNotificationProvider>
     </ToastProvider>
   );

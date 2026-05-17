@@ -2,23 +2,27 @@
 
 import Link from 'next/link';
 import { InventoryResponse } from '@/types/inventory';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   items: InventoryResponse[];
 }
 
 export default function ProductCatalogTable({ items }: Props) {
+  const { t } = useLanguage();
+  const inv = t.inventory;
+
   return (
     <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
-            <th className="px-4 py-3">Item</th>
-            <th className="px-4 py-3">Type</th>
-            <th className="px-4 py-3">Location</th>
-            <th className="px-4 py-3">Warehouse</th>
-            <th className="px-4 py-3">In Store</th>
-            <th className="px-4 py-3">Last Updated</th>
+            <th className="px-4 py-3">{inv.colItem}</th>
+            <th className="px-4 py-3">{inv.colType}</th>
+            <th className="px-4 py-3">{inv.colLocation}</th>
+            <th className="px-4 py-3">{inv.colWarehouse}</th>
+            <th className="px-4 py-3">{inv.colInStore}</th>
+            <th className="px-4 py-3">{inv.colLastUpdated}</th>
             <th className="px-4 py-3"></th>
           </tr>
         </thead>
@@ -35,30 +39,30 @@ export default function ProductCatalogTable({ items }: Props) {
                 <td className="px-4 py-3 text-xs">
                   {isProduct ? (
                     <span className="rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5">
-                      Product
+                      {inv.typeProduct}
                     </span>
                   ) : (
                     <span className="rounded-full bg-gray-50 text-gray-600 border border-gray-200 px-2 py-0.5">
-                      Warehouse-only
+                      {inv.typeWarehouseOnly}
                     </span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-700">
                   {row.Location ?? <span className="text-gray-400">—</span>}
                 </td>
-                <td className="px-4 py-3 text-gray-700">{row.WarehouseQuantity}</td>
+                <td className="px-4 py-3 text-gray-700" dir="ltr">{row.WarehouseQuantity}</td>
                 <td className="px-4 py-3">
                   {!isProduct ? (
                     <span className="text-gray-400">—</span>
                   ) : outOfStock ? (
                     <span className="rounded-full bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 text-xs">
-                      Out of stock
+                      {inv.outOfStock}
                     </span>
                   ) : (
-                    <span className="text-gray-700">{inStore}</span>
+                    <span className="text-gray-700" dir="ltr">{inStore}</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-500 text-xs">
+                <td className="px-4 py-3 text-gray-500 text-xs" dir="ltr">
                   {new Date(row.LastUpdatedAt).toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -66,7 +70,7 @@ export default function ProductCatalogTable({ items }: Props) {
                     href={`/manager/inventory/${row.InventoryId}/edit`}
                     className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
                   >
-                    ✏️ Update
+                    {inv.update}
                   </Link>
                 </td>
               </tr>

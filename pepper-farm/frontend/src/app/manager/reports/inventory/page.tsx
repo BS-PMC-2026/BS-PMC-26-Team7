@@ -10,9 +10,12 @@ import {
   InventoryReportRow,
   InventoryReportFilters,
 } from "@/services/reports";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function InventoryReportPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const rp = t.reports;
   const [rows,         setRows]         = useState<InventoryReportRow[]>([]);
   const [isLoading,    setIsLoading]    = useState(true);
   const [error,        setError]        = useState<string | null>(null);
@@ -33,7 +36,7 @@ export default function InventoryReportPage() {
         const data = await getInventoryReport(filters);
         setRows(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load inventory report.");
+        setError(err instanceof Error ? err.message : rp.loading);
       } finally {
         setIsLoading(false);
       }
@@ -57,9 +60,9 @@ export default function InventoryReportPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <PageHeader
-            label="Reports"
-            title="Inventory Report"
-            subtitle="Current stock levels across all items"
+            label={rp.inventoryLabel}
+            title={rp.inventoryTitle}
+            subtitle={rp.inventorySubtitle}
           />
         </div>
       </div>
@@ -71,16 +74,16 @@ export default function InventoryReportPage() {
         {!isLoading && rows.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Total Items</p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">{rows.length}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">{rp.totalItems}</p>
+              <p className="text-2xl font-semibold text-gray-800 mt-1" dir="ltr">{rows.length}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Low Stock</p>
-              <p className="text-2xl font-semibold text-red-600 mt-1">{lowStockCount}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">{rp.lowStock}</p>
+              <p className="text-2xl font-semibold text-red-600 mt-1" dir="ltr">{lowStockCount}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Total Available</p>
-              <p className="text-2xl font-semibold text-gray-800 mt-1">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">{rp.totalAvailable}</p>
+              <p className="text-2xl font-semibold text-gray-800 mt-1" dir="ltr">
                 {rows.reduce((sum, r) => sum + r.AvailableQuantity, 0)}
               </p>
             </div>
@@ -90,13 +93,13 @@ export default function InventoryReportPage() {
         {/* Filters */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap gap-4 items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Category</label>
+            <label className="text-xs font-medium text-gray-600">{rp.category}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
             >
-              <option value="">All categories</option>
+              <option value="">{rp.allCategories}</option>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -104,15 +107,15 @@ export default function InventoryReportPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Sort by</label>
+            <label className="text-xs font-medium text-gray-600">{rp.sortBy}</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "name" | "quantity" | "category")}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
             >
-              <option value="name">Item name</option>
-              <option value="quantity">Available (low first)</option>
-              <option value="category">Category</option>
+              <option value="name">{rp.sortByName}</option>
+              <option value="quantity">{rp.sortByQuantity}</option>
+              <option value="category">{rp.sortByCategory}</option>
             </select>
           </div>
 
@@ -123,13 +126,13 @@ export default function InventoryReportPage() {
               onChange={(e) => setLowStockOnly(e.target.checked)}
               className="rounded"
             />
-            Show only low stock items
+            {rp.lowStockOnly}
           </label>
         </div>
 
         {/* Table */}
         {isLoading ? (
-          <p className="text-sm text-gray-400 text-center py-12">Loading report...</p>
+          <p className="text-sm text-gray-400 text-center py-12">{rp.loading}</p>
         ) : (
           <InventoryReportTable rows={rows} />
         )}
