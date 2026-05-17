@@ -88,7 +88,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
     setSelected(section);
     setZoneData(null);
     setZoneLoading(true);
-    fetch(`http://localhost:8000/api/zones/${section.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "https://hadinerim.azurewebsites.net"}/api/zones/${section.id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setZoneData(data))
       .catch(() => setZoneData(null))
