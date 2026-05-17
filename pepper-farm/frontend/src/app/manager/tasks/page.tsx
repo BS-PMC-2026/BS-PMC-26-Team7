@@ -2,15 +2,17 @@
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Alert from '@/components/ui/Alert';
+import EmptyState from '@/components/ui/EmptyState';
+import { getCompletedTasks } from '@/services/tasks';
+import { ClipboardCheck, ClipboardList } from 'lucide-react';
 import TaskForm from '@/components/tasks/TaskForm';
 import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import Alert from '@/components/ui/Alert';
 import Modal from '@/components/ui/Modal';
-import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import { CreateTaskFormData, Task, TaskPriority } from '@/types/task';
 import { createTask, getTasks, updateTask } from '@/services/tasks';
@@ -18,8 +20,101 @@ import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
 import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
 
+/* -------------------------------------------------------------------------- */
+/* History tab content                                                          */
+/* -------------------------------------------------------------------------- */
+
+function TaskHistoryContent() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCompletedTasks()
+      .then(setTasks)
+      .catch(() => setError('Failed to load completed tasks.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {loading ? (
+        <p className="text-center text-gray-400 py-10">Loading completed tasks...</p>
+      ) : tasks.length === 0 ? (
+        <EmptyState title="No completed tasks found" description="Completed tasks will appear here." />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-2">
+          {tasks.map((task) => (
+            <div key={task.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 hover:shadow-lg transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">COMPLETED</span>
+                <span className="text-xs text-gray-400 uppercase">{task.priority}</span>
+              </div>
+              <h2 className="text-lg font-bold text-gray-800 mb-2">{task.title}</h2>
+              <p className="text-sm text-gray-500 mb-4">{task.description || 'No description provided.'}</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Task Type</span>
+                  <span className="font-medium text-gray-700">{task.taskType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Completed At</span>
+                  <span className="font-medium text-gray-700">{task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page tab bar                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function TasksTabBar({ activeTab, onTabChange }: { activeTab: string; onTabChange: (t: string) => void }) {
+  const tabs = [
+    { id: 'active', label: 'Active Tasks', icon: <ClipboardList size={14} /> },
+    { id: 'history', label: 'History', icon: <ClipboardCheck size={14} /> },
+  ];
+  return (
+    <div className="border-b border-gray-200 bg-white">
+      <div className="max-w-7xl mx-auto px-6 flex">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`flex items-center gap-1.5 px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? 'border-[#2F6F4E] text-[#2F6F4E]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab.icon}{tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Active tasks content                                                         */
+/* -------------------------------------------------------------------------- */
+
 function ManagerTasksPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeTab = searchParams.get('tab') === 'history' ? 'history' : 'active';
+
+  const handleTabChange = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.replace(`/manager/tasks?${params.toString()}`);
+  };
 
   const sourceAlertId = useMemo(() => {
     const raw = searchParams.get('alertId');
@@ -129,26 +224,34 @@ function ManagerTasksPageContent() {
 
   const filteredTasks = useMemo(() => filterTasks(tasks, taskFilters), [tasks, taskFilters]);
 
+  if (activeTab === 'history') {
+    return (
+      <>
+        <TasksTabBar activeTab={activeTab} onTabChange={handleTabChange} />
+        <TaskHistoryContent />
+      </>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <PageHeader
-          title="Tasks"
-          subtitle="Manage and assign farm tasks"
-          action={
-            !showCreateForm ? (
-              <div className="flex gap-2">
-                <Link href="/manager/reports/open-tasks">
-                  <Button variant="secondary">📊 Report</Button>
-                </Link>
-                <Link href="/manager/tasks/history">
-                <Button variant="secondary">📜 History</Button>
-                </Link>
-                <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
-              </div>
-            ) : undefined
-          }
-        />
+    <>
+      <TasksTabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <PageHeader
+            title="Tasks"
+            subtitle="Manage and assign farm tasks"
+            action={
+              !showCreateForm ? (
+                <div className="flex gap-2">
+                  <Link href="/manager/reports">
+                    <Button variant="secondary">Report</Button>
+                  </Link>
+                  <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
+                </div>
+              ) : undefined
+            }
+          />
       </div>
 
       {alertSuccessId && (
@@ -232,7 +335,8 @@ function ManagerTasksPageContent() {
           />
         </Modal>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

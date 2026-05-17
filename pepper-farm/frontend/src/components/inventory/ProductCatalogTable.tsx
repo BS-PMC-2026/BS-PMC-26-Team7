@@ -9,7 +9,7 @@ interface Props {
 
 export default function ProductCatalogTable({ items }: Props) {
   return (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+    <div dir="ltr" className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
           <tr>
