@@ -547,6 +547,21 @@ export interface MapDictionary {
   plantHere:                string;
   selectPepperFirst:        string;
   noOpenTasksInZone:        string;
+  // FarmMap popup
+  mapArea:                  string;
+  mapLoadingCropInfo:       string;
+  mapCurrentCrop:           string;
+  mapNoCropAssigned:        string;
+  mapPlantsInZone:          string;
+  mapInteractive:           string;
+  // Legend
+  legendGreenhouse:         string;
+  legendNursery:            string;
+  legendSmallGreenhouse:    string;
+  legendVisitorGreenhouse:  string;
+  legendVisitorCenter:      string;
+  legendParking:            string;
+  legendProduction:         string;
 }
 
 export interface WorkerDictionary {
@@ -1248,6 +1263,19 @@ const en: Dictionary = {
     plantHere:         'Plant here 🌱',
     selectPepperFirst: 'Select a pepper first',
     noOpenTasksInZone: 'No open tasks in this zone',
+    mapArea:                 'Area',
+    mapLoadingCropInfo:      'Loading crop info...',
+    mapCurrentCrop:          '🌶 Current crop',
+    mapNoCropAssigned:       'No crop assigned to this zone.',
+    mapPlantsInZone:         '🌿 Plants in this zone',
+    mapInteractive:          'Farm map · Interactive',
+    legendGreenhouse:        'Greenhouse',
+    legendNursery:           'Nursery',
+    legendSmallGreenhouse:   'Small Greenhouse',
+    legendVisitorGreenhouse: 'Visitor Greenhouse',
+    legendVisitorCenter:     'Visitor Center',
+    legendParking:           'Parking',
+    legendProduction:        'Production Facility',
   },
 
   worker: {
@@ -1918,6 +1946,19 @@ const he: Dictionary = {
     plantHere:         'שתול כאן 🌱',
     selectPepperFirst: 'בחר פלפל תחילה',
     noOpenTasksInZone: 'אין משימות פתוחות באזור זה',
+    mapArea:                 'שטח',
+    mapLoadingCropInfo:      'טוען מידע על גידול...',
+    mapCurrentCrop:          '🌶 גידול נוכחי',
+    mapNoCropAssigned:       'אין גידול משויך לאזור זה.',
+    mapPlantsInZone:         '🌿 צמחים באזור זה',
+    mapInteractive:          'מפת חווה · אינטראקטיבי',
+    legendGreenhouse:        'חממה גדולה',
+    legendNursery:           'משתלה',
+    legendSmallGreenhouse:   'חממה קטנה',
+    legendVisitorGreenhouse: 'חממת מבקרים',
+    legendVisitorCenter:     'מרכז מבקרים',
+    legendParking:           'חניה',
+    legendProduction:        'מפעל ייצור',
   },
 
   worker: {
