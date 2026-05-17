@@ -1,6 +1,6 @@
 import { apiFetch } from './api';
 import { API_URL } from '@/lib/constants';
-import { CreateTaskFormData, Task } from '@/types/task';
+import { ChecklistItem, CreateTaskFormData, Task } from '@/types/task';
 
 
 interface CreateTaskPayload {
@@ -12,6 +12,7 @@ interface CreateTaskPayload {
   dueDate: string | null;
   zoneCode: string | null;
   anomalyId?: number;
+  checklistItems: { title: string }[];
 }
 
 function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId'> {
@@ -23,6 +24,9 @@ function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId
     assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null,
     dueDate: data.dueDate || null,
     zoneCode: data.zoneCode || null,
+    checklistItems: (data.checklistItems ?? [])
+      .map((i) => ({ title: i.title.trim() }))
+      .filter((i) => i.title.length > 0),
   };
 }
 
@@ -111,4 +115,65 @@ export async function getCompletedTasks(): Promise<Task[]> {
       Authorization: `Bearer ${token}`,
     },
   });
+}
+
+export async function addChecklistItem(
+  taskId: number,
+  title: string,
+  token: string,
+): Promise<ChecklistItem> {
+  const res = await fetch(`${API_URL}/api/tasks/${taskId}/checklist`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ title: title.trim() }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to add checklist item.');
+  return json;
+}
+
+export async function updateChecklistItem(
+  taskId: number,
+  itemId: number,
+  patch: { title?: string; isCompleted?: boolean },
+  token: string,
+): Promise<ChecklistItem> {
+  const res = await fetch(
+    `${API_URL}/api/tasks/${taskId}/checklist/${itemId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...(patch.title !== undefined && { title: patch.title.trim() }),
+        ...(patch.isCompleted !== undefined && { isCompleted: patch.isCompleted }),
+      }),
+    },
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to update checklist item.');
+  return json;
+}
+
+export async function deleteChecklistItem(
+  taskId: number,
+  itemId: number,
+  token: string,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/tasks/${taskId}/checklist/${itemId}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.detail ?? 'Failed to delete checklist item.');
+  }
 }

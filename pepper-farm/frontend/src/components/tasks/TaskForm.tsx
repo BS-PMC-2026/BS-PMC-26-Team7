@@ -46,9 +46,31 @@ export default function TaskForm({
     assignedToUserId: initialData?.assignedToUserId ?? '',
     dueDate: initialData?.dueDate ?? '',
     zoneCode: initialData?.zoneCode ?? '',
+    checklistItems: initialData?.checklistItems ?? [],
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [newItemTitle, setNewItemTitle] = useState('');
+  // Checklist editing is only offered at creation time — manager edits to existing
+  // tasks go through the dedicated checklist endpoints, not this form.
+  const showChecklistSection = !initialData;
+
+  const addItem = () => {
+    const trimmed = newItemTitle.trim();
+    if (!trimmed) return;
+    setForm((prev) => ({
+      ...prev,
+      checklistItems: [...prev.checklistItems, { title: trimmed }],
+    }));
+    setNewItemTitle('');
+  };
+
+  const removeItem = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      checklistItems: prev.checklistItems.filter((_, i) => i !== index),
+    }));
+  };
 
   const validate = (): boolean => {
     const next: FormErrors = {};
@@ -118,6 +140,54 @@ export default function TaskForm({
           className="rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 resize-none"
         />
       </div>
+
+      {showChecklistSection && (
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">
+            {tk.checklist}
+          </label>
+
+          {form.checklistItems.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {form.checklistItems.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-sm"
+                >
+                  <span className="text-gray-800">{item.title}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="text-xs text-red-600 hover:text-red-700"
+                  >
+                    {tk.removeItem}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              aria-label={tk.checklist}
+              placeholder={tk.itemPlaceholder}
+              value={newItemTitle}
+              onChange={(e) => setNewItemTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addItem();
+                }
+              }}
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <Button type="button" variant="secondary" onClick={addItem}>
+              {tk.addItem}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Select
         id="taskType"

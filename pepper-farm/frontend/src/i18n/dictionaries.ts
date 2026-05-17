@@ -219,6 +219,15 @@ export interface TasksDictionary {
   completeButton:           string;
   allowedRange:             string;
   clear:                    string;
+  // Checklist (US39)
+  checklist:                    string;
+  addItem:                      string;
+  removeItem:                   string;
+  itemPlaceholder:              string;
+  progress:                     string;
+  progressOf:                   string;
+  failedToUpdateChecklistItem:  string;
+  completeBlockedByChecklist:   string;
 }
 
 export interface InventoryDictionary {
@@ -979,6 +988,14 @@ const en: Dictionary = {
     completeButton:      'Complete',
     allowedRange:        'allowed',
     clear:               'Clear',
+    checklist:                   'Checklist',
+    addItem:                     '+ Add item',
+    removeItem:                  'Remove',
+    itemPlaceholder:             'e.g. Check humidity',
+    progress:                    'Progress',
+    progressOf:                  '{done} / {total} completed',
+    failedToUpdateChecklistItem: 'Failed to update checklist item.',
+    completeBlockedByChecklist:  'Complete all checklist items first',
   },
 
   inventory: {
@@ -1685,6 +1702,14 @@ const he: Dictionary = {
     completeButton:      'סיים',
     allowedRange:        'מותר',
     clear:               'נקה',
+    checklist:                   'רשימת משימות',
+    addItem:                     '+ הוסף פריט',
+    removeItem:                  'הסר',
+    itemPlaceholder:             'לדוג׳ בדוק לחות',
+    progress:                    'התקדמות',
+    progressOf:                  '{done} / {total} הושלמו',
+    failedToUpdateChecklistItem: 'עדכון פריט נכשל.',
+    completeBlockedByChecklist:  'יש לסיים את כל פריטי הרשימה תחילה',
   },
 
   inventory: {

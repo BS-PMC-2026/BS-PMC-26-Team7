@@ -12,6 +12,13 @@ export interface AlertInfo {
   createdAtUtc: string;
 }
 
+export interface ChecklistItem {
+  itemId: number;
+  title: string;
+  isCompleted: boolean;
+  position: number;
+}
+
 export interface CreateTaskFormData {
   title: string;
   description: string;
@@ -20,6 +27,7 @@ export interface CreateTaskFormData {
   assignedToUserId: string;
   dueDate: string;
   zoneCode: string; // section id like 'GH-01', empty = none
+  checklistItems: { title: string }[];
 }
 
 export interface Task {
@@ -41,4 +49,5 @@ export interface Task {
   alertInfo: AlertInfo | null;
   createdAt: string;
   updatedAt: string;
+  checklistItems: ChecklistItem[];
 }

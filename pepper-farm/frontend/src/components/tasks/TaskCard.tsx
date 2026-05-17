@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertInfo, Task, TaskStatus } from '@/types/task';
+import { AlertInfo, ChecklistItem, Task, TaskStatus } from '@/types/task';
 import { Worker } from '@/types/user';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
@@ -43,6 +43,73 @@ function AlertInfoPanel({ info, anomalyId }: { info: AlertInfo; anomalyId: numbe
   );
 }
 
+function ChecklistPanel({
+  task,
+  onToggleChecklistItem,
+}: {
+  task: Task;
+  onToggleChecklistItem?: (task: Task, item: ChecklistItem, nextCompleted: boolean) => void;
+}) {
+  const { t } = useLanguage();
+  const tk = t.tasks;
+  const items = task.checklistItems;
+  const total = items.length;
+  const done = items.filter((i) => i.isCompleted).length;
+  const percent = total === 0 ? 0 : (done / total) * 100;
+  const caption = tk.progressOf
+    .replace('{done}', String(done))
+    .replace('{total}', String(total));
+
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      <div>
+        <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
+          <span className="font-medium">{tk.progress}</span>
+          <span dir="ltr">{caption}</span>
+        </div>
+        <div
+          className="h-2 w-full rounded-full bg-gray-200 overflow-hidden"
+          role="progressbar"
+          aria-valuenow={done}
+          aria-valuemin={0}
+          aria-valuemax={total}
+        >
+          <div
+            data-testid="checklist-progress-bar"
+            className="h-full bg-green-500 transition-all"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      </div>
+
+      <ul className="flex flex-col gap-1">
+        {items.map((item) => (
+          <li key={item.itemId} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={item.isCompleted}
+              disabled={!onToggleChecklistItem}
+              onChange={(e) =>
+                onToggleChecklistItem?.(task, item, e.target.checked)
+              }
+              className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+            <span
+              className={
+                item.isCompleted
+                  ? 'text-gray-500 line-through'
+                  : 'text-gray-900'
+              }
+            >
+              {item.title}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 const STATUS_STYLES: Record<string, string> = {
   todo: 'bg-yellow-100 text-yellow-700',
   in_progress: 'bg-blue-100 text-blue-700',
@@ -60,9 +127,16 @@ interface TaskCardProps {
   workers: Worker[];
   onEdit?: (task: Task) => void;
   onStatusChange?: (task: Task, newStatus: TaskStatus) => void;
+  onToggleChecklistItem?: (task: Task, item: ChecklistItem, nextCompleted: boolean) => void;
 }
 
-export default function TaskCard({ task, workers, onEdit, onStatusChange }: TaskCardProps) {
+export default function TaskCard({
+  task,
+  workers,
+  onEdit,
+  onStatusChange,
+  onToggleChecklistItem,
+}: TaskCardProps) {
   const { t } = useLanguage();
   const tk = t.tasks;
   const assignee = workers.find((w) => w.userId === task.assignedToUserId);
@@ -78,6 +152,13 @@ export default function TaskCard({ task, workers, onEdit, onStatusChange }: Task
     todo: tk.startButton,
     in_progress: tk.completeButton,
   };
+
+  // Block the Complete transition while any checklist item is still open.
+  // Tasks without checklist items keep the existing behavior.
+  const hasChecklistItems = !!task.checklistItems && task.checklistItems.length > 0;
+  const allChecklistDone = hasChecklistItems && task.checklistItems.every((i) => i.isCompleted);
+  const completeBlockedByChecklist =
+    hasChecklistItems && !allChecklistDone && nextStatus === 'done';
 
   return (
     <Card className={`p-4 flex flex-col gap-2 !border-0 shadow-sm ${priorityCardStyle}`}>
@@ -105,6 +186,13 @@ export default function TaskCard({ task, workers, onEdit, onStatusChange }: Task
         <p className="text-sm text-gray-900 leading-relaxed">{task.description}</p>
       )}
 
+      {task.checklistItems && task.checklistItems.length > 0 && (
+        <ChecklistPanel
+          task={task}
+          onToggleChecklistItem={onToggleChecklistItem}
+        />
+      )}
+
       {task.alertInfo && task.anomalyId != null && (
         <AlertInfoPanel info={task.alertInfo} anomalyId={task.anomalyId} />
       )}
@@ -125,7 +213,9 @@ export default function TaskCard({ task, workers, onEdit, onStatusChange }: Task
         {onStatusChange && nextStatus && (
           <button
             onClick={() => onStatusChange(task, nextStatus)}
-            className="ml-auto px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
+            disabled={completeBlockedByChecklist}
+            title={completeBlockedByChecklist ? tk.completeBlockedByChecklist : undefined}
+            className="ml-auto px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-100"
           >
             {nextStatusLabel[task.status]}
           </button>
