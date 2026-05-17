@@ -115,6 +115,46 @@ export interface ManagerDictionary {
   label:                string;
 }
 
+export interface DashboardDictionary {
+  title:                 string;
+  subtitle:              string;
+  pepperFarmManagement:  string;
+  managerUser:           string;
+  tasks:                 string;
+  openTasks:             string;
+  farmMap:               string;
+  deviationData:         string;
+  sensorStatistics:      string;
+  inventoryAlerts:       string;
+  dueDate:               string;
+  assignedTo:            string;
+  status:                string;
+  priority:              string;
+  zone:                  string;
+  averageTemperature:    string;
+  relativeHumidity:      string;
+  dailyWaterUsage:       string;
+  weeklyYield:           string;
+  activeAnomalies:       string;
+  highSeverity:          string;
+  affectedZones:         string;
+  latestReading:         string;
+  currentStock:          string;
+  requiredStock:         string;
+  warehouse:             string;
+  inStore:               string;
+  inStock:               string;
+  lowStock:              string;
+  outOfStock:            string;
+  noOpenTasks:           string;
+  noInventoryAlerts:     string;
+  noSensorDataAvailable: string;
+  failedToLoad:          string;
+  noDueDate:             string;
+  unknownWorker:         string;
+  unassigned:            string;
+}
+
 export interface UsersDictionary {
   searchPlaceholder:        string;
   loadingUsers:             string;
@@ -702,6 +742,7 @@ export interface Dictionary {
   auth:       AuthDictionary;
   enums:      EnumDictionary;
   manager:    ManagerDictionary;
+  dashboard:  DashboardDictionary;
   users:      UsersDictionary;
   tasks:      TasksDictionary;
   inventory:  InventoryDictionary;
@@ -875,6 +916,46 @@ const en: Dictionary = {
     sensorsSub:         'Monitor farm sensors and live readings',
     sensorAnomalies:    'Sensor Anomalies',
     sensorAnomaliesSub: 'Live anomaly dashboard',
+  },
+
+  dashboard: {
+    title:                 'Farm Manager Dashboard',
+    subtitle:              'PepperFarm / Pepper Farm Management',
+    pepperFarmManagement:  'PepperFarm Management',
+    managerUser:           'Manager',
+    tasks:                 'Tasks',
+    openTasks:             'Open Tasks',
+    farmMap:               'Farm Map',
+    deviationData:         'Deviation Data',
+    sensorStatistics:      'Sensor Statistics',
+    inventoryAlerts:       'Inventory Alerts',
+    dueDate:               'Due Date',
+    assignedTo:            'Assigned To',
+    status:                'Status',
+    priority:              'Priority',
+    zone:                  'Zone',
+    averageTemperature:    'Average Temperature',
+    relativeHumidity:      'Relative Humidity',
+    dailyWaterUsage:       'Daily Water Usage',
+    weeklyYield:           'Weekly Yield',
+    activeAnomalies:       'Active Anomalies',
+    highSeverity:          'High Severity',
+    affectedZones:         'Affected Zones',
+    latestReading:         'Latest Reading',
+    currentStock:          'Current Stock',
+    requiredStock:         'Required Stock',
+    warehouse:             'Warehouse',
+    inStore:               'In Store',
+    inStock:               'In Stock',
+    lowStock:              'Low Stock',
+    outOfStock:            'Out of Stock',
+    noOpenTasks:           'No open tasks',
+    noInventoryAlerts:     'No inventory alerts',
+    noSensorDataAvailable: 'No sensor data available',
+    failedToLoad:          'Failed to load dashboard data.',
+    noDueDate:             'No due date',
+    unknownWorker:         'Unknown worker',
+    unassigned:            'Unassigned',
   },
 
   users: {
@@ -1583,6 +1664,46 @@ const he: Dictionary = {
     sensorsSub:         'ניטור חיישני החווה וקריאות חיות',
     sensorAnomalies:    'חריגות חיישנים',
     sensorAnomaliesSub: 'לוח חריגות חי',
+  },
+
+  dashboard: {
+    title:                 'לוח ניהול החווה',
+    subtitle:              'PepperFarm / ניהול חוות הפלפלים',
+    pepperFarmManagement:  'ניהול PepperFarm',
+    managerUser:           'מנהל',
+    tasks:                 'משימות',
+    openTasks:             'משימות פתוחות',
+    farmMap:               'מפת החווה',
+    deviationData:         'נתוני חריגות',
+    sensorStatistics:      'סטטיסטיקת חיישנים',
+    inventoryAlerts:       'התראות מלאי',
+    dueDate:               'תאריך יעד',
+    assignedTo:            'מוקצה ל',
+    status:                'סטטוס',
+    priority:              'עדיפות',
+    zone:                  'אזור',
+    averageTemperature:    'טמפרטורה ממוצעת',
+    relativeHumidity:      'לחות יחסית',
+    dailyWaterUsage:       'צריכת מים יומית',
+    weeklyYield:           'יבול שבועי',
+    activeAnomalies:       'חריגות פעילות',
+    highSeverity:          'חומרה גבוהה',
+    affectedZones:         'אזורים מושפעים',
+    latestReading:         'קריאה אחרונה',
+    currentStock:          'מלאי נוכחי',
+    requiredStock:         'מלאי נדרש',
+    warehouse:             'מחסן',
+    inStore:               'בחנות',
+    inStock:               'במלאי',
+    lowStock:              'מלאי נמוך',
+    outOfStock:            'אזל מהמלאי',
+    noOpenTasks:           'אין משימות פתוחות',
+    noInventoryAlerts:     'אין התראות מלאי',
+    noSensorDataAvailable: 'אין נתוני חיישנים זמינים',
+    failedToLoad:          'טעינת נתוני לוח הניהול נכשלה.',
+    noDueDate:             'אין תאריך יעד',
+    unknownWorker:         'עובד לא ידוע',
+    unassigned:            'לא מוקצה',
   },
 
   users: {

@@ -100,6 +100,7 @@ interface FarmMapProps {
   activeFilter?: MapFilter;
   tasks?: Task[];
   zoneHealth?: ZoneHealth[];
+  showLegend?: boolean;
 }
 
 export default function FarmMap({
@@ -109,6 +110,7 @@ export default function FarmMap({
   activeFilter = null,
   tasks = [],
   zoneHealth = [],
+  showLegend = true,
 }: FarmMapProps = {}) {
   const [selected,    setSelected]    = useState<FarmSection | null>(null);
   const [zoneData,    setZoneData]    = useState<ZoneData | null>(null);
@@ -478,6 +480,7 @@ export default function FarmMap({
       </div>
 
       {/* ── Legends ── */}
+      {showLegend && (
       <div className="mt-4 flex flex-col gap-3">
 
         {/* Status legend (alert view or active filter) */}
@@ -524,6 +527,7 @@ export default function FarmMap({
           })}
         </div>
       </div>
+      )}
 
       {/* ── Detail modal ── */}
       {selected && (
