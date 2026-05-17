@@ -6,7 +6,7 @@ from schemas.pepper import PepperCreate, PepperResponse, PepperUpdate
 from pathlib import Path
 from uuid import uuid4
 import traceback
-from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id, update_pepper
+from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id, update_pepper , delete_pepper
 
 router = APIRouter(prefix="/api/peppers", tags=["Peppers"])
 
@@ -107,6 +107,34 @@ def update_pepper_endpoint(pepper_id: int, pepper: PepperUpdate, db: Session = D
     except OperationalError:
         db.rollback()
         raise HTTPException(status_code=503, detail="Database connection timeout. Please try again.")
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Unexpected server error.")
+    
+    
+@router.delete("/{pepper_id}")
+def delete_pepper_endpoint(pepper_id: int, db: Session = Depends(get_db)):
+    try:
+        deleted = delete_pepper(db, pepper_id)
+
+        if deleted is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pepper with id {pepper_id} not found."
+            )
+
+        return {"message": "Pepper deleted successfully."}
+
+    except OperationalError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection timeout. Please try again."
+        )
 
     except HTTPException:
         raise

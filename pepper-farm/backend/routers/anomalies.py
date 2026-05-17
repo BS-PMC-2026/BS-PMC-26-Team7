@@ -1,16 +1,18 @@
+import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+from sse_starlette.sse import EventSourceResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, text, case, cast, Date
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
+from sse_starlette.sse import EventSourceResponse
 
 from database import get_db
-from models.sensor import SensorAlert
-from models.sensor import SensorAssignment
-from models.sensor import SensorReading
+from services.recurrence_detection_service import get_occurrence_count, get_recurrence_config, invalidate_recurrence_config_cache
+from models.sensor import SensorAlert, SensorAssignment, SensorReading, RecurrenceConfig
 from models.farm_zone import FarmZone
 from models.plant import Plant
 from models.pepper_variety import PepperVariety
@@ -41,10 +43,18 @@ class RecentAlertResponse(BaseModel):
     message: str
     isResolved: bool
     createdAtUtc: str
+    resolvedAtUtc: Optional[str]
     zoneName: Optional[str]
     zoneCode: Optional[str]
     plantCode: Optional[str]
     pepperName: Optional[str]
+    isRecurring: bool
+    occurrenceCount: int
+
+
+class PaginatedAlertResponse(BaseModel):
+    total: int
+    items: list[RecentAlertResponse]
 
 
 class TrendPointResponse(BaseModel):
@@ -120,17 +130,23 @@ def get_anomaly_summary(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/recent", response_model=list[RecentAlertResponse])
+@router.get("/recent", response_model=PaginatedAlertResponse)
 def get_recent_alerts(
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    since: Optional[datetime] = Query(default=None, description="ISO UTC timestamp — only return alerts created after this time"),
+    severity: Optional[str] = Query(default=None, pattern="^(High|Medium)$"),
+    status: Optional[str] = Query(default=None, pattern="^(active|resolved|all)$"),
+    zone_id: Optional[int] = Query(default=None, ge=1),
+    recurring: Optional[bool] = Query(default=None, description="If true, return only recurring alerts"),
     db: Session = Depends(get_db),
 ):
     """
-    Returns the most recent sensor alerts enriched with zone, plant,
-    and pepper variety names for display in the anomaly table.
+    Returns paginated sensor alerts enriched with zone, plant, and pepper variety names.
+    Supports filtering by severity, status (active/resolved/all), zone, and timestamp.
     """
     try:
-        rows = (
+        q = (
             db.query(
                 SensorAlert,
                 FarmZone.ZoneName,
@@ -142,32 +158,56 @@ def get_recent_alerts(
             .outerjoin(FarmZone, FarmZone.ZoneId == SensorAssignment.ZoneId)
             .outerjoin(Plant, Plant.PlantId == SensorAssignment.PlantId)
             .outerjoin(PepperVariety, PepperVariety.PepperId == SensorAlert.PepperId)
-            .filter(SensorAssignment.IsActive == True)  # noqa: E712
-            .order_by(SensorAlert.CreatedAtUtc.desc())
-            .limit(limit)
-            .all()
-        )
-
-        return [
-            RecentAlertResponse(
-                alertId=alert.AlertId,
-                sensorId=alert.SensorId,
-                readingId=alert.ReadingId,
-                metricName=alert.MetricName,
-                actualValue=alert.ActualValue,
-                minAllowed=alert.MinAllowed,
-                maxAllowed=alert.MaxAllowed,
-                severity=alert.Severity,
-                message=alert.Message,
-                isResolved=bool(alert.IsResolved),
-                createdAtUtc=alert.CreatedAtUtc.isoformat(),
-                zoneName=zone_name,
-                zoneCode=zone_code,
-                plantCode=plant_code,
-                pepperName=pepper_name,
+            .filter(
+                SensorAssignment.IsActive == True,       # noqa: E712
+                SensorAssignment.AssignedToUtc == None,  # noqa: E711
             )
-            for alert, zone_name, zone_code, plant_code, pepper_name in rows
-        ]
+        )
+        if since:
+            q = q.filter(SensorAlert.CreatedAtUtc > since)
+        if severity:
+            q = q.filter(SensorAlert.Severity == severity)
+        if status == "active":
+            q = q.filter(SensorAlert.IsResolved == False)   # noqa: E712
+        elif status == "resolved":
+            q = q.filter(SensorAlert.IsResolved == True)    # noqa: E712
+        if zone_id:
+            q = q.filter(SensorAssignment.ZoneId == zone_id)
+        if recurring is True:
+            q = q.filter(SensorAlert.IsRecurring == True)  # noqa: E712
+
+        total = q.with_entities(func.count(SensorAlert.AlertId)).scalar() or 0
+        # SQL Server does not support NULLS LAST syntax — use CASE expression to sort recurring first
+        from sqlalchemy import case
+        recurring_sort = case((SensorAlert.IsRecurring == True, 0), else_=1)  # noqa: E712
+        rows = q.order_by(recurring_sort, SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
+
+        return PaginatedAlertResponse(
+            total=total,
+            items=[
+                RecentAlertResponse(
+                    alertId=alert.AlertId,
+                    sensorId=alert.SensorId,
+                    readingId=alert.ReadingId,
+                    metricName=alert.MetricName,
+                    actualValue=alert.ActualValue,
+                    minAllowed=alert.MinAllowed,
+                    maxAllowed=alert.MaxAllowed,
+                    severity=alert.Severity,
+                    message=alert.Message,
+                    isResolved=bool(alert.IsResolved),
+                    createdAtUtc=alert.CreatedAtUtc.isoformat(),
+                    resolvedAtUtc=alert.ResolvedAtUtc.isoformat() if alert.ResolvedAtUtc else None,
+                    zoneName=zone_name,
+                    zoneCode=zone_code,
+                    plantCode=plant_code,
+                    pepperName=pepper_name,
+                    isRecurring=bool(alert.IsRecurring) if alert.IsRecurring is not None else False,
+                    occurrenceCount=get_occurrence_count(db, alert.SensorId, alert.MetricName) if alert.IsRecurring else 0,
+                )
+                for alert, zone_name, zone_code, plant_code, pepper_name in rows
+            ],
+        )
     except OperationalError:
         raise HTTPException(status_code=503, detail="Database connection timeout.")
     except Exception as exc:
@@ -263,6 +303,117 @@ def get_zone_health(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail="Database connection timeout.")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# SSE stream endpoint
+# ---------------------------------------------------------------------------
+
+@router.get("/stream")
+async def stream_alerts(
+    request: Request,
+    last_alert_id: int = Query(default=0, description="Highest AlertId the client has seen; server streams rows with AlertId > this value"),
+    db: Session = Depends(get_db),
+):
+    """
+    Server-Sent Events endpoint that streams new SensorAlert rows as they appear.
+    The client passes last_alert_id (the highest AlertId it has seen).
+    The server polls the DB every 2 s and yields new rows as SSE events.
+
+    Note: Authorization header is intentionally not required here because the
+    browser EventSource API cannot set custom headers. Manager routes are
+    protected at the Next.js navigation level.
+    """
+    async def event_generator():
+        cursor = last_alert_id
+        while True:
+            if await request.is_disconnected():
+                break
+            try:
+                rows = (
+                    db.query(
+                        SensorAlert,
+                        FarmZone.ZoneName,
+                        FarmZone.ZoneCode,
+                        Plant.PlantCode,
+                        PepperVariety.PepperName,
+                    )
+                    .join(SensorAssignment, SensorAssignment.SensorId == SensorAlert.SensorId)
+                    .outerjoin(FarmZone, FarmZone.ZoneId == SensorAssignment.ZoneId)
+                    .outerjoin(Plant, Plant.PlantId == SensorAssignment.PlantId)
+                    .outerjoin(PepperVariety, PepperVariety.PepperId == SensorAlert.PepperId)
+                    .filter(
+                        SensorAssignment.IsActive == True,       # noqa: E712
+                        SensorAssignment.AssignedToUtc == None,  # noqa: E711
+                        SensorAlert.AlertId > cursor,
+                    )
+                    .order_by(SensorAlert.AlertId.asc())
+                    .limit(20)
+                    .all()
+                )
+                for alert, zone_name, zone_code, plant_code, pepper_name in rows:
+                    cursor = alert.AlertId
+                    payload = json.dumps({
+                        "alertId": alert.AlertId,
+                        "sensorId": alert.SensorId,
+                        "readingId": alert.ReadingId,
+                        "metricName": alert.MetricName,
+                        "actualValue": alert.ActualValue,
+                        "minAllowed": alert.MinAllowed,
+                        "maxAllowed": alert.MaxAllowed,
+                        "severity": alert.Severity,
+                        "message": alert.Message,
+                        "isResolved": bool(alert.IsResolved),
+                        "createdAtUtc": alert.CreatedAtUtc.isoformat() if alert.CreatedAtUtc else None,
+                        "zoneName": zone_name,
+                        "zoneCode": zone_code,
+                        "plantCode": plant_code,
+                        "pepperName": pepper_name,
+                    })
+                    yield {"event": "alert", "data": payload}
+            except Exception:
+                pass  # DB hiccup — retry next cycle
+            await asyncio.sleep(2)
+
+    return EventSourceResponse(event_generator())
+
+
+# ---------------------------------------------------------------------------
+# Recurrence configuration endpoints (RECUR-03, RECUR-04)
+# ---------------------------------------------------------------------------
+
+class RecurrenceConfigResponse(BaseModel):
+    minCount: int
+    windowHours: int
+
+
+class RecurrenceConfigUpdate(BaseModel):
+    minCount: Optional[int] = None
+    windowHours: Optional[int] = None
+
+
+@router.get("/recurrence-config", response_model=RecurrenceConfigResponse)
+def get_recurrence_config_endpoint(db: Session = Depends(get_db)):
+    """Returns the current global recurrence detection thresholds."""
+    min_count, window_hours = get_recurrence_config(db)
+    return RecurrenceConfigResponse(minCount=min_count, windowHours=window_hours)
+
+
+@router.patch("/recurrence-config", response_model=RecurrenceConfigResponse)
+def update_recurrence_config(payload: RecurrenceConfigUpdate, db: Session = Depends(get_db)):
+    """Updates global recurrence detection thresholds (RECUR-03, RECUR-04)."""
+    cfg = db.query(RecurrenceConfig).filter(RecurrenceConfig.ConfigId == 1).first()
+    if not cfg:
+        cfg = RecurrenceConfig(ConfigId=1, MinCount=3, WindowHours=24)
+        db.add(cfg)
+    if payload.minCount is not None:
+        cfg.MinCount = payload.minCount
+    if payload.windowHours is not None:
+        cfg.WindowHours = payload.windowHours
+    db.commit()
+    db.refresh(cfg)
+    invalidate_recurrence_config_cache()
+    return RecurrenceConfigResponse(minCount=cfg.MinCount, windowHours=cfg.WindowHours)
 
 
 # ---------------------------------------------------------------------------

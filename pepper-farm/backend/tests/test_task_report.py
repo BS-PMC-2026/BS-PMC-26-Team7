@@ -36,6 +36,8 @@ def make_mock_task(task_id=1, status="todo", assigned_to=3):
     task.CompletedAt = None
     task.PepperId = None
     task.ZoneId = 1
+    task.AnomalyId = None
+    task.alert = None
     task.zone = zone
     task.CreatedAt = now
     task.UpdatedAt = now

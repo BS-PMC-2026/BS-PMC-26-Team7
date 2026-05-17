@@ -49,6 +49,10 @@ export default function UserRoleTable() {
   };
 
   const handlePromote = async (userId: number) => {
+    const confirmed = window.confirm("Are you sure you want to promote this user to Employee?");
+    if (!confirmed) {
+      return;
+    }
     setPromoting(userId);
     setMessage(null);
     try {
@@ -65,6 +69,10 @@ export default function UserRoleTable() {
   };
 
   const handleRevoke = async (userId: number) => {
+    const confirmed = window.confirm("Are you sure you want to revoke this employee's permissions?");
+    if (!confirmed) {
+      return;
+    }
   setPromoting(userId);
   setMessage(null);
 

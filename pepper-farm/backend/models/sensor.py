@@ -54,7 +54,7 @@ class SensorReading(Base):
     Leak = Column(Float, nullable=True)
     VibrationSD = Column(Float, nullable=True)
     BatteryLevel = Column(Float, nullable=True)
-    Radiation = Column(Float, nullable=True)
+    PAR = Column(Float, nullable=True)
 
     SampleTimeUtc = Column(DateTime, nullable=False)
     GatewayReadTimeUtc = Column(DateTime, nullable=True)
@@ -93,28 +93,6 @@ class SensorSyncState(Base):
     LastError = Column(Text, nullable=True)
 
 
-class PepperThreshold(Base):
-    __tablename__ = "PepperThresholds"
-
-    ThresholdId = Column(Integer, primary_key=True, autoincrement=True)
-    PepperId = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=False)
-
-    MinTemperature = Column(Float, nullable=True)
-    MaxTemperature = Column(Float, nullable=True)
-
-    MinHumidity = Column(Float, nullable=True)
-    MaxHumidity = Column(Float, nullable=True)
-
-    MaxLeak = Column(Float, nullable=True)
-
-    MinRadiation = Column(Float, nullable=True)
-    MaxRadiation = Column(Float, nullable=True)
-
-    IsActive = Column(Boolean, nullable=False, default=True)
-    CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
-    UpdatedAtUtc = Column(DateTime, nullable=True)
-
-
 class SensorAlert(Base):
     __tablename__ = "SensorAlerts"
 
@@ -135,3 +113,17 @@ class SensorAlert(Base):
     IsResolved = Column(Boolean, nullable=False, default=False)
     CreatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
     ResolvedAtUtc = Column(DateTime, nullable=True)
+    IsRecurring = Column(Boolean, nullable=True, default=False)
+
+
+class RecurrenceConfig(Base):
+    """
+    Single-row global configuration for recurrence detection thresholds.
+    ConfigId is always 1 (enforced by application layer).
+    """
+    __tablename__ = "RecurrenceConfig"
+
+    ConfigId = Column(Integer, primary_key=True, default=1)
+    MinCount = Column(Integer, nullable=False, default=3)    # RECUR-03: min occurrences to flag recurring
+    WindowHours = Column(Integer, nullable=False, default=24)  # RECUR-04: rolling time window in hours
+    UpdatedAtUtc = Column(DateTime, nullable=False, server_default=func.sysutcdatetime(), onupdate=func.sysutcdatetime())

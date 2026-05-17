@@ -8,7 +8,8 @@ export type Pepper = {
   OptimalSoilMoistureMax?: number | null;
   OptimalTempMinC?: number | null;
   OptimalTempMaxC?: number | null;
-  OptimalSunlightHours?: number | null;
+  OptimalPARMin?: number | null;
+  OptimalPARMax?: number | null;
   ImageUrl?: string | null;
   Zone?: string | null;
   GeneralDescription?: string | null;

@@ -16,17 +16,25 @@ export interface RecentAlert {
   severity: 'High' | 'Medium';
   message: string;
   isResolved: boolean;
+  resolvedAtUtc: string | null;
   createdAtUtc: string;
   zoneName: string | null;
   zoneCode: string | null;
   plantCode: string | null;
   pepperName: string | null;
+  isRecurring: boolean;
+  occurrenceCount: number;
 }
 
 export interface TrendPoint {
   date: string;
   count: number;
   highCount: number;
+}
+
+export interface PaginatedAlertResponse {
+  total: number;
+  items: RecentAlert[];
 }
 
 export interface ZoneHealth {

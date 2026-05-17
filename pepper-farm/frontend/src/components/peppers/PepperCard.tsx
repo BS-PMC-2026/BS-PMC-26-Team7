@@ -59,6 +59,18 @@ export default function PepperCard({ pepper }: PepperCardProps) {
           </p>
         )}
 
+        {(pepper.OptimalPARMin != null || pepper.OptimalPARMax != null) && (
+          <p className="text-xs text-gray-400 pt-1">
+            PAR:{' '}
+            <span className="text-purple-600 font-medium">
+              {pepper.OptimalPARMin != null ? pepper.OptimalPARMin : '—'}
+              {' – '}
+              {pepper.OptimalPARMax != null ? pepper.OptimalPARMax : '—'}
+              {' µmol/m²/s'}
+            </span>
+          </p>
+        )}
+
         {pepper.Zone && (
           <p className="text-xs text-gray-400 mt-auto pt-2 border-t border-gray-100">
             Zone: <span className="text-gray-600 font-medium">{pepper.Zone}</span>

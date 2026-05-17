@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # Node
 node_modules/
 .next/
@@ -27,3 +30,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+pepper-farm/backend.zip
+.claude/settings.local.json
+/.claude
+.planning/

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import TaskForm from '@/components/tasks/TaskForm';
 import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
@@ -11,13 +12,33 @@ import Alert from '@/components/ui/Alert';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
-import { CreateTaskFormData, Task } from '@/types/task';
+import { CreateTaskFormData, Task, TaskPriority } from '@/types/task';
 import { createTask, getTasks, updateTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
 import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
 
-export default function ManagerTasksPage() {
+function ManagerTasksPageContent() {
+  const searchParams = useSearchParams();
+
+  const sourceAlertId = useMemo(() => {
+    const raw = searchParams.get('alertId');
+    return raw ? Number(raw) : null;
+  }, [searchParams]);
+
+  const alertPrefill = useMemo((): Partial<CreateTaskFormData> | undefined => {
+    if (!sourceAlertId) return undefined;
+    return {
+      title: searchParams.get('title') ?? '',
+      description: searchParams.get('description') ?? '',
+      taskType: searchParams.get('taskType') ?? '',
+      priority: (searchParams.get('priority') as TaskPriority) ?? 'medium',
+      zoneCode: searchParams.get('zoneCode') ?? '',
+      assignedToUserId: '',
+      dueDate: '',
+    };
+  }, [sourceAlertId, searchParams]);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask,    setEditingTask]    = useState<Task | null>(null);
   const [isSubmitting,   setIsSubmitting]   = useState(false);
@@ -28,6 +49,14 @@ export default function ManagerTasksPage() {
   const [tasks,          setTasks]          = useState<Task[]>([]);
   const [zones,          setZones]          = useState<ZoneSummary[]>([]);
   const [taskFilters,    setTaskFilters]    = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
+  const [alertSuccessId, setAlertSuccessId] = useState<number | null>(null);
+
+  // Auto-open form when navigating from an alert
+  useEffect(() => {
+    if (sourceAlertId) {
+      setShowCreateForm(true);
+    }
+  }, [sourceAlertId]);
 
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
@@ -40,7 +69,7 @@ export default function ManagerTasksPage() {
         getZones(),
       ]);
       setTasks(fetchedTasks);
-      setWorkers(fetchedWorkers);
+      setWorkers(fetchedWorkers.filter((u) => u.roleName === 'Worker'));
       setZones(fetchedZones);
     } catch {
       setLoadError('Failed to load tasks. Is the backend running?');
@@ -57,9 +86,12 @@ export default function ManagerTasksPage() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const newTask = await createTask(data);
+      const newTask = await createTask(data, sourceAlertId ?? undefined);
       setTasks((prev) => [newTask, ...prev]);
       setShowCreateForm(false);
+      if (sourceAlertId) {
+        setAlertSuccessId(sourceAlertId);
+      }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to create task.');
     } finally {
@@ -109,6 +141,9 @@ export default function ManagerTasksPage() {
                 <Link href="/manager/reports/open-tasks">
                   <Button variant="secondary">📊 Report</Button>
                 </Link>
+                <Link href="/manager/tasks/history">
+                <Button variant="secondary">📜 History</Button>
+                </Link>
                 <Button onClick={() => setShowCreateForm(true)}>+ Add Task</Button>
               </div>
             ) : undefined
@@ -116,8 +151,35 @@ export default function ManagerTasksPage() {
         />
       </div>
 
+      {alertSuccessId && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <span>
+            Task created from{' '}
+            <Link href="/manager/anomalies" className="underline font-medium">
+              alert #{alertSuccessId}
+            </Link>
+            .
+          </span>
+          <button
+            onClick={() => setAlertSuccessId(null)}
+            className="text-green-500 hover:text-green-700 font-medium leading-none cursor-pointer"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {showCreateForm && (
         <Card className="p-6 mb-6">
+          {sourceAlertId && (
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <span>Pre-filled from alert #{sourceAlertId}.</span>
+              <Link href="/manager/anomalies" className="underline ml-auto">
+                Back to anomalies
+              </Link>
+            </div>
+          )}
           <h2 className="text-lg font-medium text-gray-700 mb-4">New Task</h2>
           {submitError && <Alert className="mb-4">{submitError}</Alert>}
           <TaskForm
@@ -126,6 +188,7 @@ export default function ManagerTasksPage() {
             isLoading={isSubmitting}
             workers={workers}
             zones={zones}
+            initialData={alertPrefill}
           />
         </Card>
       )}
@@ -170,5 +233,13 @@ export default function ManagerTasksPage() {
         </Modal>
       )}
     </div>
+  );
+}
+
+export default function ManagerTasksPage() {
+  return (
+    <Suspense>
+      <ManagerTasksPageContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings
 from routers.anomalies import router as anomalies_router, resolve_router
-from routers import tasks, users, auth, peppers, plants, products, inventory, sensors, zones
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensors, zones,spray
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -12,7 +12,8 @@ import models.task  # noqa: F401
 import models.plant  # noqa: F401
 import models.product    # noqa: F401
 import models.inventory  # noqa: F401
-import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, SensorReading, SensorSyncState, PepperThreshold, SensorAlert
+import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, SensorReading, SensorSyncState, SensorAlert
+import models.spray  # noqa: F401  — registers Pesticide, SprayReport
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
@@ -60,6 +61,7 @@ app.include_router(inventory.router)
 app.include_router(sensor_readings.router)
 app.include_router(anomalies_router)
 app.include_router(resolve_router)
+app.include_router(spray.router)
 
 app.include_router(sensors.router)
 

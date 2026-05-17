@@ -19,9 +19,11 @@ class Task(Base):
     CompletedAt      = Column(DateTime, nullable=True)
     PepperId         = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=True)
     ZoneId           = Column(Integer, ForeignKey("FarmZones.ZoneId"), nullable=True)
+    AnomalyId        = Column(Integer, ForeignKey("SensorAlerts.AlertId"), nullable=True)
     CreatedAt        = Column(DateTime, nullable=False, server_default=func.sysdatetime())
     UpdatedAt        = Column(DateTime, nullable=False, server_default=func.sysdatetime())
 
     created_by  = relationship("User", foreign_keys=[CreatedByUserId], lazy="joined")
     assigned_to = relationship("User", foreign_keys=[AssignedToUserId], lazy="joined")
     zone        = relationship("FarmZone", foreign_keys=[ZoneId], lazy="joined")
+    alert       = relationship("SensorAlert", foreign_keys=[AnomalyId], lazy="joined")

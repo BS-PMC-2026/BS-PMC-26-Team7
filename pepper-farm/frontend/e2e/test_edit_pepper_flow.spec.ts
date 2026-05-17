@@ -38,7 +38,6 @@ const MOCK_PEPPER = {
   OptimalSoilMoistureMax: null,
   OptimalTempMinC: null,
   OptimalTempMaxC: null,
-  OptimalSunlightHours: null,
   ImageUrl: null,
   Zone: 'tropical',
   GeneralDescription: 'A medium-hot chili pepper.',

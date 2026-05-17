@@ -11,6 +11,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@testing-library/dom": "^10.4.1",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -23,8 +24,6 @@
     "xlsx": "^0.18.5"
   },
   "optionalDependencies": {
-    "lightningcss-darwin-arm64": "^1.32.0",
-    "lightningcss-darwin-x64": "^1.32.0",
     "lightningcss-linux-arm64-gnu": "^1.32.0",
     "lightningcss-linux-arm64-musl": "^1.32.0",
     "lightningcss-linux-x64-gnu": "^1.32.0",
@@ -48,6 +47,7 @@
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
     "ts-jest": "^29.4.9",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }
