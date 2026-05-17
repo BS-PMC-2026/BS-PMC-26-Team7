@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 export default function ManagerUsersPage() {
   const { t } = useLanguage();
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen">
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <h1 className="text-2xl font-bold text-gray-800">{t.manager.userManagement}</h1>

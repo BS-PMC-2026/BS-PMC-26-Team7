@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RecentAlert } from '@/types/anomaly';
 import { resolveAlert } from '@/services/anomalies';
 import AlertDetailsDrawer from './AlertDetailsDrawer';
@@ -12,6 +12,7 @@ interface Props {
   alerts: RecentAlert[];
   onAlertResolved: (alertId: number) => void;
   onCreateTask?: (alert: RecentAlert) => void;
+  initialSelectedAlert?: RecentAlert | null;
 }
 
 const SEVERITY_BADGE: Record<string, string> = {
@@ -27,11 +28,23 @@ function IconCheck({ className }: { className?: string }) {
   );
 }
 
-export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreateTask }: Props) {
+export default function RecentAnomaliesTable({
+  alerts,
+  onAlertResolved,
+  onCreateTask,
+  initialSelectedAlert,
+}: Props) {
   const { t } = useLanguage();
   const a = t.anomalies;
-  const [selected, setSelected] = useState<RecentAlert | null>(null);
+
+  const [selected, setSelected] = useState<RecentAlert | null>(
+    initialSelectedAlert ?? null
+  );
   const [resolvingId, setResolvingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (initialSelectedAlert) setSelected(initialSelectedAlert);
+  }, [initialSelectedAlert]);
 
   const handleQuickResolve = async (e: React.MouseEvent, alertId: number) => {
     e.stopPropagation();

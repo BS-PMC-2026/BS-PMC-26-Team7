@@ -19,7 +19,7 @@ export default function ManagerPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen">
       {/* Page header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-8">
