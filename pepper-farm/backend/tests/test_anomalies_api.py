@@ -23,6 +23,7 @@ def make_mock_alert(
     alert_id=1, sensor_id=1, reading_id=1,
     metric="Temperature", actual=35.0,
     severity="High", resolved=False, pepper_id=1,
+    is_recurring=False,
 ):
     a = MagicMock()
     a.AlertId = alert_id
@@ -36,6 +37,7 @@ def make_mock_alert(
     a.Severity = severity
     a.Message = f"{metric} out of range"
     a.IsResolved = resolved
+    a.IsRecurring = is_recurring
     a.CreatedAtUtc = datetime(2026, 4, 27, 9, 0, 0)
     a.ResolvedAtUtc = None
     return a
