@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
@@ -29,7 +29,7 @@ export default function PlantsByVarietyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-10 flex items-start justify-between">
           <PageHeader
@@ -54,7 +54,7 @@ export default function PlantsByVarietyPage() {
         ) : rows.length === 0 ? (
           <EmptyState icon="🌱" title="No varieties" description="No active pepper varieties to show." />
         ) : (
-          <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+          <div dir="ltr" className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
@@ -68,9 +68,8 @@ export default function PlantsByVarietyPage() {
                 {rows.map((r) => {
                   const open = !!expanded[r.PepperId];
                   return (
-                    <>
+                    <React.Fragment key={r.PepperId}>
                       <tr
-                        key={`v-${r.PepperId}`}
                         className="border-t border-gray-100 cursor-pointer hover:bg-gray-50"
                         onClick={() => toggle(r.PepperId)}
                       >
@@ -110,7 +109,7 @@ export default function PlantsByVarietyPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown, ChevronUp, ChevronsUpDown, Download, MapPin, RefreshCw } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, ChevronDown, ChevronUp, ChevronsUpDown, Download, MapPin, Radio, AlertTriangle, RefreshCw } from 'lucide-react';
+import AnomalyDashboardEmbed from '@/components/anomalies/AnomalyDashboardEmbed';
 import {
   CartesianGrid,
   Legend,
@@ -94,8 +95,10 @@ function getStatusStyle(status?: string) {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export default function SensorDashboardPage() {
+function SensorDashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'anomalies' ? 'anomalies' : 'live';
 
   // sensor list state
   const [sensors,          setSensors]          = useState<SensorInfo[]>([]);
@@ -554,30 +557,52 @@ export default function SensorDashboardPage() {
     );
   };
 
-  return (
-    <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
-
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/manager')}
+  const SensorTabBar = () => (
+    <div className="border-b border-gray-200 bg-white sticky top-[52px] z-40">
+      <div className="max-w-7xl mx-auto px-6 flex">
+        {[
+          { id: 'live', label: 'Live Sensors', icon: <Radio size={14} /> },
+          { id: 'anomalies', label: 'Anomalies', icon: <AlertTriangle size={14} /> },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => router.replace(`/manager/sensors?tab=${tab.id}`)}
+            className={`flex items-center gap-1.5 px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? 'border-[#2F6F4E] text-[#2F6F4E]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
+            {tab.icon}{tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-          <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-0.5">
-              Manager
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">Sensor Dashboard</h1>
-            {liveData?.macAddress && (
-              <p className="text-sm text-gray-400 mt-0.5">Device: {liveData.macAddress}</p>
-            )}
-          </div>
+  if (activeTab === 'anomalies') {
+    return (
+      <>
+        <SensorTabBar />
+        <AnomalyDashboardEmbed />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SensorTabBar />
+      <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
+
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Sensor Dashboard</h1>
+              {liveData?.macAddress && (
+                <p className="text-sm text-gray-400 mt-0.5">Device: {liveData.macAddress}</p>
+              )}
+            </div>
         </div>
 
         {/* ── Sensor selector ── */}
@@ -885,7 +910,7 @@ export default function SensorDashboardPage() {
         ) : (
           <>
             {/* ref is attached here so html2canvas can capture it */}
-            <div ref={chartRef} style={{ height: 320 }}>
+            <div ref={chartRef} dir="ltr" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={chartData}
@@ -971,7 +996,16 @@ export default function SensorDashboardPage() {
           exportError={exportError}
           onExport={handleExport}
         />
-      )}
-    </main>
+        )}
+      </main>
+    </>
+  );
+}
+
+export default function SensorExplorerPage() {
+  return (
+    <Suspense>
+      <SensorDashboardPage />
+    </Suspense>
   );
 }
