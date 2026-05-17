@@ -221,6 +221,14 @@ export default function ManagerPage() {
                     showLegend={false}
                   />
                 </div>
+                <DashboardMapLegend
+                  items={[
+                    { label: t.map.legendBothAlerts, color: 'rgba(220,38,38,0.2)', border: '#dc2626' },
+                    { label: t.map.legendTaskAlert, color: 'rgba(239,68,68,0.15)', border: '#ef4444' },
+                    { label: t.map.legendSensorAlert, color: 'rgba(249,115,22,0.15)', border: '#f97316' },
+                    { label: t.map.legendNeutral, color: 'transparent', border: '#9ca3af' },
+                  ]}
+                />
               </DashboardCard>
 
               <DashboardCard title={d.deviationData} icon={<AlertTriangle className="h-4 w-4" />} direction={dir}>
@@ -323,6 +331,29 @@ function EmptyMessage({ text }: { text: string }) {
   return (
     <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400">
       {text}
+    </div>
+  );
+}
+
+function DashboardMapLegend({
+  items,
+}: {
+  items: Array<{ label: string; color: string; border: string }>;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+      {items.map((item) => (
+        <div key={item.label} className="flex items-center gap-1.5">
+          <span
+            className="h-3.5 w-3.5 shrink-0 rounded-[2px]"
+            style={{
+              backgroundColor: item.color,
+              border: `2px solid ${item.border}`,
+            }}
+          />
+          <span className="text-xs text-gray-600">{item.label}</span>
+        </div>
+      ))}
     </div>
   );
 }

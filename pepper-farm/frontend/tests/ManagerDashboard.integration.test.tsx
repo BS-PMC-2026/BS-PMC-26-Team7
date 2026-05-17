@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ManagerPage from '@/app/manager/page';
 import { LanguageProvider } from '@/context/LanguageContext';
+import { getDictionary } from '@/i18n/dictionaries';
 import { getManagerDashboardData } from '@/lib/managerDashboardApi';
 
 jest.mock('@/lib/managerDashboardApi', () => ({
@@ -104,13 +105,18 @@ describe('Manager dashboard integration', () => {
     expect(screen.queryByText('Hidden description')).not.toBeInTheDocument();
   });
 
-  it('hides the dashboard map legend while keeping map filters and clear behavior', async () => {
+  it('shows the dashboard alert legend while keeping the full map type legend hidden', async () => {
     const user = userEvent.setup();
     renderDashboard('en');
 
     const map = await screen.findByTestId('farm-map');
+    const mapText = getDictionary('en').map;
     expect(map).toHaveAttribute('data-show-legend', 'false');
     expect(screen.queryByText('Regular Greenhouse')).not.toBeInTheDocument();
+    expect(screen.getByText(mapText.legendBothAlerts)).toBeInTheDocument();
+    expect(screen.getByText(mapText.legendTaskAlert)).toBeInTheDocument();
+    expect(screen.getByText(mapText.legendSensorAlert)).toBeInTheDocument();
+    expect(screen.getByText(mapText.legendNeutral)).toBeInTheDocument();
     expect(map).toHaveAttribute('data-active-filter', 'none');
 
     await user.click(screen.getByRole('button', { name: /open task/i }));
