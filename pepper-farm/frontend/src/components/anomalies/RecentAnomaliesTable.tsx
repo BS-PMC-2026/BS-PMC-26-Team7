@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { RecentAlert } from '@/types/anomaly';
 import { resolveAlert } from '@/services/anomalies';
 import AlertDetailsDrawer from './AlertDetailsDrawer';
+import RecurringBadge from '@/components/ui/RecurringBadge';
 
 interface Props {
   alerts: RecentAlert[];
@@ -94,7 +95,15 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
                   <td className="px-4 py-3 text-gray-500">
                     {alert.pepperName ?? <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-gray-800">{alert.metricName}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-800">
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                      {alert.metricName}
+                      <RecurringBadge
+                        isRecurring={alert.isRecurring}
+                        occurrenceCount={alert.occurrenceCount}
+                      />
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono font-semibold text-gray-800">{alert.actualValue}</td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{range}</td>
                   <td className="px-4 py-3">

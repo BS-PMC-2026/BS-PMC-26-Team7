@@ -28,15 +28,17 @@ export interface AlertFilters {
   severity?: 'High' | 'Medium';
   status?: 'active' | 'resolved' | 'all';
   zoneId?: number;
+  recurring?: boolean;
 }
 
 export async function getRecentAlerts(filters: AlertFilters = {}): Promise<PaginatedAlertResponse> {
-  const { limit = 50, offset = 0, since, severity, status, zoneId } = filters;
+  const { limit = 50, offset = 0, since, severity, status, zoneId, recurring } = filters;
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (since) params.set('since', since);
   if (severity) params.set('severity', severity);
   if (status) params.set('status', status);
   if (zoneId) params.set('zone_id', String(zoneId));
+  if (recurring !== undefined) params.set('recurring', String(recurring));
   const res = await fetch(`${API_URL}/api/manager/anomalies/recent?${params}`, {
     headers: authHeaders(),
   });
@@ -60,6 +62,31 @@ export async function getZoneHealth(): Promise<ZoneHealth[]> {
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch zone health.');
+  return json;
+}
+
+export interface RecurrenceConfig {
+  minCount: number;
+  windowHours: number;
+}
+
+export async function getRecurrenceConfig(): Promise<RecurrenceConfig> {
+  const res = await fetch(`${API_URL}/api/manager/anomalies/recurrence-config`, {
+    headers: authHeaders(),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch recurrence config.');
+  return json;
+}
+
+export async function updateRecurrenceConfig(config: Partial<RecurrenceConfig>): Promise<RecurrenceConfig> {
+  const res = await fetch(`${API_URL}/api/manager/anomalies/recurrence-config`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(config),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail ?? 'Failed to update recurrence config.');
   return json;
 }
 

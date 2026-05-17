@@ -33,3 +33,4 @@ Thumbs.db
 pepper-farm/backend.zip
 .claude/settings.local.json
 /.claude
+.planning/

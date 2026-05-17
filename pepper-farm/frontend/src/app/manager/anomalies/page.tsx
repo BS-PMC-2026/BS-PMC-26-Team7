@@ -18,6 +18,7 @@ import {
 } from '@/services/anomalies';
 import type { AnomalySummary, RecentAlert, TrendPoint, ZoneHealth } from '@/types/anomaly';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
+import RecurrenceConfigPanel from '@/components/anomalies/RecurrenceConfigPanel';
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -157,6 +158,8 @@ export default function AnomalyDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<'High' | 'Medium' | ''>('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'resolved' | 'all' | ''>('');
+  const [filterRecurring, setFilterRecurring] = useState<boolean>(false);
+  const [showRecurrenceConfig, setShowRecurrenceConfig] = useState(false);
   const [offset, setOffset] = useState(0);
   const [totalAlerts, setTotalAlerts] = useState(0);
   const [tableLoading, setTableLoading] = useState(false);
@@ -175,12 +178,14 @@ export default function AnomalyDashboardPage() {
           offset,
           severity: filterSeverity || undefined,
           status: filterStatus || undefined,
+          recurring: filterRecurring ? true : undefined,
         }),
         getRecentAlerts({
           limit: 200,
           offset: 0,
           severity: filterSeverity || undefined,
           status: filterStatus || undefined,
+          recurring: filterRecurring ? true : undefined,
         }),
       ]);
       setAlerts(pageResult.items);
@@ -191,7 +196,7 @@ export default function AnomalyDashboardPage() {
     } finally {
       if (!silent) setTableLoading(false);
     }
-  }, [offset, filterSeverity, filterStatus]);
+  }, [offset, filterSeverity, filterStatus, filterRecurring]);
 
   // Re-fetch table when filters or page change
   useEffect(() => { loadAlerts(); }, [loadAlerts]);
@@ -366,6 +371,26 @@ export default function AnomalyDashboardPage() {
           label="Alert History"
           right={
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  handleFilterChange();
+                  setFilterRecurring((v) => !v);
+                }}
+                className={`text-xs px-3 py-1 rounded-lg border transition-colors duration-150 cursor-pointer font-medium ${
+                  filterRecurring
+                    ? 'bg-amber-100 text-amber-700 border-amber-300'
+                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Recurring only
+              </button>
+              <button
+                onClick={() => setShowRecurrenceConfig(true)}
+                title="Configure recurrence thresholds"
+                className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer"
+              >
+                ⚙︎
+              </button>
               <select
                 value={filterSeverity}
                 onChange={(e) => {
@@ -431,6 +456,10 @@ export default function AnomalyDashboardPage() {
         </Section>
 
       </div>
+
+      {showRecurrenceConfig && (
+        <RecurrenceConfigPanel onClose={() => setShowRecurrenceConfig(false)} />
+      )}
     </div>
   );
 }

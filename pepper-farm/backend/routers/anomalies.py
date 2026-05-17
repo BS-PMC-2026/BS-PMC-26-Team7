@@ -11,9 +11,8 @@ from sqlalchemy.exc import OperationalError
 from sse_starlette.sse import EventSourceResponse
 
 from database import get_db
-from models.sensor import SensorAlert
-from models.sensor import SensorAssignment
-from models.sensor import SensorReading
+from services.recurrence_detection_service import get_occurrence_count, get_recurrence_config, invalidate_recurrence_config_cache
+from models.sensor import SensorAlert, SensorAssignment, SensorReading, RecurrenceConfig
 from models.farm_zone import FarmZone
 from models.plant import Plant
 from models.pepper_variety import PepperVariety
@@ -49,6 +48,8 @@ class RecentAlertResponse(BaseModel):
     zoneCode: Optional[str]
     plantCode: Optional[str]
     pepperName: Optional[str]
+    isRecurring: bool
+    occurrenceCount: int
 
 
 class PaginatedAlertResponse(BaseModel):
@@ -137,6 +138,7 @@ def get_recent_alerts(
     severity: Optional[str] = Query(default=None, pattern="^(High|Medium)$"),
     status: Optional[str] = Query(default=None, pattern="^(active|resolved|all)$"),
     zone_id: Optional[int] = Query(default=None, ge=1),
+    recurring: Optional[bool] = Query(default=None, description="If true, return only recurring alerts"),
     db: Session = Depends(get_db),
 ):
     """
@@ -171,9 +173,14 @@ def get_recent_alerts(
             q = q.filter(SensorAlert.IsResolved == True)    # noqa: E712
         if zone_id:
             q = q.filter(SensorAssignment.ZoneId == zone_id)
+        if recurring is True:
+            q = q.filter(SensorAlert.IsRecurring == True)  # noqa: E712
 
         total = q.with_entities(func.count(SensorAlert.AlertId)).scalar() or 0
-        rows = q.order_by(SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
+        # SQL Server does not support NULLS LAST syntax — use CASE expression to sort recurring first
+        from sqlalchemy import case
+        recurring_sort = case((SensorAlert.IsRecurring == True, 0), else_=1)  # noqa: E712
+        rows = q.order_by(recurring_sort, SensorAlert.CreatedAtUtc.desc()).limit(limit).offset(offset).all()
 
         return PaginatedAlertResponse(
             total=total,
@@ -195,6 +202,8 @@ def get_recent_alerts(
                     zoneCode=zone_code,
                     plantCode=plant_code,
                     pepperName=pepper_name,
+                    isRecurring=bool(alert.IsRecurring) if alert.IsRecurring is not None else False,
+                    occurrenceCount=get_occurrence_count(db, alert.SensorId, alert.MetricName) if alert.IsRecurring else 0,
                 )
                 for alert, zone_name, zone_code, plant_code, pepper_name in rows
             ],
@@ -367,6 +376,44 @@ async def stream_alerts(
             await asyncio.sleep(2)
 
     return EventSourceResponse(event_generator())
+
+
+# ---------------------------------------------------------------------------
+# Recurrence configuration endpoints (RECUR-03, RECUR-04)
+# ---------------------------------------------------------------------------
+
+class RecurrenceConfigResponse(BaseModel):
+    minCount: int
+    windowHours: int
+
+
+class RecurrenceConfigUpdate(BaseModel):
+    minCount: Optional[int] = None
+    windowHours: Optional[int] = None
+
+
+@router.get("/recurrence-config", response_model=RecurrenceConfigResponse)
+def get_recurrence_config_endpoint(db: Session = Depends(get_db)):
+    """Returns the current global recurrence detection thresholds."""
+    min_count, window_hours = get_recurrence_config(db)
+    return RecurrenceConfigResponse(minCount=min_count, windowHours=window_hours)
+
+
+@router.patch("/recurrence-config", response_model=RecurrenceConfigResponse)
+def update_recurrence_config(payload: RecurrenceConfigUpdate, db: Session = Depends(get_db)):
+    """Updates global recurrence detection thresholds (RECUR-03, RECUR-04)."""
+    cfg = db.query(RecurrenceConfig).filter(RecurrenceConfig.ConfigId == 1).first()
+    if not cfg:
+        cfg = RecurrenceConfig(ConfigId=1, MinCount=3, WindowHours=24)
+        db.add(cfg)
+    if payload.minCount is not None:
+        cfg.MinCount = payload.minCount
+    if payload.windowHours is not None:
+        cfg.WindowHours = payload.windowHours
+    db.commit()
+    db.refresh(cfg)
+    invalidate_recurrence_config_cache()
+    return RecurrenceConfigResponse(minCount=cfg.MinCount, windowHours=cfg.WindowHours)
 
 
 # ---------------------------------------------------------------------------

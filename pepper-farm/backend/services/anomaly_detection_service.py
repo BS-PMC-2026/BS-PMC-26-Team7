@@ -37,6 +37,7 @@ from models.sensor import (
 from models.plant import Plant
 from models.pepper_variety import PepperVariety
 from schemas.sensor_reading import AlertResult, SensorReadingCreate, SensorReadingResponse
+from services.recurrence_detection_service import check_recurrence
 
 
 # ---------------------------------------------------------------------------
@@ -420,7 +421,14 @@ def process_sensor_reading(
                 )
                 alerts_created.append(alert)
 
-    # 6. Single atomic commit for all alerts
+    # 6. Flush to assign AlertIds without committing, then check recurrence
+    if alerts_created:
+        db.flush()
+        for alert in alerts_created:
+            if check_recurrence(db, alert.SensorId, alert.MetricName, alert.AlertId):
+                alert.IsRecurring = True
+
+    # 7. Single atomic commit for all alerts + recurrence flags
     db.commit()
     db.refresh(reading)
 

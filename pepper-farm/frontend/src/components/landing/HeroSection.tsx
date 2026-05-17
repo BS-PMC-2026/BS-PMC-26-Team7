@@ -45,7 +45,11 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
+    // React doesn't always forward the `muted` JSX prop to the DOM attribute,
+    // so set it imperatively to ensure autoplay is allowed by the browser.
+    vid.muted = true;
     vid.playbackRate = 0.7;
+    vid.play().catch(() => { /* autoplay blocked — silently ignore */ });
     const handleEnded = () => { vid.currentTime = 0; vid.play(); };
     vid.addEventListener('ended', handleEnded);
     return () => vid.removeEventListener('ended', handleEnded);

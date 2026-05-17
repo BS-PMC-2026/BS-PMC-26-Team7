@@ -22,6 +22,8 @@ export interface RecentAlert {
   zoneCode: string | null;
   plantCode: string | null;
   pepperName: string | null;
+  isRecurring: boolean;
+  occurrenceCount: number;
 }
 
 export interface TrendPoint {
