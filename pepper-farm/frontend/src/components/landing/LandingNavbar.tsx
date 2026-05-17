@@ -6,29 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Leaf, Menu as MenuIcon, X } from 'lucide-react';
 import NavMenu, { IMenu } from '@/components/ui/navbar';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-
-const NAV_ITEMS: IMenu[] = [
-  { id: 1, title: 'Peppers', url: '/#peppers', dropdown: false },
-  {
-    id: 2,
-    title: 'Explore',
-    url: '#',
-    dropdown: true,
-    items: [
-      { id: 21, title: 'Farm Map', url: '/visitor/map' },
-      { id: 22, title: 'Products', url: '/visitor/products' },
-      { id: 23, title: 'All Varieties', url: '/visitor/peppers/1' },
-    ],
-  },
-  { id: 3, title: 'Our Farm', url: '/#farm', dropdown: false },
-];
-
-const MOBILE_LINKS = [
-  { label: 'Peppers', href: '/#peppers' },
-  { label: 'Farm', href: '/#farm' },
-  { label: 'Products', href: '/visitor/products' },
-  { label: 'Farm Map', href: '/visitor/map' },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 interface LandingNavbarProps {
   /** Whether the page has been scrolled past the hero (drives visual state) */
@@ -43,6 +21,31 @@ interface LandingNavbarProps {
  */
 export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useLanguage();
+  const la = t.landing;
+
+  const NAV_ITEMS: IMenu[] = [
+    { id: 1, title: la.navPeppers, url: '/#peppers', dropdown: false },
+    {
+      id: 2,
+      title: la.navExplore,
+      url: '#',
+      dropdown: true,
+      items: [
+        { id: 21, title: la.navFarmMap,      url: '/visitor/map'       },
+        { id: 22, title: la.navProducts,     url: '/visitor/products'  },
+        { id: 23, title: la.navAllVarieties, url: '/visitor/peppers/1' },
+      ],
+    },
+    { id: 3, title: la.navOurFarm, url: '/#farm', dropdown: false },
+  ];
+
+  const MOBILE_LINKS = [
+    { label: la.navPeppers,  href: '/#peppers'         },
+    { label: la.navOurFarm,  href: '/#farm'            },
+    { label: la.navProducts, href: '/visitor/products' },
+    { label: la.navFarmMap,  href: '/visitor/map'      },
+  ];
 
   return (
     <motion.header
@@ -97,7 +100,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   : 'text-white border-white/30 hover:bg-white/10'
               }`}
             >
-              Sign In
+              {la.signIn}
             </Link>
           </motion.div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
@@ -105,7 +108,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
               href="/register"
               className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-150 cursor-pointer"
             >
-              Get Started
+              {la.getStarted}
             </Link>
           </motion.div>
         </div>
@@ -184,13 +187,13 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                     href="/login"
                     className="flex-1 text-center py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer"
                   >
-                    Sign In
+                    {la.signIn}
                   </Link>
                   <Link
                     href="/register"
                     className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
                   >
-                    Register
+                    {la.register}
                   </Link>
                 </div>
               </div>

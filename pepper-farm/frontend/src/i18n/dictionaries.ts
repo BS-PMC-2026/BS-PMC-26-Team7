@@ -588,6 +588,71 @@ export interface VisitorDictionary {
   farmMapSubtitle:          string;
 }
 
+export interface LandingDictionary {
+  // Navbar
+  navPeppers:           string;
+  navExplore:           string;
+  navFarmMap:           string;
+  navProducts:          string;
+  navAllVarieties:      string;
+  navOurFarm:           string;
+  signIn:               string;
+  getStarted:           string;
+  register:             string;
+  // Hero
+  heroLine1:            string;
+  heroLine2:            string;
+  heroDesc:             string;
+  shopPeppers:          string;
+  tourFarm:             string;
+  scroll:               string;
+  // Stats
+  statPepperVarieties:  string;
+  statFarmArea:         string;
+  statSunHours:         string;
+  statPesticides:       string;
+  statZero:             string;
+  // Peppers grid
+  ourVarieties:         string;
+  everyPepperStory:     string;
+  peppersGridDesc:      string;
+  browseAllVarieties:   string;
+  // Pepper card descriptions (names are never translated)
+  jalapenoDesc:         string;
+  habaneroDesc:         string;
+  carolinaDesc:         string;
+  shishitoDesc:         string;
+  anaheimDesc:          string;
+  ghostDesc:            string;
+  // Farm story
+  ourProcess:           string;
+  grownWithIntention:   string;
+  feature1Title:        string;
+  feature1Body:         string;
+  feature2Title:        string;
+  feature2Body:         string;
+  feature3Title:        string;
+  feature3Body:         string;
+  // Map teaser
+  interactive:          string;
+  exploreFarmMap:       string;
+  mapDesc:              string;
+  openFarmMap:          string;
+  // Final CTA
+  joinPepperFarm:       string;
+  readyToTasteHeat:     string;
+  ctaDesc:              string;
+  createFreeAccount:    string;
+  browseProducts:       string;
+  // Footer
+  footerLogin:          string;
+  footerRegister:       string;
+  footerFarmMap:        string;
+  footerCopyright:      string;
+  // PepperVarietyCard
+  exploreVariety:       string;
+}
+
 export interface Dictionary {
   nav:        NavDictionary;
   common:     CommonDictionary;
@@ -605,6 +670,7 @@ export interface Dictionary {
   map:        MapDictionary;
   worker:     WorkerDictionary;
   visitor:    VisitorDictionary;
+  landing:    LandingDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -1222,6 +1288,61 @@ const en: Dictionary = {
     farmMapTitle:            'Farm Map',
     farmMapSubtitle:         'Interactive layout of the farm facility — click any section to learn more',
   },
+
+  landing: {
+    navPeppers:          'Peppers',
+    navExplore:          'Explore',
+    navFarmMap:          'Farm Map',
+    navProducts:         'Products',
+    navAllVarieties:     'All Varieties',
+    navOurFarm:          'Our Farm',
+    signIn:              'Sign In',
+    getStarted:          'Get Started',
+    register:            'Register',
+    heroLine1:           'From our fields',
+    heroLine2:           'to your table.',
+    heroDesc:            'We grow over 30 pepper varieties with care, precision, and passion — from mild Shishito to the fearsome Carolina Reaper. Explore our farm, track every plant, taste the difference.',
+    shopPeppers:         'Shop Peppers',
+    tourFarm:            'Tour the Farm',
+    scroll:              'Scroll',
+    statPepperVarieties: 'Pepper Varieties',
+    statFarmArea:        'Farm Area',
+    statSunHours:        'Sun Hours',
+    statPesticides:      'Pesticides',
+    statZero:            'Zero',
+    ourVarieties:        'Our Varieties',
+    everyPepperStory:    'Every pepper tells a story',
+    peppersGridDesc:     'Thirty cultivars, each with its own personality, heat level, and culinary purpose. We grow them all with the same obsessive care.',
+    browseAllVarieties:  'Browse all varieties',
+    jalapenoDesc:        'Mild, versatile and crisp — perfect for fresh salsas, pickles and everyday cooking.',
+    habaneroDesc:        'Fruity, floral with intense Caribbean heat. Our signature premium variety.',
+    carolinaDesc:        'World-record heat meets complex fruity depth. Only for the truly brave.',
+    shishitoDesc:        'Delicate Japanese variety — sweet and thin-skinned, perfect for blistering.',
+    anaheimDesc:         'California-grown, mildly smoky and incredibly versatile for roasting.',
+    ghostDesc:           'Bhut jolokia — the ghost that haunts your palate for hours after each bite.',
+    ourProcess:          'Our Process',
+    grownWithIntention:  'Grown with intention',
+    feature1Title:       'Planted by hand',
+    feature1Body:        'Every seedling is started in our nursery and transplanted by hand into raised beds enriched with compost. No shortcuts, no machinery guesswork.',
+    feature2Title:       'Smart irrigation',
+    feature2Body:        'Our drip-irrigation system delivers precise water at root level, monitored by soil sensors. Plants get exactly what they need — no more, no less.',
+    feature3Title:       'Harvested at peak',
+    feature3Body:        'We track every plant from seed to harvest day. Peppers are picked at the exact moment of peak flavour and immediately packed for freshness.',
+    interactive:         'Interactive',
+    exploreFarmMap:      'Explore our farm map',
+    mapDesc:             'Navigate every zone of PepperFarm. See which varieties grow where, check plant health, and plan your visit.',
+    openFarmMap:         'Open Farm Map',
+    joinPepperFarm:      'Join PepperFarm',
+    readyToTasteHeat:    'Ready to taste the heat?',
+    ctaDesc:             'Create a free account to track your favourite varieties, get harvest notifications, and order directly from our farm.',
+    createFreeAccount:   'Create Free Account',
+    browseProducts:      'Browse Products',
+    footerLogin:         'Login',
+    footerRegister:      'Register',
+    footerFarmMap:       'Farm Map',
+    footerCopyright:     '© {year} PepperFarm. Grown with care in Israel.',
+    exploreVariety:      'Explore variety',
+  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -1836,6 +1957,61 @@ const he: Dictionary = {
     checkBackLater:          'בדוק שוב מאוחר יותר.',
     farmMapTitle:            'מפת החווה',
     farmMapSubtitle:         'פריסה אינטראקטיבית של מתקן החווה — לחץ על כל קטע לפרטים נוספים',
+  },
+
+  landing: {
+    navPeppers:          'פלפלים',
+    navExplore:          'סיור',
+    navFarmMap:          'מפת חווה',
+    navProducts:         'מוצרים',
+    navAllVarieties:     'כל הזנים',
+    navOurFarm:          'החווה שלנו',
+    signIn:              'כניסה',
+    getStarted:          'התחל',
+    register:            'הרשמה',
+    heroLine1:           'מהשדות שלנו',
+    heroLine2:           'לשולחן שלך.',
+    heroDesc:            'אנו מגדלים למעלה מ-30 זני פלפל בטיפול, דיוק ותשוקה — מהשישיטו העדין ועד לקרוליינה ריפר המפחיד. גלה את החווה, עקוב אחר כל צמח, טעם את ההבדל.',
+    shopPeppers:         'קנה פלפלים',
+    tourFarm:            'סיור בחווה',
+    scroll:              'גלול',
+    statPepperVarieties: 'זני פלפל',
+    statFarmArea:        'שטח חווה',
+    statSunHours:        'שעות שמש',
+    statPesticides:      'חומרי הדברה',
+    statZero:            'אפס',
+    ourVarieties:        'הזנים שלנו',
+    everyPepperStory:    'כל פלפל מספר סיפור',
+    peppersGridDesc:     'שלושים זנים, לכל אחד את אישיותו, רמת החריפות ומטרתו הקולינרית. אנו מגדלים את כולם באותה תשומת לב אובססיבית.',
+    browseAllVarieties:  'עיין בכל הזנים',
+    jalapenoDesc:        'עדין, מגוון ופריך — מושלם לסלסות טריות, חמוצים ובישול יומיומי.',
+    habaneroDesc:        'פירותי ופרחוני עם חריפות קריבית עזה. זן הפרמיום החתימתי שלנו.',
+    carolinaDesc:        'שיא חריפות עולמי עם עומק פירותי מורכב. רק לאמיצים באמת.',
+    shishitoDesc:        'זן יפני עדין — מתוק ודק-קליפה, מושלם לצלייה קלה.',
+    anaheimDesc:         'מגודל בקליפורניה, מעושן קלות ומגוון להפליא לצלייה.',
+    ghostDesc:           "בהוט ג'ולוקיה — הרוח שרודפת את חיכך שעות לאחר כל נגיסה.",
+    ourProcess:          'התהליך שלנו',
+    grownWithIntention:  'מגודל בכוונה',
+    feature1Title:       'שתילה ביד',
+    feature1Body:        'כל שתיל מתחיל במשתלה שלנו ומושתל ביד לערוגות מוגבהות מועשרות קומפוסט. ללא קיצורי דרך, ללא ניחושי מכונות.',
+    feature2Title:       'השקיה חכמה',
+    feature2Body:        'מערכת הטפטוף שלנו מספקת מים מדויקים ברמת השורשים, מנוטרת על ידי חיישני קרקע. הצמחים מקבלים בדיוק את מה שהם צריכים — לא יותר ולא פחות.',
+    feature3Title:       'נקצר בשיא',
+    feature3Body:        'אנו עוקבים אחר כל צמח מזרע ועד יום הקציר. הפלפלים נקטפים ברגע המדויק של שיא הטעם ומיד נארזים לשמירה על הטריות.',
+    interactive:         'אינטראקטיבי',
+    exploreFarmMap:      'גלה את מפת החווה שלנו',
+    mapDesc:             'נווט בכל אזור של PepperFarm. ראה אילו זנים גדלים היכן, בדוק את בריאות הצמחים ותכנן את ביקורך.',
+    openFarmMap:         'פתח מפת חווה',
+    joinPepperFarm:      'הצטרף ל-PepperFarm',
+    readyToTasteHeat:    'מוכן לטעום את החריפות?',
+    ctaDesc:             'צור חשבון חינמי כדי לעקוב אחר הזנים האהובים עליך, לקבל הודעות קציר ולהזמין ישירות מהחווה שלנו.',
+    createFreeAccount:   'צור חשבון חינמי',
+    browseProducts:      'עיין במוצרים',
+    footerLogin:         'כניסה',
+    footerRegister:      'הרשמה',
+    footerFarmMap:       'מפת חווה',
+    footerCopyright:     '© {year} PepperFarm. מגודל באהבה בישראל.',
+    exploreVariety:      'גלה את הזן',
   },
 };
 
