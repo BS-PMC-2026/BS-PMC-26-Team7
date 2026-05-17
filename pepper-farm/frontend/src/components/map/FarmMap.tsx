@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FARM_SECTIONS, type FarmSectionData } from '@/data/farmSections';
 import { PlantData } from '@/services/plants';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ZoneData {
   ZoneName: string;
@@ -48,16 +49,6 @@ const TYPE_ICONS: Record<FarmSection['type'], string> = {
   production: '🏭',
 };
 
-const LEGEND_ITEMS = [
-  { color: '#a8d5a3', label: 'חממה גדולה' },
-  { color: '#2b8333', label: 'משתלה' },
-  { color: '#b8d96f', label: 'חממה קטנה' },
-  { color: '#a8e6cf', label: 'חממת מבקרים' },
-  { color: '#c7e9c0', label: 'מרכז מבקרים' },
-  { color: '#c9c4b8', label: 'חניה' },
-  { color: '#3d4a4d', label: 'מפעל ייצור' },
-];
-
 interface FarmMapProps {
   sectionColors?: Record<string, string>;
   plants?: PlantData[];
@@ -71,6 +62,18 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
   const [hovered,     setHovered]     = useState<string | null>(null);
   const [scale,       setScale]       = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t, locale, dir } = useLanguage();
+  const ma = t.map;
+
+  const LEGEND_ITEMS = [
+    { color: '#a8d5a3', label: ma.legendGreenhouse        },
+    { color: '#2b8333', label: ma.legendNursery           },
+    { color: '#b8d96f', label: ma.legendSmallGreenhouse   },
+    { color: '#a8e6cf', label: ma.legendVisitorGreenhouse },
+    { color: '#c7e9c0', label: ma.legendVisitorCenter     },
+    { color: '#c9c4b8', label: ma.legendParking           },
+    { color: '#3d4a4d', label: ma.legendProduction        },
+  ];
 
   useEffect(() => {
     const update = () => {
@@ -94,6 +97,12 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
       .catch(() => setZoneData(null))
       .finally(() => setZoneLoading(false));
   };
+
+  const sectionLabel = (section: FarmSection) =>
+    locale === 'he' ? section.name : section.nameEn;
+
+  const sectionArea = (section: FarmSection) =>
+    locale === 'he' ? (section.area ?? null) : (section.areaEn ?? section.area ?? null);
 
   const MIN_SCALE = 0.28;
   const effectiveScale = Math.max(MIN_SCALE, scale);
@@ -131,6 +140,8 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
               section.type === 'nursery' ||
               section.type === 'production';
             const isHovered = hovered === section.id;
+            const label = sectionLabel(section);
+            const area  = sectionArea(section);
 
             return (
               <div
@@ -170,19 +181,19 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
                       pointerEvents: 'none',
                     }}
                   >
-                    <div>{section.name}</div>
-                    {section.area && (
-                      <div style={{ fontSize: `${0.65 / effectiveScale}rem`, marginTop: 4 }}>{section.area}</div>
+                    <div>{label}</div>
+                    {area && (
+                      <div style={{ fontSize: `${0.65 / effectiveScale}rem`, marginTop: 4 }}>{area}</div>
                     )}
                   </div>
                 ) : section.type === 'growing' ? (
                   <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
                     <div style={{ color: '#2d3a2e', fontSize: `${0.75 / effectiveScale}rem`, fontWeight: 600 }}>
-                      {section.name}
+                      {label}
                     </div>
-                    {section.area && (
+                    {area && (
                       <div style={{ color: '#2d3a2e', fontSize: `${0.65 / effectiveScale}rem`, marginTop: 2 }}>
-                        {section.area}
+                        {area}
                       </div>
                     )}
                   </div>
@@ -197,7 +208,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
                       padding: '4px',
                     }}
                   >
-                    {section.name}
+                    {label}
                   </div>
                 )}
               </div>
@@ -236,7 +247,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
           <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative overflow-y-auto max-h-[90vh]"
             style={{ border: `4px solid ${selected.color}` }}
-            dir="rtl"
+            dir={dir}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -255,14 +266,14 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
                 {TYPE_ICONS[selected.type]}
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">{selected.name}</h2>
+                <h2 className="text-xl font-semibold text-gray-900">{sectionLabel(selected)}</h2>
               </div>
             </div>
 
-            {selected.area && (
+            {sectionArea(selected) && (
               <div className="mb-3 p-3 rounded-lg bg-gray-50">
-                <p className="text-xs text-gray-400 mb-1">שטח</p>
-                <p className="text-xl font-bold text-gray-900">{selected.area}</p>
+                <p className="text-xs text-gray-400 mb-1">{ma.mapArea}</p>
+                <p className="text-xl font-bold text-gray-900" dir="ltr">{sectionArea(selected)}</p>
               </div>
             )}
 
@@ -273,16 +284,16 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
             {/* Pepper info */}
             <div className="mb-3">
               {zoneLoading ? (
-                <p className="text-xs text-gray-400 animate-pulse">טוען מידע על גידול...</p>
+                <p className="text-xs text-gray-400 animate-pulse">{ma.mapLoadingCropInfo}</p>
               ) : zoneData?.pepper ? (
                 <div className="p-3 rounded-lg bg-green-50 border border-green-100">
-                  <p className="text-xs text-green-600 font-medium mb-2">🌶 גידול נוכחי</p>
+                  <p className="text-xs text-green-600 font-medium mb-2">{ma.mapCurrentCrop}</p>
                   <p className="text-base font-bold text-gray-900">{zoneData.pepper.PepperName}</p>
                   {zoneData.pepper.ScientificName && (
                     <p className="text-xs text-gray-500 italic mt-0.5">{zoneData.pepper.ScientificName}</p>
                   )}
                   {(zoneData.pepper.HeatLevelScovilleMin != null || zoneData.pepper.HeatLevelScovilleMax != null) && (
-                    <p className="text-xs text-orange-600 mt-1">
+                    <p className="text-xs text-orange-600 mt-1" dir="ltr">
                       🔥 {zoneData.pepper.HeatLevelScovilleMin?.toLocaleString()} – {zoneData.pepper.HeatLevelScovilleMax?.toLocaleString()} SHU
                     </p>
                   )}
@@ -291,7 +302,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
                   )}
                 </div>
               ) : zoneData && !zoneData.pepper ? (
-                <p className="text-xs text-gray-400">אין גידול משויך לאזור זה.</p>
+                <p className="text-xs text-gray-400">{ma.mapNoCropAssigned}</p>
               ) : null}
             </div>
 
@@ -302,12 +313,14 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
               if (zonePlants.length === 0) return null;
               return (
                 <div className="mb-3 border-t border-gray-100 pt-3">
-                  <p className="text-xs text-gray-500 font-medium mb-2">🌿 צמחים באזור זה ({zonePlants.length}):</p>
+                  <p className="text-xs text-gray-500 font-medium mb-2">
+                    {ma.mapPlantsInZone} ({zonePlants.length}):
+                  </p>
                   <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
                     {zonePlants.map(plant => (
                       <div key={plant.PlantId} className="flex items-center gap-2 px-2 py-1 rounded bg-green-50 text-xs text-gray-700">
                         <span>🌱</span>
-                        <span className="font-medium">{plant.PlantCode}</span>
+                        <span className="font-medium" dir="ltr">{plant.PlantCode}</span>
                         {plant.Status && <span className="text-gray-400">— {plant.Status}</span>}
                       </div>
                     ))}
@@ -320,7 +333,7 @@ export default function FarmMap({ sectionColors, plants = [], renderPopupExtra }
 
             <div className="flex items-center gap-2 text-xs text-gray-400 pt-3 border-t border-gray-100">
               <span>📍</span>
-              <span>מפת חווה · אינטראקטיבי</span>
+              <span>{ma.mapInteractive}</span>
             </div>
           </div>
         </div>

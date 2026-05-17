@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Alert from '@/components/ui/Alert';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface ExportOptions {
   includeTable: boolean;
@@ -29,6 +30,8 @@ export default function ExportModal({
   exportError,
   onExport,
 }: ExportModalProps) {
+  const { t } = useLanguage();
+  const se = t.sensors;
   const [includeTable, setIncludeTable] = useState(canExportTable);
   const [includeGraph, setIncludeGraph] = useState(canExportGraph);
   const [delivery, setDelivery] = useState<'download' | 'email'>('download');
@@ -45,7 +48,7 @@ export default function ExportModal({
 
   return (
     <Modal onClose={onClose}>
-      <h2 className="text-lg font-semibold text-gray-900 mb-5">Export Sensor Data</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-5">{se.exportTitle}</h2>
 
       {exportError && (
         <Alert variant="error" className="mb-4">{exportError}</Alert>
@@ -54,7 +57,7 @@ export default function ExportModal({
       {/* ── What to export ── */}
       <fieldset className="mb-6">
         <legend className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-          Include
+          {se.exportInclude}
         </legend>
 
         <div className="space-y-3">
@@ -71,13 +74,10 @@ export default function ExportModal({
               className="mt-0.5 w-4 h-4 rounded accent-[#2F6F4E]"
             />
             <div>
-              <span className="text-sm text-gray-700">
-                Table{' '}
-                <span className="text-gray-400 font-normal">→ Excel (.xlsx)</span>
-              </span>
+              <span className="text-sm text-gray-700">{se.exportTableExcel}</span>
               {!canExportTable && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Load data first in the Data Explorer
+                  {se.exportLoadFirst}
                 </p>
               )}
             </div>
@@ -96,13 +96,10 @@ export default function ExportModal({
               className="mt-0.5 w-4 h-4 rounded accent-[#2F6F4E]"
             />
             <div>
-              <span className="text-sm text-gray-700">
-                Graph{' '}
-                <span className="text-gray-400 font-normal">→ PDF</span>
-              </span>
+              <span className="text-sm text-gray-700">{se.exportGraphPdf}</span>
               {!canExportGraph && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Switch to Graph view and load data first
+                  {se.exportSwitchGraph}
                 </p>
               )}
             </div>
@@ -113,7 +110,7 @@ export default function ExportModal({
       {/* ── Delivery method ── */}
       <fieldset className="mb-6">
         <legend className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-          Deliver via
+          {se.exportDeliverVia}
         </legend>
 
         <div className="space-y-3">
@@ -126,7 +123,7 @@ export default function ExportModal({
               onChange={() => setDelivery('download')}
               className="w-4 h-4 accent-[#2F6F4E]"
             />
-            <span className="text-sm text-gray-700">Download to device</span>
+            <span className="text-sm text-gray-700">{se.exportDownload}</span>
           </label>
 
           <label className="flex items-center gap-3 cursor-pointer">
@@ -138,20 +135,21 @@ export default function ExportModal({
               onChange={() => setDelivery('email')}
               className="w-4 h-4 accent-[#2F6F4E]"
             />
-            <span className="text-sm text-gray-700">Send by email</span>
+            <span className="text-sm text-gray-700">{se.exportEmail}</span>
           </label>
         </div>
 
         {delivery === 'email' && (
           <div className="mt-4">
-            <label className="block text-xs text-gray-500 mb-1">Recipient email address</label>
+            <label className="block text-xs text-gray-500 mb-1">{se.exportEmailAddress}</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={se.exportEmailPlaceholder}
               className="w-full rounded-lg border border-[#DDE5DC] px-3 py-2 text-sm
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2F6F4E]/30"
+              dir="ltr"
             />
           </div>
         )}
@@ -160,10 +158,10 @@ export default function ExportModal({
       {/* ── Actions ── */}
       <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
         <Button variant="ghost" onClick={onClose} disabled={isExporting}>
-          Cancel
+          {se.exportCancel}
         </Button>
         <Button onClick={handleSubmit} disabled={!canSubmit}>
-          {isExporting ? 'Exporting…' : 'Export'}
+          {isExporting ? se.exportExporting : se.exportExport}
         </Button>
       </div>
     </Modal>

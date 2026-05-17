@@ -9,9 +9,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function VisitorPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const vi = t.visitor;
   const [peppers,    setPeppers]   = useState<Pepper[]>([]);
   const [isLoading,  setIsLoading] = useState(true);
   const [loadError,  setLoadError] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export default function VisitorPage() {
       const data = await getAllPeppers();
       setPeppers(data);
     } catch {
-      setLoadError('Failed to load pepper varieties. Is the backend running?');
+      setLoadError(vi.failedToLoad);
     } finally {
       setIsLoading(false);
     }
@@ -56,9 +59,9 @@ export default function VisitorPage() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader
-              label="PepperFarm"
-              title="Pepper Varieties"
-              subtitle="Browse all pepper varieties grown at our farm"
+              label={vi.label}
+              title={vi.pepperVarietiesTitle}
+              subtitle={vi.pepperVarietiesSubtitle}
             />
             <div className="flex gap-3 mt-1">
               {isLoggedIn ? (
@@ -67,19 +70,19 @@ export default function VisitorPage() {
                     href="/visitor/products"
                     className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
                   >
-                    Products
+                    {vi.products}
                   </Link>
                   <Link
                     href="/visitor/map"
                     className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
                   >
-                    🗺️ Map
+                    🗺️ {vi.map}
                   </Link>
                   <button
                     onClick={handleLogout}
                     className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"
                   >
-                    Logout
+                    {vi.logout}
                   </button>
                 </>
               ) : (
@@ -88,19 +91,19 @@ export default function VisitorPage() {
                     href="/visitor/products"
                     className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
                   >
-                    Products
+                    {vi.products}
                   </Link>
                   <Link
                     href="/login"
                     className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
                   >
-                    Login
+                    {vi.login}
                   </Link>
                   <Link
                     href="/register"
                     className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
                   >
-                    Register
+                    {vi.register}
                   </Link>
                 </>
               )}
@@ -127,11 +130,11 @@ export default function VisitorPage() {
             ))}
           </div>
         ) : peppers.length === 0 ? (
-          <EmptyState icon="🌶️" title="No pepper varieties found" description="Check back later." />
+          <EmptyState icon="🌶️" title={vi.noPepperVariants} description={vi.checkBackLater} />
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-4">
-              {peppers.length} {peppers.length === 1 ? 'variety' : 'varieties'}
+            <p className="text-xs text-gray-400 mb-4" dir="ltr">
+              {peppers.length} {peppers.length === 1 ? t.common.variety : t.common.varieties}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {peppers.map((pepper) => (

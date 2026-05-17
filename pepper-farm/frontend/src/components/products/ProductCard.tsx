@@ -1,7 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { ProductResponse } from '@/services/productService';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ProductCardProps {
   product: ProductResponse;
@@ -9,6 +12,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
+  const { t } = useLanguage();
+  const pr = t.products;
   const outOfStock = product.AllocatedQuantity === 0;
 
   return (
@@ -36,7 +41,7 @@ export default function ProductCard({ product, showEditButton = false }: Product
 
         {outOfStock && (
           <span className="absolute top-2 left-2 rounded-full bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wide">
-            Out of stock
+            {pr.outOfStock}
           </span>
         )}
       </div>
@@ -55,8 +60,8 @@ export default function ProductCard({ product, showEditButton = false }: Product
 
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
           <p className="text-sm font-bold text-gray-900">${Number(product.Price).toFixed(2)}</p>
-          <p className={`text-xs font-medium ${outOfStock ? 'text-red-600' : 'text-gray-600'}`}>
-            {outOfStock ? 'Out of stock' : `${product.AllocatedQuantity} left`}
+          <p className={`text-xs font-medium ${outOfStock ? 'text-red-600' : 'text-gray-600'}`} dir="ltr">
+            {outOfStock ? pr.outOfStock : `${product.AllocatedQuantity} ${pr.unitsLeft}`}
           </p>
         </div>
 
@@ -65,7 +70,7 @@ export default function ProductCard({ product, showEditButton = false }: Product
             href={`/manager/products/${product.ProductId}/edit`}
             className="mt-2 w-full text-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
           >
-            ✏️ Edit
+            {pr.editProduct}
           </Link>
         )}
       </div>

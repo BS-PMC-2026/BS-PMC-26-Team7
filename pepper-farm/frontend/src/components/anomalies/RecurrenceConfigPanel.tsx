@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { getRecurrenceConfig, updateRecurrenceConfig, RecurrenceConfig } from '@/services/anomalies';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface RecurrenceConfigPanelProps {
   onClose: () => void;
 }
 
 const MIN_COUNT_OPTIONS = [2, 3, 5, 10];
-const WINDOW_OPTIONS = [
-  { label: '1 day',   hours: 24 },
-  { label: '3 days',  hours: 72 },
-  { label: '7 days',  hours: 168 },
-  { label: '14 days', hours: 336 },
-  { label: '30 days', hours: 720 },
-];
 
 export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanelProps) {
+  const { t } = useLanguage();
+  const a = t.anomalies;
+  const WINDOW_OPTIONS = [
+    { label: a.window1day,   hours: 24 },
+    { label: a.window3days,  hours: 72 },
+    { label: a.window7days,  hours: 168 },
+    { label: a.window14days, hours: 336 },
+    { label: a.window30days, hours: 720 },
+  ];
   const [config, setConfig] = useState<RecurrenceConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
       const updated = await updateRecurrenceConfig({ minCount: value });
       setConfig(updated);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save');
+      setError(e instanceof Error ? e.message : a.failedToSave);
     } finally {
       setSaving(false);
     }
@@ -49,7 +52,7 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
       const updated = await updateRecurrenceConfig({ windowHours: hours });
       setConfig(updated);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save');
+      setError(e instanceof Error ? e.message : a.failedToSave);
     } finally {
       setSaving(false);
     }
@@ -59,7 +62,7 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-semibold text-gray-900">Recurrence Thresholds</h2>
+          <h2 className="text-base font-semibold text-gray-900">{a.recurrenceThresholds}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer text-lg leading-none"
@@ -69,13 +72,13 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
         </div>
 
         {!config ? (
-          <p className="text-sm text-gray-400 text-center py-4">Loading…</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t.common.loading}</p>
         ) : (
           <div className="space-y-5">
             {/* Min count */}
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">
-                Minimum occurrences to flag as recurring
+                {a.minOccurrences}
               </label>
               <div className="flex gap-2">
                 {MIN_COUNT_OPTIONS.map((n) => (
@@ -98,7 +101,7 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
             {/* Window */}
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">
-                Time window for counting occurrences
+                {a.timeWindow}
               </label>
               <div className="flex flex-col gap-1.5">
                 {WINDOW_OPTIONS.map(({ label, hours }) => (
@@ -123,11 +126,11 @@ export default function RecurrenceConfigPanel({ onClose }: RecurrenceConfigPanel
             )}
 
             {saving && (
-              <p className="text-xs text-gray-400 text-center">Saving…</p>
+              <p className="text-xs text-gray-400 text-center">{t.common.saving}</p>
             )}
 
             <p className="text-xs text-gray-400">
-              Changes take effect immediately on new anomaly detections.
+              {a.changesImmediate}
             </p>
           </div>
         )}

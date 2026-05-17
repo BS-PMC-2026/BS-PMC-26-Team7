@@ -10,9 +10,12 @@ import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
 import { Pepper } from '@/types/pepper';
 import { getAllPeppers , deletePepper } from '@/services/peppers';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ManagerPeppersPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const pe = t.peppers;
   const [peppers, setPeppers] = useState<Pepper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export default function ManagerPeppersPage() {
       const data = await getAllPeppers();
       setPeppers(data);
     } catch {
-      setError('Failed to load peppers. Is the backend running?');
+      setError(pe.failedToLoad);
     } finally {
       setIsLoading(false);
     }
@@ -78,9 +81,7 @@ export default function ManagerPeppersPage() {
   });
 
   const handleDeletePepper = async (pepperId: number) => {
-    const confirmDelete = window.confirm(
-      'Are you sure you want to delete this pepper?'
-    );
+    const confirmDelete = window.confirm(pe.confirmDelete);
 
     if (!confirmDelete) return;
 
@@ -94,9 +95,9 @@ export default function ManagerPeppersPage() {
         prevPeppers.filter((pepper) => pepper.PepperId !== pepperId)
       );
 
-      setSuccessMessage('Pepper deleted successfully.');
+      setSuccessMessage(pe.deletedSuccessfully);
     } catch {
-      setError('Failed to delete pepper.');
+      setError(pe.failedToDelete);
     }
   };
 
@@ -104,9 +105,9 @@ export default function ManagerPeppersPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
         <PageHeader
-          label="Manager Dashboard"
-          title="Pepper Varieties"
-          subtitle="Manage pepper varieties in the farm"
+          label={pe.label}
+          title={pe.title}
+          subtitle={pe.subtitle}
           action={
             <div className="flex items-center gap-3">
               <Button
@@ -114,10 +115,10 @@ export default function ManagerPeppersPage() {
                 size="sm"
                 onClick={() => router.push('/manager')}
               >
-                ← Dashboard
+                {pe.backToDashboard}
               </Button>
               <Link href="/manager/peppers/create">
-                <Button>+ Add Pepper</Button>
+                <Button>{pe.addPepper}</Button>
               </Link>
             </div>
           
@@ -129,7 +130,7 @@ export default function ManagerPeppersPage() {
     type="text"
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
-    placeholder="Search pepper by name, scientific name, zone or description..."
+    placeholder={pe.searchPlaceholder}
     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
   />
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
@@ -138,7 +139,7 @@ export default function ManagerPeppersPage() {
     onChange={(e) => setSelectedPepperName(e.target.value)}
     className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
   >
-    <option value="">All Pepper Types</option>
+    <option value="">{pe.allPepperTypes}</option>
     {pepperNames.map((name) => (
       <option key={name} value={name}>
         {name}
@@ -151,11 +152,11 @@ export default function ManagerPeppersPage() {
     onChange={(e) => setSelectedHeatLevel(e.target.value)}
     className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
   >
-    <option value="">All Heat Levels</option>
-    <option value="Mild">Mild</option>
-    <option value="Medium">Medium</option>
-    <option value="Hot">Hot</option>
-    <option value="Very Hot">Very Hot</option>
+    <option value="">{pe.allHeatLevels}</option>
+    <option value="Mild">{pe.mild}</option>
+    <option value="Medium">{pe.medium}</option>
+    <option value="Hot">{pe.hot}</option>
+    <option value="Very Hot">{pe.veryHot}</option>
   </select>
 
   <select
@@ -163,7 +164,7 @@ export default function ManagerPeppersPage() {
     onChange={(e) => setSelectedZone(e.target.value)}
     className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
   >
-    <option value="">All Growing Zones</option>
+    <option value="">{pe.allGrowingZones}</option>
     {zones.map((zone) => (
      <option key={String(zone)} value={zone ?? ''}>
         {zone}
@@ -182,11 +183,11 @@ export default function ManagerPeppersPage() {
 )}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-12">Loading peppers...</p>
+        <p className="text-sm text-gray-400 text-center py-12">{pe.loading}</p>
       ) : filteredPeppers.length === 0 ? (
         <EmptyState
-          title="No pepper varieties yet."
-          description="Click + Add Pepper to create the first one."
+          title={pe.noPeppersYet}
+          description={pe.clickToCreate}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -196,13 +197,13 @@ export default function ManagerPeppersPage() {
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                 <Link href={`/manager/peppers/edit/${pepper.PepperId}`}>
                   <Button variant="secondary" className="text-xs px-2 py-1">
-                    Edit
+                    {pe.editPepper}
                   </Button>
                 </Link>
-                 <Button variant="secondary" className="text-xs px-2 py-1" 
+                 <Button variant="secondary" className="text-xs px-2 py-1"
                  onClick={() => handleDeletePepper(pepper.PepperId)}
                  >
-                   Delete
+                   {pe.deletePepper}
                    </Button>
               </div>
             </div>

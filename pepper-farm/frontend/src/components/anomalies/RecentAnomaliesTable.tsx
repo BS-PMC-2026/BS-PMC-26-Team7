@@ -5,6 +5,8 @@ import { RecentAlert } from '@/types/anomaly';
 import { resolveAlert } from '@/services/anomalies';
 import AlertDetailsDrawer from './AlertDetailsDrawer';
 import RecurringBadge from '@/components/ui/RecurringBadge';
+import { useLanguage } from '@/context/LanguageContext';
+import { translateEnum } from '@/i18n/dictionaries';
 
 interface Props {
   alerts: RecentAlert[];
@@ -26,8 +28,18 @@ function IconCheck({ className }: { className?: string }) {
   );
 }
 
-export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreateTask, initialSelectedAlert }: Props) {
-  const [selected, setSelected] = useState<RecentAlert | null>(initialSelectedAlert ?? null);
+export default function RecentAnomaliesTable({
+  alerts,
+  onAlertResolved,
+  onCreateTask,
+  initialSelectedAlert,
+}: Props) {
+  const { t } = useLanguage();
+  const a = t.anomalies;
+
+  const [selected, setSelected] = useState<RecentAlert | null>(
+    initialSelectedAlert ?? null
+  );
   const [resolvingId, setResolvingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -51,8 +63,8 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
         <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-3">
           <IconCheck className="w-6 h-6 text-green-600" />
         </div>
-        <p className="text-sm font-semibold text-gray-700">No anomalies found</p>
-        <p className="text-xs text-gray-400 mt-1">All sensor readings are within normal range</p>
+        <p className="text-sm font-semibold text-gray-700">{a.noAnomaliesFound}</p>
+        <p className="text-xs text-gray-400 mt-1">{a.allReadingsNormal}</p>
       </div>
     );
   }
@@ -63,7 +75,7 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              {['Time', 'Zone', 'Plant', 'Pepper', 'Metric', 'Actual', 'Allowed Range', 'Severity', 'Status', ''].map((h) => (
+              {[a.colTime, a.colZone, a.colPlant, a.colPepper, a.colMetric, a.colActual, a.colAllowedRange, a.colSeverity, a.colStatus, ''].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
@@ -88,7 +100,7 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
                   className="hover:bg-gray-50 cursor-pointer transition-colors duration-150 group"
                   onClick={() => setSelected(alert)}
                 >
-                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap tabular-nums">
+                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap tabular-nums" dir="ltr">
                     {new Date(alert.createdAtUtc).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-gray-700 font-medium">
@@ -113,18 +125,18 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{range}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${SEVERITY_BADGE[alert.severity] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {alert.severity}
+                      {translateEnum(alert.severity, t.enums.severity)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     {alert.isResolved ? (
                       <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-0.5 rounded-full font-medium">
                         <IconCheck className="w-3 h-3" />
-                        Resolved
+                        {a.resolved}
                       </span>
                     ) : (
                       <span className="inline-block text-xs text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full font-medium">
-                        Active
+                        {a.activeStatus}
                       </span>
                     )}
                   </td>
@@ -136,7 +148,7 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
                             onClick={(e) => { e.stopPropagation(); onCreateTask(alert); }}
                             className="text-xs text-blue-600 border border-blue-300 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors duration-150 cursor-pointer font-medium"
                           >
-                            Create Task
+                            {a.createTask}
                           </button>
                         )}
                         <button
@@ -144,7 +156,7 @@ export default function RecentAnomaliesTable({ alerts, onAlertResolved, onCreate
                           disabled={resolvingId === alert.alertId}
                           className="text-xs text-[#2F6F4E] border border-[#2F6F4E] px-3 py-1 rounded-lg hover:bg-[#D6EBE0] transition-colors duration-150 disabled:opacity-40 cursor-pointer font-medium"
                         >
-                          {resolvingId === alert.alertId ? '…' : 'Resolve'}
+                          {resolvingId === alert.alertId ? '…' : a.resolve}
                         </button>
                       </div>
                     )}

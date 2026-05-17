@@ -8,8 +8,11 @@ import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import { getProducts } from '@/services/productService';
 import { ProductResponse } from '@/services/productService';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function VisitorProductsPage() {
+  const { t } = useLanguage();
+  const vi = t.visitor;
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -21,11 +24,11 @@ export default function VisitorProductsPage() {
       const data = await getProducts();
       setProducts(data);
     } catch {
-      setLoadError('Failed to load products. Is the backend running?');
+      setLoadError(vi.failedToLoadProducts);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [vi.failedToLoadProducts]);
 
   useEffect(() => {
     loadProducts();
@@ -37,22 +40,22 @@ export default function VisitorProductsPage() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader
-              label="PepperFarm"
-              title="Product Catalog"
-              subtitle="Browse all products available from our farm"
+              label={vi.label}
+              title={vi.productCatalogTitle}
+              subtitle={vi.productCatalogSubtitle}
             />
             <div className="flex gap-3 mt-1">
               <Link
                 href="/login"
                 className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
               >
-                Login
+                {vi.login}
               </Link>
               <Link
                 href="/register"
                 className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
               >
-                Register
+                {vi.register}
               </Link>
             </div>
           </div>
@@ -86,13 +89,13 @@ export default function VisitorProductsPage() {
         ) : products.length === 0 ? (
           <EmptyState
             icon="🛒"
-            title="No products available"
-            description="Check back later."
+            title={vi.noProductsAvailable}
+            description={vi.checkBackLater}
           />
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-4">
-              {products.length} {products.length === 1 ? 'product' : 'products'}
+            <p className="text-xs text-gray-400 mb-4" dir="ltr">
+              {products.length} {products.length === 1 ? t.common.product : t.common.products}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {products.map((product) => (

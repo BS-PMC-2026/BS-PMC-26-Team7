@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import RevealSection from '@/components/ui/RevealSection';
+import { useLanguage } from '@/context/LanguageContext';
 
 const MAP_COLORS = ['#15803d', '#22c55e', '#4ade80', '#ca8a04', '#dc2626'];
 
@@ -12,12 +13,10 @@ interface MapTeaserSectionProps {
   mapHref?: string;
 }
 
-/**
- * Interactive farm map teaser card.
- * Dark green gradient card with animated mini-map grid on the right.
- * Links to the full interactive farm map.
- */
 export default function MapTeaserSection({ mapHref = '/visitor/map' }: MapTeaserSectionProps) {
+  const { t } = useLanguage();
+  const la = t.landing;
+
   return (
     <motion.section className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
@@ -41,17 +40,16 @@ export default function MapTeaserSection({ mapHref = '/visitor/map' }: MapTeaser
               {/* Text + CTA */}
               <div className="max-w-md">
                 <p className="text-xs font-semibold tracking-widest text-green-300 uppercase mb-3">
-                  Interactive
+                  {la.interactive}
                 </p>
                 <h2
                   className="text-3xl font-bold mb-4"
                   style={{ fontFamily: 'Lora, serif' }}
                 >
-                  Explore our farm map
+                  {la.exploreFarmMap}
                 </h2>
                 <p className="text-green-200 leading-relaxed mb-8">
-                  Navigate every zone of PepperFarm. See which varieties grow where,
-                  check plant health, and plan your visit.
+                  {la.mapDesc}
                 </p>
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                   <Link
@@ -59,7 +57,7 @@ export default function MapTeaserSection({ mapHref = '/visitor/map' }: MapTeaser
                     className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-400 text-green-900 font-semibold rounded-xl hover:bg-yellow-300 transition-colors duration-200 cursor-pointer"
                   >
                     <MapPin className="w-4 h-4" />
-                    Open Farm Map
+                    {la.openFarmMap}
                   </Link>
                 </motion.div>
               </div>

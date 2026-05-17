@@ -5,6 +5,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { RecentAlert } from '@/types/anomaly';
 import { resolveAlert } from '@/services/anomalies';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   alert: RecentAlert;
@@ -35,6 +36,8 @@ function IconCheck({ className }: { className?: string }) {
 }
 
 export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props) {
+  const { t } = useLanguage();
+  const a = t.anomalies;
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(alert.isResolved);
@@ -47,7 +50,7 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
       setResolved(true);
       onResolved(alert.alertId);
     } catch (err) {
-      setResolveError(err instanceof Error ? err.message : 'Failed to resolve alert.');
+      setResolveError(err instanceof Error ? err.message : a.failedToResolve);
     } finally {
       setResolving(false);
     }
@@ -71,13 +74,13 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base font-semibold text-gray-900">Alert Details</h2>
+            <h2 className="text-base font-semibold text-gray-900">{a.alertDetails}</h2>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sev.pill}`}>
               {alert.severity}
             </span>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Alert #{alert.alertId} · Reading #{alert.readingId}
+          <p className="text-xs text-gray-400 mt-0.5" dir="ltr">
+            {a.alertHashId}{alert.alertId} · {a.readingHashId}{alert.readingId}
           </p>
         </div>
       </div>
@@ -86,22 +89,22 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
       {resolved && (
         <div className="mb-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
           <IconCheck className="w-4 h-4 text-green-600 shrink-0" />
-          This alert has been resolved
+          {a.alertResolved}
         </div>
       )}
 
       {/* Details */}
       <div className="rounded-xl border border-gray-200 overflow-hidden mb-4">
         {[
-          { label: 'Metric',         value: alert.metricName },
-          { label: 'Actual Value',   value: String(alert.actualValue) },
-          { label: 'Allowed Range',  value: allowedRange },
-          { label: 'Zone',           value: alert.zoneName ?? '—' },
-          { label: 'Plant',          value: alert.plantCode ?? '—' },
-          { label: 'Pepper Variety', value: alert.pepperName ?? '—' },
-          { label: 'Time',           value: new Date(alert.createdAtUtc).toLocaleString() },
+          { label: a.colMetricName,      value: alert.metricName },
+          { label: a.colActualValue,     value: String(alert.actualValue), ltr: true },
+          { label: a.colAllowedRangeFull,value: allowedRange, ltr: true },
+          { label: a.colZoneName,        value: alert.zoneName ?? '—' },
+          { label: a.colPlantCode,       value: alert.plantCode ?? '—' },
+          { label: a.colPepperVariety,   value: alert.pepperName ?? '—' },
+          { label: a.colTime,            value: new Date(alert.createdAtUtc).toLocaleString(), ltr: true },
           ...(alert.resolvedAtUtc
-            ? [{ label: 'Resolved At', value: new Date(alert.resolvedAtUtc).toLocaleString() }]
+            ? [{ label: a.colResolvedAt, value: new Date(alert.resolvedAtUtc).toLocaleString(), ltr: true }]
             : []),
         ].map((row, i) => (
           <div
@@ -109,7 +112,7 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
             className={`flex items-center justify-between px-4 py-2.5 text-sm ${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}
           >
             <span className="text-gray-500 font-medium">{row.label}</span>
-            <span className="text-gray-900 font-semibold text-right">{row.value}</span>
+            <span className="text-gray-900 font-semibold text-right" dir={row.ltr ? 'ltr' : undefined}>{row.value}</span>
           </div>
         ))}
       </div>
@@ -129,11 +132,11 @@ export default function AlertDetailsDrawer({ alert, onClose, onResolved }: Props
       {/* Actions */}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>
-          Close
+          {a.close}
         </Button>
         {!resolved && (
           <Button variant="danger" onClick={handleResolve} disabled={resolving}>
-            {resolving ? 'Resolving…' : 'Mark as Resolved'}
+            {resolving ? a.resolving : a.markAsResolved}
           </Button>
         )}
       </div>
