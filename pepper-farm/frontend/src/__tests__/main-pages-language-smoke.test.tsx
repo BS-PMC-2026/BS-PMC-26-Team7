@@ -153,25 +153,25 @@ describe('Manager Dashboard page smoke test', () => {
   it('renders in English without crashing', async () => {
     const ManagerPage = (await import('@/app/manager/page')).default;
     await renderInProvider(<ManagerPage />, 'en');
-    expect(screen.getByText(new RegExp(getDictionary('en').manager.title))).toBeInTheDocument();
+    expect(screen.getByText(getDictionary('en').dashboard.title)).toBeInTheDocument();
   });
 
   it('renders in Hebrew without crashing', async () => {
     const ManagerPage = (await import('@/app/manager/page')).default;
     await renderInProvider(<ManagerPage />, 'he');
-    expect(screen.getByText(new RegExp(getDictionary('he').manager.title))).toBeInTheDocument();
+    expect(screen.getByText(getDictionary('he').dashboard.title)).toBeInTheDocument();
   });
 
-  it('renders translated user management label in English', async () => {
+  it('renders translated farm map label in English', async () => {
     const ManagerPage = (await import('@/app/manager/page')).default;
     await renderInProvider(<ManagerPage />, 'en');
-    expect(screen.getByText(new RegExp(getDictionary('en').manager.userManagement))).toBeInTheDocument();
+    expect(screen.getByText(getDictionary('en').dashboard.farmMap)).toBeInTheDocument();
   });
 
-  it('renders translated user management label in Hebrew', async () => {
+  it('renders translated farm map label in Hebrew', async () => {
     const ManagerPage = (await import('@/app/manager/page')).default;
     await renderInProvider(<ManagerPage />, 'he');
-    expect(screen.getByText(new RegExp(getDictionary('he').manager.userManagement))).toBeInTheDocument();
+    expect(screen.getByText(getDictionary('he').dashboard.farmMap)).toBeInTheDocument();
   });
 });
 
