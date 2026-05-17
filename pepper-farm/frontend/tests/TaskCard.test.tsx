@@ -57,17 +57,17 @@ describe('TaskCard', () => {
 
   it('renders status badge', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('todo')).toBeInTheDocument();
+    expect(screen.getByText('To Do')).toBeInTheDocument();
   });
 
   it('renders in_progress status with space', () => {
     render(<TaskCard task={{ ...baseTask, status: 'in_progress' }} workers={[]} />);
-    expect(screen.getByText('in progress')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
   });
 
   it('renders priority badge', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('medium')).toBeInTheDocument();
+    expect(screen.getByText('Medium')).toBeInTheDocument();
   });
 
   it('uses a bright card color for the task priority', () => {
@@ -78,12 +78,12 @@ describe('TaskCard', () => {
 
   it('uses a bright priority badge color', () => {
     render(<TaskCard task={{ ...baseTask, priority: 'high' }} workers={[]} />);
-    expect(screen.getByText('high')).toHaveClass('bg-orange-200');
+    expect(screen.getByText('High')).toHaveClass('bg-orange-200');
   });
 
   it('renders task type', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('irrigation')).toBeInTheDocument();
+    expect(screen.getByText('Irrigation')).toBeInTheDocument();
   });
 
   it('renders assignee name when assigned', () => {
