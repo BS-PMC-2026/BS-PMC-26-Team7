@@ -14,8 +14,13 @@ from models.user import User
 from models.task import Task
 from models.farm_zone import FarmZone
 from models.pepper_variety import PepperVariety
-from schemas.task import CreateTaskRequest
-from services.task_service import create_task
+from schemas.task import ChecklistItemIn, CreateTaskRequest, UpdateChecklistItemRequest
+from services.task_service import (
+    add_checklist_item,
+    create_task,
+    delete_checklist_item,
+    update_checklist_item,
+)
 
 # ------------------------------------------------------------------ #
 # Setup: SQLite in-memory DB (no SQL Server needed)
@@ -163,3 +168,120 @@ def test_create_task_valid_worker_assignment(db):
     assert error is None
     assert result is not None
     assert result.assignedToUserId == WORKER_ID
+
+
+# ------------------------------------------------------------------ #
+# US39 — Checklist items
+# ------------------------------------------------------------------ #
+def test_create_task_without_checklist_returns_empty_list(db):
+    """A task created without checklistItems exposes an empty list (no crash)."""
+    dto = CreateTaskRequest(title="No checklist", taskType="inspection", priority="low")
+    result, error = create_task(db, MANAGER_ID, dto)
+
+    assert error is None
+    assert result.checklistItems == []
+
+
+def test_create_task_with_checklist_persists_items_in_order(db):
+    """checklistItems on CreateTaskRequest are persisted with sequential Position."""
+    dto = CreateTaskRequest(
+        title="Inspect greenhouse",
+        taskType="inspection",
+        priority="medium",
+        checklistItems=[
+            ChecklistItemIn(title="Check humidity"),
+            ChecklistItemIn(title="Check temperature"),
+            ChecklistItemIn(title="Log results"),
+        ],
+    )
+    result, error = create_task(db, MANAGER_ID, dto)
+
+    assert error is None
+    assert len(result.checklistItems) == 3
+    assert [i.title for i in result.checklistItems] == [
+        "Check humidity", "Check temperature", "Log results"
+    ]
+    assert [i.position for i in result.checklistItems] == [0, 1, 2]
+    assert all(i.isCompleted is False for i in result.checklistItems)
+
+
+def test_add_checklist_item_appends_after_existing(db):
+    """add_checklist_item assigns a Position greater than any existing item."""
+    dto = CreateTaskRequest(
+        title="Harvest",
+        taskType="harvesting",
+        priority="high",
+        checklistItems=[ChecklistItemIn(title="Pick row A")],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+
+    added, error = add_checklist_item(db, created.id, ChecklistItemIn(title="Pick row B"))
+    assert error is None
+    assert added.title == "Pick row B"
+    assert added.position == 1
+    assert added.isCompleted is False
+
+
+def test_add_checklist_item_task_not_found(db):
+    """add_checklist_item returns a clear error when the task is missing."""
+    added, error = add_checklist_item(db, 9999, ChecklistItemIn(title="x"))
+    assert added is None
+    assert error == "Task not found."
+
+
+def test_update_checklist_item_toggles_completion(db):
+    """update_checklist_item flips IsCompleted without touching other items."""
+    dto = CreateTaskRequest(
+        title="Two-step",
+        taskType="inspection",
+        priority="medium",
+        checklistItems=[
+            ChecklistItemIn(title="Step 1"),
+            ChecklistItemIn(title="Step 2"),
+        ],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+    first_item = created.checklistItems[0]
+
+    toggled, error = update_checklist_item(
+        db, created.id, first_item.itemId, UpdateChecklistItemRequest(isCompleted=True)
+    )
+    assert error is None
+    assert toggled.itemId == first_item.itemId
+    assert toggled.isCompleted is True
+    # The other item is untouched
+    assert created.checklistItems[1].isCompleted is False
+
+
+def test_update_checklist_item_not_found(db):
+    """update_checklist_item returns an error when the item id does not match."""
+    dto = CreateTaskRequest(title="t", taskType="other", priority="low")
+    created, _ = create_task(db, MANAGER_ID, dto)
+
+    result, error = update_checklist_item(
+        db, created.id, 9999, UpdateChecklistItemRequest(isCompleted=True)
+    )
+    assert result is None
+    assert error == "Checklist item not found."
+
+
+def test_delete_checklist_item_removes_row(db):
+    """delete_checklist_item drops the row; subsequent toggle reports not-found."""
+    dto = CreateTaskRequest(
+        title="Removable",
+        taskType="other",
+        priority="low",
+        checklistItems=[ChecklistItemIn(title="Doomed")],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+    item_id = created.checklistItems[0].itemId
+
+    ok, error = delete_checklist_item(db, created.id, item_id)
+    assert ok is True
+    assert error is None
+
+    # Toggling the deleted item now returns the not-found error.
+    _, post_error = update_checklist_item(
+        db, created.id, item_id, UpdateChecklistItemRequest(isCompleted=True)
+    )
+    assert post_error == "Checklist item not found."
