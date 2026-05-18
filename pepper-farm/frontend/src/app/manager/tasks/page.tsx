@@ -15,7 +15,7 @@ import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import { CreateTaskFormData, Task, TaskPriority } from '@/types/task';
-import { createTask, getTasks, updateTask } from '@/services/tasks';
+import { createTask, getTasks, syncChecklistItems, updateTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
 import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
@@ -203,8 +203,20 @@ function ManagerTasksPageContent() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const updated = await updateTask(editingTask.id, data, token);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      const updatedTask = await updateTask(editingTask.id, data, token);
+      const updatedChecklist = await syncChecklistItems(
+        editingTask.id,
+        editingTask.checklistItems ?? [],
+        data.checklistItems ?? [],
+        token,
+      );
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === editingTask.id
+            ? { ...updatedTask, checklistItems: updatedChecklist }
+            : t,
+        ),
+      );
       setEditingTask(null);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : tk.failedToUpdate);
@@ -222,6 +234,11 @@ function ManagerTasksPageContent() {
         assignedToUserId: editingTask.assignedToUserId ? String(editingTask.assignedToUserId) : '',
         dueDate: editingTask.dueDate ? editingTask.dueDate.slice(0, 10) : '',
         zoneCode: editingTask.zoneCode ?? '',
+        checklistItems: (editingTask.checklistItems ?? []).map((item) => ({
+          itemId: item.itemId,
+          title: item.title,
+          isCompleted: item.isCompleted,
+        })),
       }
     : undefined;
 

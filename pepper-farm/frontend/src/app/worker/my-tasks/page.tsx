@@ -6,8 +6,8 @@ import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
-import { Task, TaskStatus } from '@/types/task';
-import { getMyTasks, updateTask } from '@/services/tasks';
+import { ChecklistItem, Task, TaskStatus } from '@/types/task';
+import { getMyTasks, updateChecklistItem, updateTask } from '@/services/tasks';
 import { useToast } from '@/context/ToastContext';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -65,6 +65,52 @@ export default function MyTasksPage() {
     }
   }, [show]);
 
+  const handleToggleChecklistItem = useCallback(
+    async (task: Task, item: ChecklistItem, nextCompleted: boolean) => {
+      const token = localStorage.getItem('token') ?? '';
+      // Optimistic update: flip the item locally, revert on error.
+      setTasks((prev) =>
+        prev.map((tt) =>
+          tt.id === task.id
+            ? {
+                ...tt,
+                checklistItems: tt.checklistItems.map((ci) =>
+                  ci.itemId === item.itemId
+                    ? { ...ci, isCompleted: nextCompleted }
+                    : ci,
+                ),
+              }
+            : tt,
+        ),
+      );
+      try {
+        await updateChecklistItem(task.id, item.itemId, { isCompleted: nextCompleted }, token);
+      } catch (err) {
+        setTasks((prev) =>
+          prev.map((tt) =>
+            tt.id === task.id
+              ? {
+                  ...tt,
+                  checklistItems: tt.checklistItems.map((ci) =>
+                    ci.itemId === item.itemId
+                      ? { ...ci, isCompleted: item.isCompleted }
+                      : ci,
+                  ),
+                }
+              : tt,
+          ),
+        );
+        show({
+          title: 'Error',
+          body: err instanceof Error ? err.message : t.tasks.failedToUpdateChecklistItem,
+          severity: 'High',
+          autoDismissMs: 6000,
+        });
+      }
+    },
+    [show, t.tasks.failedToUpdateChecklistItem],
+  );
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -78,7 +124,11 @@ export default function MyTasksPage() {
       ) : tasks.length === 0 ? (
         <EmptyState title={wk.noTasksYet} description={wk.youHaveNoTasks} />
       ) : (
-        <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
+        <TaskList
+          tasks={tasks}
+          onStatusChange={handleStatusChange}
+          onToggleChecklistItem={handleToggleChecklistItem}
+        />
       )}
     </div>
   );

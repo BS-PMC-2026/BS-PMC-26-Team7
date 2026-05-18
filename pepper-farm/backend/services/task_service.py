@@ -1,10 +1,18 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from models.task import Task
+from models.task import Task, TaskChecklistItem
 from models.user import User
 from models.farm_zone import FarmZone
 from models.sensor import SensorAlert, SensorAssignment
-from schemas.task import AlertInfo, CreateTaskRequest, UpdateTaskRequest, TaskResponse
+from schemas.task import (
+    AlertInfo,
+    ChecklistItemIn,
+    ChecklistItemOut,
+    CreateTaskRequest,
+    TaskResponse,
+    UpdateChecklistItemRequest,
+    UpdateTaskRequest,
+)
 
 ALLOWED_PRIORITIES = {"low", "medium", "high", "critical"}
 ALLOWED_STATUSES = {"todo", "in_progress", "done", "cancelled"}
@@ -91,6 +99,14 @@ def create_task(db: Session, created_by_user_id: int, data: CreateTaskRequest) -
         CreatedAt=now,
         UpdatedAt=now,
     )
+    for idx, item_in in enumerate(data.checklistItems):
+        task.checklist_items.append(TaskChecklistItem(
+            Title=item_in.title.strip(),
+            IsCompleted=False,
+            Position=idx,
+            CreatedAt=now,
+            UpdatedAt=now,
+        ))
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -188,6 +204,16 @@ def _to_response(task: Task) -> TaskResponse:
             isResolved=bool(a.IsResolved),
             createdAtUtc=a.CreatedAtUtc.isoformat() if a.CreatedAtUtc else "",
         )
+    items = getattr(task, "checklist_items", None) or []
+    checklist_out = [
+        ChecklistItemOut(
+            itemId=item.ItemId,
+            title=item.Title,
+            isCompleted=bool(item.IsCompleted),
+            position=item.Position,
+        )
+        for item in items
+    ]
     return TaskResponse(
         id=task.Id,
         title=task.Title,
@@ -207,6 +233,7 @@ def _to_response(task: Task) -> TaskResponse:
         alertInfo=alert_info,
         createdAt=task.CreatedAt,
         updatedAt=task.UpdatedAt,
+        checklistItems=checklist_out,
     )
 
 def get_completed_tasks(
@@ -229,3 +256,81 @@ def get_completed_tasks(
     tasks = query.order_by(Task.CompletedAt.desc()).all()
 
     return [_to_response(t) for t in tasks]
+
+
+def _item_to_out(item: TaskChecklistItem) -> ChecklistItemOut:
+    return ChecklistItemOut(
+        itemId=item.ItemId,
+        title=item.Title,
+        isCompleted=bool(item.IsCompleted),
+        position=item.Position,
+    )
+
+
+def add_checklist_item(
+    db: Session, task_id: int, data: ChecklistItemIn
+) -> tuple[ChecklistItemOut | None, str | None]:
+    task = db.query(Task).filter(Task.Id == task_id).first()
+    if not task:
+        return None, "Task not found."
+
+    max_position = max((i.Position for i in task.checklist_items), default=-1)
+    now = datetime.now(timezone.utc)
+    item = TaskChecklistItem(
+        TaskId=task.Id,
+        Title=data.title.strip(),
+        IsCompleted=False,
+        Position=max_position + 1,
+        CreatedAt=now,
+        UpdatedAt=now,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return _item_to_out(item), None
+
+
+def update_checklist_item(
+    db: Session, task_id: int, item_id: int, data: UpdateChecklistItemRequest
+) -> tuple[ChecklistItemOut | None, str | None]:
+    item = (
+        db.query(TaskChecklistItem)
+        .filter(
+            TaskChecklistItem.ItemId == item_id,
+            TaskChecklistItem.TaskId == task_id,
+        )
+        .first()
+    )
+    if not item:
+        return None, "Checklist item not found."
+
+    if data.title is not None:
+        new_title = data.title.strip()
+        if not new_title:
+            return None, "Checklist item title cannot be empty."
+        item.Title = new_title
+    if data.isCompleted is not None:
+        item.IsCompleted = data.isCompleted
+
+    item.UpdatedAt = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(item)
+    return _item_to_out(item), None
+
+
+def delete_checklist_item(
+    db: Session, task_id: int, item_id: int
+) -> tuple[bool, str | None]:
+    item = (
+        db.query(TaskChecklistItem)
+        .filter(
+            TaskChecklistItem.ItemId == item_id,
+            TaskChecklistItem.TaskId == task_id,
+        )
+        .first()
+    )
+    if not item:
+        return False, "Checklist item not found."
+    db.delete(item)
+    db.commit()
+    return True, None

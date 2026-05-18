@@ -1,8 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from services.task_service import create_task, get_all_tasks, get_tasks_by_user, update_task, get_open_tasks_report, get_open_tasks_by_worker ,get_completed_tasks
-from schemas.task import CreateTaskRequest, UpdateTaskRequest, TaskResponse
+from models.task import Task
+from services.task_service import (
+    add_checklist_item,
+    create_task,
+    delete_checklist_item,
+    get_all_tasks,
+    get_completed_tasks,
+    get_open_tasks_by_worker,
+    get_open_tasks_report,
+    get_tasks_by_user,
+    update_checklist_item,
+    update_task,
+)
+from schemas.task import (
+    ChecklistItemIn,
+    ChecklistItemOut,
+    CreateTaskRequest,
+    TaskResponse,
+    UpdateChecklistItemRequest,
+    UpdateTaskRequest,
+)
 from utils.jwt import get_current_user, require_role
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -70,3 +89,53 @@ def update_task_endpoint(
     if error:
         raise HTTPException(status_code=400, detail=error)
     return result
+
+
+@router.post("/{task_id}/checklist", response_model=ChecklistItemOut, status_code=201)
+def add_checklist_item_endpoint(
+    task_id: int,
+    data: ChecklistItemIn,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    result, error = add_checklist_item(db, task_id, data)
+    if error:
+        status = 404 if error == "Task not found." else 400
+        raise HTTPException(status_code=status, detail=error)
+    return result
+
+
+@router.patch("/{task_id}/checklist/{item_id}", response_model=ChecklistItemOut)
+def update_checklist_item_endpoint(
+    task_id: int,
+    item_id: int,
+    data: UpdateChecklistItemRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    # Workers may only modify items on tasks assigned to them.
+    if current_user["role"] != "FarmManager":
+        task = db.query(Task).filter(Task.Id == task_id).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found.")
+        if task.AssignedToUserId != current_user["user_id"]:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+    result, error = update_checklist_item(db, task_id, item_id, data)
+    if error:
+        status = 404 if error == "Checklist item not found." else 400
+        raise HTTPException(status_code=status, detail=error)
+    return result
+
+
+@router.delete("/{task_id}/checklist/{item_id}", status_code=204)
+def delete_checklist_item_endpoint(
+    task_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    ok, error = delete_checklist_item(db, task_id, item_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=error)
+    return None
