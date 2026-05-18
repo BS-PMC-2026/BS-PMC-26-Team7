@@ -1,32 +1,23 @@
-import { API_URL } from '@/lib/constants';
+import { apiFetch } from "./apiClient";
 import {
-  Pesticide,
   CreateSprayReportRequest,
+  Pesticide,
   SprayReportSubmissionResponse,
-} from '@/types/spray';
+} from "@/types/spray";
 
 export async function getPesticides(token: string): Promise<Pesticide[]> {
-  const res = await fetch(`${API_URL}/api/spray-reports/pesticides`, {
+  return apiFetch<Pesticide[]>("/api/spray-reports/pesticides", {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to load pesticides.');
-  return json;
 }
 
 export async function createSprayReport(
   data: CreateSprayReportRequest,
   token: string,
 ): Promise<SprayReportSubmissionResponse> {
-  const res = await fetch(`${API_URL}/api/spray-reports`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  return apiFetch<SprayReportSubmissionResponse>("/api/spray-reports", {
+    method: "POST",
     body: JSON.stringify(data),
+    headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to submit spray report.');
-  return json;
 }

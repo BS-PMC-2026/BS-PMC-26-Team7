@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from models.task import Task, TaskChecklistItem
 from models.user import User
 from models.farm_zone import FarmZone
@@ -151,13 +151,19 @@ def update_task(db: Session, task_id: int, data: UpdateTaskRequest) -> tuple[Tas
 
 
 def get_all_tasks(db: Session) -> list[TaskResponse]:
-    tasks = db.query(Task).order_by(Task.CreatedAt.desc()).all()
+    tasks = (
+        db.query(Task)
+        .options(selectinload(Task.checklist_items))
+        .order_by(Task.CreatedAt.desc())
+        .all()
+    )
     return [_to_response(t) for t in tasks]
 
 
 def get_tasks_by_user(db: Session, user_id: int) -> list[TaskResponse]:
     tasks = (
         db.query(Task)
+        .options(selectinload(Task.checklist_items))
         .filter(Task.AssignedToUserId == user_id)
         .order_by(Task.CreatedAt.desc())
         .all()
@@ -169,6 +175,7 @@ def get_open_tasks_report(db: Session) -> list[TaskResponse]:
     """BSPMT7-107 BSPMT7-108: Returns all tasks with status not done or cancelled"""
     tasks = (
         db.query(Task)
+        .options(selectinload(Task.checklist_items))
         .filter(Task.Status.notin_(["done", "cancelled"]))
         .order_by(Task.Priority.asc(), Task.DueDate.asc())
         .all()
@@ -180,6 +187,7 @@ def get_open_tasks_by_worker(db: Session, worker_id: int) -> list[TaskResponse]:
     """BSPMT7-107 BSPMT7-108: Returns open tasks for a specific worker"""
     tasks = (
         db.query(Task)
+        .options(selectinload(Task.checklist_items))
         .filter(
             Task.AssignedToUserId == worker_id,
             Task.Status.notin_(["done", "cancelled"])
@@ -242,7 +250,7 @@ def get_completed_tasks(
     task_type: str | None = None,
     zone_id: int | None = None,
 ) -> list[TaskResponse]:
-    query = db.query(Task).filter(Task.Status == "done")
+    query = db.query(Task).options(selectinload(Task.checklist_items)).filter(Task.Status == "done")
 
     if worker_id is not None:
         query = query.filter(Task.AssignedToUserId == worker_id)

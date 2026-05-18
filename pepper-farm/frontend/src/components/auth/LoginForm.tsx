@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL, ROLE_ROUTES } from "@/lib/constants";
+import { ROLE_ROUTES } from "@/lib/constants";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface FormData {
@@ -34,7 +34,7 @@ export default function LoginForm() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`/api/auth/login`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(form),

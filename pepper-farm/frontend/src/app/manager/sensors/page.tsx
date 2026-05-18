@@ -27,8 +27,6 @@ import {
 } from '@/services/sensors';
 import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
 import { useLanguage } from '@/context/LanguageContext';
-import { API_URL as API_BASE } from '@/lib/constants';
-  
 function sensorLabel(s: SensorInfo, inactiveText: string): string {
   const name = s.DeviceName || s.MacAddress;
   return s.IsActive ? name : `${name} ${inactiveText}`;
@@ -375,7 +373,7 @@ function SensorDashboardPage() {
 
       // Send email
       if (opts.delivery === 'email') {
-        const res = await fetch(`${API_BASE}/api/sensors/export/email`, {
+        const res = await fetch(`/api/sensors/export/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to: opts.email, attachments }),

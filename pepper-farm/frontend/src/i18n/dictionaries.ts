@@ -153,6 +153,13 @@ export interface DashboardDictionary {
   noDueDate:             string;
   unknownWorker:         string;
   unassigned:            string;
+  openTasksCount:        string;
+  overdue:               string;
+  dueSoon:               string;
+  recentlyCompleted:     string;
+  showCompleted:         string;
+  hideCompleted:         string;
+  completedAt:           string;
 }
 
 export interface UsersDictionary {
@@ -968,6 +975,13 @@ const en: Dictionary = {
     noDueDate:             'No due date',
     unknownWorker:         'Unknown worker',
     unassigned:            'Unassigned',
+    openTasksCount:        '{count} open tasks',
+    overdue:               'Overdue',
+    dueSoon:               'Due Soon',
+    recentlyCompleted:     'Recently Completed',
+    showCompleted:         'Show completed',
+    hideCompleted:         'Hide completed',
+    completedAt:           'Completed',
   },
 
   users: {
@@ -1727,6 +1741,13 @@ const he: Dictionary = {
     noDueDate:             'אין תאריך יעד',
     unknownWorker:         'עובד לא ידוע',
     unassigned:            'לא מוקצה',
+    openTasksCount:        '{count} משימות פתוחות',
+    overdue:               'באיחור',
+    dueSoon:               'מסתיים בקרוב',
+    recentlyCompleted:     'הושלמו לאחרונה',
+    showCompleted:         'הצג שהושלמו',
+    hideCompleted:         'הסתר שהושלמו',
+    completedAt:           'הושלם',
   },
 
   users: {
