@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface FormData {
   fullName: string;
@@ -18,6 +18,7 @@ interface FieldErrors {
 
 export default function RegisterForm() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [form,     setForm]     = useState<FormData>({ fullName: "", email: "", password: "" });
   const [errors,   setErrors]   = useState<FieldErrors>({});
@@ -28,11 +29,11 @@ export default function RegisterForm() {
   const validate = (): boolean => {
     const e: FieldErrors = {};
     if (!form.fullName.trim())
-      e.fullName = "Full name is required.";
+      e.fullName = t.auth.fullNameRequired;
     if (!form.email.includes("@"))
-      e.email = "Valid email is required.";
+      e.email = t.auth.validEmailRequired;
     if (form.password.length < 6)
-      e.password = "Password must be at least 6 characters.";
+      e.password = t.auth.passwordMinLength;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -49,7 +50,7 @@ export default function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/register`, {
+      const res = await fetch(`/api/auth/register`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(form),
@@ -58,14 +59,14 @@ export default function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setApiError(data.detail ?? "Registration failed.");
+        setApiError(data.detail ?? t.auth.registrationFailed);
         return;
       }
 
       setSuccess(true);
 
     } catch {
-      setApiError("Network error — please try again.");
+      setApiError(t.auth.networkError);
     } finally {
       setLoading(false);
     }
@@ -75,15 +76,13 @@ export default function RegisterForm() {
     return (
       <div className="bg-white rounded-xl shadow p-8 w-full max-w-sm text-center">
         <div className="text-4xl mb-4">✅</div>
-        <h2 className="text-xl font-bold text-green-700 mb-2">Registration Successful!</h2>
-        <p className="text-gray-500 mb-6">
-          Your account has been created as a <strong>Visitor</strong>.
-        </p>
+        <h2 className="text-xl font-bold text-green-700 mb-2">{t.auth.registrationSuccess}</h2>
+        <p className="text-gray-500 mb-6">{t.auth.accountCreatedAsVisitor}</p>
         <button
           onClick={() => router.push("/login")}
           className="bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700 transition"
         >
-          Go to Login
+          {t.auth.goToLogin}
         </button>
       </div>
     );
@@ -94,16 +93,16 @@ export default function RegisterForm() {
       onSubmit={handleSubmit}
       className="bg-white rounded-xl shadow p-8 w-full max-w-sm flex flex-col gap-4"
     >
-      <h2 className="text-2xl font-bold text-center text-gray-800">Create Account</h2>
+      <h2 className="text-2xl font-bold text-center text-gray-800">{t.auth.createAccount}</h2>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Full Name</label>
+        <label className="text-sm font-medium text-gray-700">{t.auth.fullName}</label>
         <input
           name="fullName"
           type="text"
           value={form.fullName}
           onChange={handleChange}
-          placeholder="Your full name"
+          placeholder={t.auth.fullNamePlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
         {errors.fullName && (
@@ -112,14 +111,15 @@ export default function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Email</label>
+        <label className="text-sm font-medium text-gray-700">{t.auth.email}</label>
         <input
           name="email"
           type="email"
           value={form.email}
           onChange={handleChange}
-          placeholder="your@email.com"
+          placeholder={t.auth.emailPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+          dir="ltr"
         />
         {errors.email && (
           <span className="text-red-500 text-xs">{errors.email}</span>
@@ -127,13 +127,13 @@ export default function RegisterForm() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Password</label>
+        <label className="text-sm font-medium text-gray-700">{t.auth.password}</label>
         <input
           name="password"
           type="password"
           value={form.password}
           onChange={handleChange}
-          placeholder="Min. 6 characters"
+          placeholder={t.auth.passwordMinCharsHint}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
         {errors.password && (
@@ -152,12 +152,12 @@ export default function RegisterForm() {
         disabled={loading}
         className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
       >
-        {loading ? "Registering..." : "Register"}
+        {loading ? t.auth.registering : t.auth.register}
       </button>
 
       <p className="text-center text-sm text-gray-500">
-        Already have an account?{" "}
-        <a href="/login" className="text-green-600 hover:underline">Login</a>
+        {t.auth.haveAccount}{" "}
+        <a href="/login" className="text-green-600 hover:underline">{t.auth.login}</a>
       </p>
     </form>
   );

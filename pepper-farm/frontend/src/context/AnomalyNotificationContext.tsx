@@ -10,17 +10,21 @@ import {
   ReactNode,
 } from 'react';
 import { getRecentAlerts } from '@/services/anomalies';
+import { getCompletedTasks } from '@/services/tasks';
 import type { RecentAlert } from '@/types/anomaly';
+import type { Task } from '@/types/task';
 import { useToast } from '@/context/ToastContext';
-import { API_URL } from '@/lib/constants';
 
 const FALLBACK_INTERVAL_MS = 30_000;
+const TASK_POLL_INTERVAL_MS = 30_000;
 
 interface AnomalyNotificationContextValue {
   unreadCount: number;
   clearUnread: () => void;
   /** Latest list of all alerts — updated on every SSE event or fallback poll */
   liveAlerts: RecentAlert[];
+  /** Recently completed tasks — polled every 30 s */
+  completedTasks: Task[];
 }
 
 const AnomalyNotificationContext = createContext<AnomalyNotificationContextValue | null>(null);
@@ -38,20 +42,24 @@ function buildBody(alert: RecentAlert): string {
 
 export function AnomalyNotificationProvider({ children }: { children: ReactNode }) {
   const { show } = useToast();
-  const seenIds = useRef<Set<number>>(new Set());
-  const maxAlertId = useRef<number>(0);
+  const seenAlertIds = useRef<Set<number>>(new Set());
+  const seenTaskIds  = useRef<Set<number>>(new Set());
+  const maxAlertId   = useRef<number>(0);
   const lastSeenTime = useRef<string | undefined>(undefined);
-  const esRef = useRef<EventSource | null>(null);
-  const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [liveAlerts, setLiveAlerts] = useState<RecentAlert[]>([]);
+  const esRef        = useRef<EventSource | null>(null);
+  const fallbackRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const taskPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [unreadCount,     setUnreadCount]     = useState(0);
+  const [liveAlerts,      setLiveAlerts]      = useState<RecentAlert[]>([]);
+  const [completedTasks,  setCompletedTasks]  = useState<Task[]>([]);
 
   // ------------------------------------------------------------------
   // Process a new incoming alert (from SSE or fallback)
   // ------------------------------------------------------------------
   const handleNewAlert = useCallback((alert: RecentAlert) => {
-    if (seenIds.current.has(alert.alertId)) return;
-    seenIds.current.add(alert.alertId);
+    if (seenAlertIds.current.has(alert.alertId)) return;
+    seenAlertIds.current.add(alert.alertId);
     if (alert.alertId > maxAlertId.current) maxAlertId.current = alert.alertId;
     if (!alert.isResolved) {
       show({
@@ -68,10 +76,23 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
   }, [show]);
 
   // ------------------------------------------------------------------
+  // Process a newly completed task (from polling)
+  // ------------------------------------------------------------------
+  const handleNewTask = useCallback((task: Task) => {
+    if (seenTaskIds.current.has(task.id)) return;
+    seenTaskIds.current.add(task.id);
+    setCompletedTasks((prev) => {
+      const exists = prev.some((t) => t.id === task.id);
+      return exists ? prev : [task, ...prev];
+    });
+    setUnreadCount((prev) => prev + 1);
+  }, []);
+
+  // ------------------------------------------------------------------
   // Fallback: REST poll every 30 s when SSE is unavailable
   // ------------------------------------------------------------------
   const startFallback = useCallback(() => {
-    if (fallbackRef.current) return; // already running
+    if (fallbackRef.current) return;
     fallbackRef.current = setInterval(async () => {
       try {
         const result = await getRecentAlerts({ limit: 20, since: lastSeenTime.current });
@@ -102,7 +123,7 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
       esRef.current.close();
       esRef.current = null;
     }
-    const url = `${API_URL}/api/manager/anomalies/stream?last_alert_id=${maxAlertId.current}`;
+    const url = `/api/manager/anomalies/stream?last_alert_id=${maxAlertId.current}`;
     const es = new EventSource(url);
     esRef.current = es;
 
@@ -116,48 +137,69 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
     });
 
     es.onerror = () => {
-      // SSE disconnected — close and start fallback
       es.close();
       esRef.current = null;
       startFallback();
     };
 
-    // SSE connected — stop any running fallback
     es.onopen = () => stopFallback();
   }, [handleNewAlert, startFallback, stopFallback]);
 
   // ------------------------------------------------------------------
-  // Mount: initial full load, then open SSE
+  // Mount: initial full load, then open SSE + start task polling
   // ------------------------------------------------------------------
   useEffect(() => {
+    // Only run when a token is present (authenticated pages only)
+    if (typeof window !== 'undefined' && !localStorage.getItem('token')) return;
+
     let cancelled = false;
 
     async function init() {
+      // Load alerts
       try {
-        const result = await getRecentAlerts({ limit: 100 });
+        const result = await getRecentAlerts({ limit: 20 });
         if (cancelled) return;
         const alerts = result.items;
-
-        // Seed state silently — no toasts for existing alerts
         setLiveAlerts(alerts);
         alerts.forEach((a) => {
-          seenIds.current.add(a.alertId);
+          seenAlertIds.current.add(a.alertId);
           if (a.alertId > maxAlertId.current) maxAlertId.current = a.alertId;
           if (a.createdAtUtc > (lastSeenTime.current ?? '')) {
             lastSeenTime.current = a.createdAtUtc;
           }
         });
       } catch {
-        // Initial load failed — start fallback immediately
         startFallback();
         return;
       }
-      openSSE();
+
+      // Load completed tasks (seed silently — no unread bump)
+      try {
+        const tasks = await getCompletedTasks();
+        if (cancelled) return;
+        setCompletedTasks(tasks);
+        tasks.forEach((t) => seenTaskIds.current.add(t.id));
+      } catch {
+        // silent
+      }
+
+      if (!cancelled) {
+        openSSE();
+
+        // Poll for new completed tasks every 30 s
+        taskPollRef.current = setInterval(async () => {
+          try {
+            const tasks = await getCompletedTasks();
+            tasks.forEach(handleNewTask);
+          } catch {
+            // silent
+          }
+        }, TASK_POLL_INTERVAL_MS);
+      }
     }
 
     init();
 
-    // Reconnect SSE when tab becomes visible again
     const onVisible = () => {
       if (document.visibilityState === 'visible' && !esRef.current) {
         stopFallback();
@@ -171,14 +213,18 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
       esRef.current?.close();
       esRef.current = null;
       stopFallback();
+      if (taskPollRef.current) {
+        clearInterval(taskPollRef.current);
+        taskPollRef.current = null;
+      }
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [openSSE, startFallback, stopFallback]);
+  }, [openSSE, startFallback, stopFallback, handleNewTask]);
 
   const clearUnread = useCallback(() => setUnreadCount(0), []);
 
   return (
-    <AnomalyNotificationContext.Provider value={{ unreadCount, clearUnread, liveAlerts }}>
+    <AnomalyNotificationContext.Provider value={{ unreadCount, clearUnread, liveAlerts, completedTasks }}>
       {children}
     </AnomalyNotificationContext.Provider>
   );

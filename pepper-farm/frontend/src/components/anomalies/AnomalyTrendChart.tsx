@@ -50,7 +50,7 @@ export default function AnomalyTrendChart({ data }: Props) {
   const yTicks = [0, Math.round(maxCount / 2), maxCount];
 
   return (
-    <div className="w-full">
+    <div className="w-full" dir="ltr">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"

@@ -1,7 +1,5 @@
-import { apiFetch } from './api';
-import { API_URL } from '@/lib/constants';
-import { CreateTaskFormData, Task } from '@/types/task';
-
+import { apiFetch } from './apiClient';
+import { ChecklistFormItem, ChecklistItem, CreateTaskFormData, Task } from '@/types/task';
 
 interface CreateTaskPayload {
   title: string;
@@ -12,6 +10,7 @@ interface CreateTaskPayload {
   dueDate: string | null;
   zoneCode: string | null;
   anomalyId?: number;
+  checklistItems: { title: string }[];
 }
 
 function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId'> {
@@ -23,16 +22,17 @@ function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId
     assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null,
     dueDate: data.dueDate || null,
     zoneCode: data.zoneCode || null,
+    // Strip itemId/isCompleted — creation endpoint only accepts { title }
+    checklistItems: (data.checklistItems ?? [])
+      .map((i) => ({ title: i.title.trim() }))
+      .filter((i) => i.title.length > 0),
   };
 }
 
 export async function getMyTasks(token: string): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/my`, {
+  return apiFetch<Task[]>('/api/tasks/my', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks.');
-  return json;
 }
 
 export async function getTasks(): Promise<Task[]> {
@@ -40,22 +40,14 @@ export async function getTasks(): Promise<Task[]> {
 }
 
 export async function createTask(data: CreateTaskFormData, anomalyId?: number): Promise<Task> {
-  const token = localStorage.getItem('token') ?? '';
   const payload: CreateTaskPayload = {
     ...toPayload(data),
     ...(anomalyId !== undefined ? { anomalyId } : {}),
   };
-  const res = await fetch(`${API_URL}/api/tasks`, {
+  return apiFetch<Task>('/api/tasks', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(payload),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to create task.');
-  return json;
 }
 
 export async function updateTask(
@@ -63,52 +55,121 @@ export async function updateTask(
   data: Partial<CreateTaskFormData> & { status?: string },
   token: string,
 ): Promise<Task> {
-  const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+  return apiFetch<Task>(`/api/tasks/${taskId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({
       ...(data.title !== undefined && { title: data.title.trim() }),
       ...(data.description !== undefined && { description: data.description.trim() || null }),
       ...(data.taskType !== undefined && { taskType: data.taskType }),
       ...(data.priority !== undefined && { priority: data.priority }),
-      ...(data.assignedToUserId !== undefined && { assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null }),
+      ...(data.assignedToUserId !== undefined && {
+        assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null,
+      }),
       ...(data.dueDate !== undefined && { dueDate: data.dueDate || null }),
       ...(data.zoneCode !== undefined && { zoneCode: data.zoneCode || null }),
       ...(data.status !== undefined && { status: data.status }),
     }),
+    headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to update task.');
-  return json;
 }
 
 export async function getTasksReport(token: string): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/report`, {
+  return apiFetch<Task[]>('/api/tasks/report', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
-  return json;
 }
 
 export async function getTasksReportByWorker(token: string, workerId: number): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/report?worker_id=${workerId}`, {
+  return apiFetch<Task[]>(`/api/tasks/report?worker_id=${workerId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
-  return json;
 }
 
 export async function getCompletedTasks(): Promise<Task[]> {
-  const token = localStorage.getItem('token') ?? '';
+  return apiFetch<Task[]>('/api/tasks/completed');
+}
 
-  return apiFetch<Task[]>('/api/tasks/completed', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export async function addChecklistItem(
+  taskId: number,
+  title: string,
+  token: string,
+): Promise<ChecklistItem> {
+  return apiFetch<ChecklistItem>(`/api/tasks/${taskId}/checklist`, {
+    method: 'POST',
+    body: JSON.stringify({ title: title.trim() }),
+    headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function updateChecklistItem(
+  taskId: number,
+  itemId: number,
+  patch: { title?: string; isCompleted?: boolean },
+  token: string,
+): Promise<ChecklistItem> {
+  return apiFetch<ChecklistItem>(`/api/tasks/${taskId}/checklist/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(patch.title !== undefined && { title: patch.title.trim() }),
+      ...(patch.isCompleted !== undefined && { isCompleted: patch.isCompleted }),
+    }),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function deleteChecklistItem(
+  taskId: number,
+  itemId: number,
+  token: string,
+): Promise<void> {
+  await apiFetch<void>(`/api/tasks/${taskId}/checklist/${itemId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/**
+ * Diff `updated` (from the edit form) against `original` (from the server) and
+ * apply the minimal set of create / patch / delete calls needed to synchronise.
+ * Returns the resulting ChecklistItem list in form order.
+ */
+export async function syncChecklistItems(
+  taskId: number,
+  original: ChecklistItem[],
+  updated: ChecklistFormItem[],
+  token: string,
+): Promise<ChecklistItem[]> {
+  const originalById = new Map(original.map((i) => [i.itemId, i]));
+  const updatedItemIds = new Set(
+    updated.filter((i) => i.itemId !== undefined).map((i) => i.itemId!),
+  );
+
+  // Delete items that were removed in the form
+  await Promise.all(
+    original
+      .filter((i) => !updatedItemIds.has(i.itemId))
+      .map((i) => deleteChecklistItem(taskId, i.itemId, token)),
+  );
+
+  // Create / update items in order
+  const result: ChecklistItem[] = [];
+  for (const item of updated) {
+    const title = item.title.trim();
+    if (!title) continue;
+
+    if (item.itemId !== undefined) {
+      const orig = originalById.get(item.itemId);
+      if (orig && orig.title !== title) {
+        const patched = await updateChecklistItem(taskId, item.itemId, { title }, token);
+        result.push(patched);
+      } else if (orig) {
+        result.push(orig);
+      }
+    } else {
+      const created = await addChecklistItem(taskId, title, token);
+      result.push(created);
+    }
+  }
+
+  return result;
 }

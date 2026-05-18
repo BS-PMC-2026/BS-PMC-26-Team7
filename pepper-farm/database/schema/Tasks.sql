@@ -22,3 +22,4 @@
 -- | UpdatedAt        | DATETIME2      | NO       | SYSDATETIME()     |                                    |
 --
 -- Migration required: run database/migrations/add_anomaly_id_to_tasks.sql
+-- Related child table: TaskChecklistItems (US39). Migration: database/migrations/add_task_checklist_items.sql

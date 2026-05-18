@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import RevealSection from '@/components/ui/RevealSection';
 import PepperVarietyCard from '@/components/ui/PepperVarietyCard';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface PepperVariety {
   name: string;
@@ -13,15 +14,6 @@ export interface PepperVariety {
   description: string;
 }
 
-const DEFAULT_PEPPERS: PepperVariety[] = [
-  { name: 'Jalapeño Mexicano', heat: 2, color: '#15803d', description: 'Mild, versatile and crisp — perfect for fresh salsas, pickles and everyday cooking.' },
-  { name: 'Habanero Gold',     heat: 4, color: '#ca8a04', description: 'Fruity, floral with intense Caribbean heat. Our signature premium variety.' },
-  { name: 'Carolina Reaper',   heat: 5, color: '#dc2626', description: 'World-record heat meets complex fruity depth. Only for the truly brave.' },
-  { name: 'Shishito',          heat: 1, color: '#4ade80', description: 'Delicate Japanese variety — sweet and thin-skinned, perfect for blistering.' },
-  { name: 'Anaheim Sunrise',   heat: 2, color: '#f97316', description: 'California-grown, mildly smoky and incredibly versatile for roasting.' },
-  { name: 'Ghost Pepper',      heat: 5, color: '#7c3aed', description: 'Bhut jolokia — the ghost that haunts your palate for hours after each bite.' },
-];
-
 interface PeppersGridSectionProps {
   /** Override the default pepper list (e.g. feed from API) */
   peppers?: PepperVariety[];
@@ -29,36 +21,44 @@ interface PeppersGridSectionProps {
   allVarietiesHref?: string;
 }
 
-/**
- * 3-column pepper variety grid section.
- * Defaults to 6 hardcoded varieties; accepts an override prop for API-driven data.
- * Includes section header and "Browse all varieties" CTA link.
- */
 export default function PeppersGridSection({
-  peppers = DEFAULT_PEPPERS,
+  peppers,
   allVarietiesHref = '/visitor/peppers/1',
 }: PeppersGridSectionProps) {
+  const { t } = useLanguage();
+  const la = t.landing;
+
+  const DEFAULT_PEPPERS: PepperVariety[] = [
+    { name: 'Jalapeño Mexicano', heat: 2, color: '#15803d', description: la.jalapenoDesc },
+    { name: 'Habanero Gold',     heat: 4, color: '#ca8a04', description: la.habaneroDesc },
+    { name: 'Carolina Reaper',   heat: 5, color: '#dc2626', description: la.carolinaDesc },
+    { name: 'Shishito',          heat: 1, color: '#4ade80', description: la.shishitoDesc },
+    { name: 'Anaheim Sunrise',   heat: 2, color: '#f97316', description: la.anaheimDesc  },
+    { name: 'Ghost Pepper',      heat: 5, color: '#7c3aed', description: la.ghostDesc    },
+  ];
+
+  const list = peppers ?? DEFAULT_PEPPERS;
+
   return (
     <motion.section id="peppers" className="py-20 px-6">
       <div className="max-w-6xl mx-auto">
         <RevealSection className="text-center mb-14">
           <p className="text-xs font-semibold tracking-widest text-green-500 uppercase mb-3">
-            Our Varieties
+            {la.ourVarieties}
           </p>
           <h2
             className="text-4xl font-bold text-green-900"
             style={{ fontFamily: 'Lora, serif' }}
           >
-            Every pepper tells a story
+            {la.everyPepperStory}
           </h2>
           <p className="mt-3 text-gray-500 max-w-xl mx-auto leading-relaxed">
-            Thirty cultivars, each with its own personality, heat level, and culinary purpose.
-            We grow them all with the same obsessive care.
+            {la.peppersGridDesc}
           </p>
         </RevealSection>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {peppers.map((p, i) => (
+          {list.map((p, i) => (
             <PepperVarietyCard key={p.name} {...p} delay={i * 0.07} />
           ))}
         </div>
@@ -69,7 +69,7 @@ export default function PeppersGridSection({
               href={allVarietiesHref}
               className="inline-flex items-center gap-2 text-green-700 font-medium hover:text-green-900 transition-colors duration-150 cursor-pointer"
             >
-              Browse all varieties <ArrowRight className="w-4 h-4" />
+              {la.browseAllVarieties} <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </RevealSection>

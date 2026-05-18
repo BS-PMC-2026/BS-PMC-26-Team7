@@ -12,6 +12,7 @@ import {
 } from 'framer-motion';
 import { ShoppingBag, MapPin, ChevronDown } from 'lucide-react';
 import FloatingPepper from '@/components/ui/FloatingPepper';
+import { useLanguage } from '@/context/LanguageContext';
 
 const PEPPER_PARTICLES = [
   { x: 10, delay: 0,   size: 16 },
@@ -29,17 +30,10 @@ interface HeroSectionProps {
   scrollYProgress: MotionValue<number>;
 }
 
-/**
- * Full-screen hero section with:
- * - Slowed looping video background (/field_background.mp4)
- * - Gradient overlay
- * - Floating pepper particles
- * - Cursor glow
- * - Parallax headline + CTAs
- * - Scroll indicator
- */
 export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSectionProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { t } = useLanguage();
+  const la = t.landing;
 
   /* Slow the video down and restart seamlessly */
   useEffect(() => {
@@ -128,7 +122,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
           className="text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-tight mb-6 drop-shadow-lg"
           style={{ fontFamily: 'Lora, serif' }}
         >
-          From our fields
+          {la.heroLine1}
           <br />
           <motion.em
             className="text-green-300 not-italic"
@@ -136,7 +130,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
-            to your table.
+            {la.heroLine2}
           </motion.em>
         </motion.h1>
 
@@ -146,9 +140,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
           transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="text-lg text-green-100 max-w-2xl mx-auto leading-relaxed mb-10 drop-shadow"
         >
-          We grow over 30 pepper varieties with care, precision, and passion —
-          from mild Shishito to the fearsome Carolina Reaper.
-          Explore our farm, track every plant, taste the difference.
+          {la.heroDesc}
         </motion.p>
 
         <motion.div
@@ -163,7 +155,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors duration-200 cursor-pointer shadow-lg shadow-green-200"
             >
               <ShoppingBag className="w-4 h-4" />
-              Shop Peppers
+              {la.shopPeppers}
             </Link>
           </motion.div>
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
@@ -172,7 +164,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-green-800 bg-white border border-green-200 rounded-xl hover:bg-green-50 transition-colors duration-200 cursor-pointer"
             >
               <MapPin className="w-4 h-4" />
-              Tour the Farm
+              {la.tourFarm}
             </Link>
           </motion.div>
         </motion.div>
@@ -185,7 +177,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2 }}
       >
-        <span className="text-xs font-medium tracking-widest uppercase">Scroll</span>
+        <span className="text-xs font-medium tracking-widest uppercase">{la.scroll}</span>
         <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
           <ChevronDown className="w-5 h-5" />
         </motion.div>

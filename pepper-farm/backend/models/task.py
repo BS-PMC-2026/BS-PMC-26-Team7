@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -27,3 +27,23 @@ class Task(Base):
     assigned_to = relationship("User", foreign_keys=[AssignedToUserId], lazy="joined")
     zone        = relationship("FarmZone", foreign_keys=[ZoneId], lazy="joined")
     alert       = relationship("SensorAlert", foreign_keys=[AnomalyId], lazy="joined")
+    checklist_items = relationship(
+        "TaskChecklistItem",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        order_by="TaskChecklistItem.Position",
+    )
+
+
+class TaskChecklistItem(Base):
+    __tablename__ = "TaskChecklistItems"
+
+    ItemId      = Column(Integer, primary_key=True, autoincrement=True)
+    TaskId      = Column(Integer, ForeignKey("Tasks.Id"), nullable=False)
+    Title       = Column(String(200), nullable=False)
+    IsCompleted = Column(Boolean, nullable=False, default=False)
+    Position    = Column(Integer, nullable=False, default=0)
+    CreatedAt   = Column(DateTime, nullable=False, server_default=func.sysdatetime())
+    UpdatedAt   = Column(DateTime, nullable=False, server_default=func.sysdatetime())
+
+    task = relationship("Task", back_populates="checklist_items")

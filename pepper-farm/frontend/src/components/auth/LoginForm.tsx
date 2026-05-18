@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL, ROLE_ROUTES } from "@/lib/constants";
+import { ROLE_ROUTES } from "@/lib/constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface FormData {
   email:    string;
@@ -11,6 +12,7 @@ interface FormData {
 
 export default function LoginForm() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [form,    setForm]    = useState<FormData>({ email: "", password: "" });
   const [error,   setError]   = useState("");
@@ -26,13 +28,13 @@ export default function LoginForm() {
     setError("");
 
     if (!form.email || !form.password) {
-      setError("Email and password are required.");
+      setError(t.auth.emailPasswordRequired);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`/api/auth/login`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(form),
@@ -41,7 +43,7 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail ?? "Login failed.");
+        setError(data.detail ?? t.auth.loginFailed);
         return;
       }
 
@@ -56,7 +58,7 @@ export default function LoginForm() {
       router.push(route);
 
     } catch {
-      setError("Network error — please try again.");
+      setError(t.auth.networkError);
     } finally {
       setLoading(false);
     }
@@ -67,28 +69,29 @@ export default function LoginForm() {
       onSubmit={handleSubmit}
       className="bg-white rounded-xl shadow p-8 w-full max-w-sm flex flex-col gap-4"
     >
-      <h2 className="text-2xl font-bold text-center text-gray-800">Welcome Back</h2>
+      <h2 className="text-2xl font-bold text-center text-gray-800">{t.auth.welcomeBack}</h2>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Email</label>
+        <label className="text-sm font-medium text-gray-700">{t.auth.email}</label>
         <input
           name="email"
           type="email"
           value={form.email}
           onChange={handleChange}
-          placeholder="your@email.com"
+          placeholder={t.auth.emailPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+          dir="ltr"
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Password</label>
+        <label className="text-sm font-medium text-gray-700">{t.auth.password}</label>
         <input
           name="password"
           type="password"
           value={form.password}
           onChange={handleChange}
-          placeholder="Your password"
+          placeholder={t.auth.passwordPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
       </div>
@@ -104,12 +107,12 @@ export default function LoginForm() {
         disabled={loading}
         className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
       >
-        {loading ? "Logging in..." : "Login"}
+        {loading ? t.auth.loggingIn : t.auth.login}
       </button>
 
       <p className="text-center text-sm text-gray-500">
-        Don&apos;t have an account?{" "}
-        <a href="/register" className="text-green-600 hover:underline">Register</a>
+        {t.auth.noAccount}{" "}
+        <a href="/register" className="text-green-600 hover:underline">{t.auth.register}</a>
       </p>
     </form>
   );

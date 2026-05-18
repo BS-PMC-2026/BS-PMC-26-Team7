@@ -1,4 +1,8 @@
-import { createTask } from '@/services/tasks';
+import {
+  addChecklistItem,
+  createTask,
+  updateChecklistItem,
+} from '@/services/tasks';
 import type { CreateTaskFormData } from '@/types/task';
 
 global.fetch = jest.fn();
@@ -23,6 +27,7 @@ const baseFormData: CreateTaskFormData = {
   assignedToUserId: '',
   dueDate: '',
   zoneCode: 'GH-01',
+  checklistItems: [],
 };
 
 const mockTask = {
@@ -44,6 +49,7 @@ const mockTask = {
   alertInfo: null,
   createdAt: '2026-05-12T00:00:00',
   updatedAt: '2026-05-12T00:00:00',
+  checklistItems: [],
 };
 
 // ------------------------------------------------------------------ //
@@ -160,4 +166,86 @@ test('createTask converts empty assignedToUserId to null', async () => {
 
   const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
   expect(body.assignedToUserId).toBeNull();
+});
+
+// ------------------------------------------------------------------ //
+// Checklist items (US39)
+// ------------------------------------------------------------------ //
+
+test('createTask sends an empty checklistItems array by default', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockTask,
+  });
+
+  await createTask(baseFormData);
+
+  const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+  expect(body.checklistItems).toEqual([]);
+});
+
+test('createTask forwards checklist item titles, trimmed, dropping empties', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockTask,
+  });
+
+  await createTask({
+    ...baseFormData,
+    checklistItems: [
+      { title: '  Check humidity  ' },
+      { title: '' },
+      { title: 'Log results' },
+    ],
+  });
+
+  const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+  expect(body.checklistItems).toEqual([
+    { title: 'Check humidity' },
+    { title: 'Log results' },
+  ]);
+});
+
+test('updateChecklistItem PATCHes the item endpoint with the given payload', async () => {
+  const mockItem = { itemId: 9, title: 'Step', isCompleted: true, position: 0 };
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockItem,
+  });
+
+  const result = await updateChecklistItem(5, 9, { isCompleted: true }, 'tok');
+
+  const [url, options] = (fetch as jest.Mock).mock.calls[0];
+  expect(url).toContain('/api/tasks/5/checklist/9');
+  expect(options.method).toBe('PATCH');
+  expect(options.headers.Authorization).toBe('Bearer tok');
+  expect(JSON.parse(options.body)).toEqual({ isCompleted: true });
+  expect(result).toEqual(mockItem);
+});
+
+test('updateChecklistItem throws with backend error detail on non-OK response', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: false,
+    json: async () => ({ detail: 'Forbidden.' }),
+  });
+
+  await expect(
+    updateChecklistItem(5, 9, { isCompleted: true }, 'tok'),
+  ).rejects.toThrow('Forbidden.');
+});
+
+test('addChecklistItem POSTs the title to the checklist endpoint', async () => {
+  const mockItem = { itemId: 12, title: 'New', isCompleted: false, position: 2 };
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockItem,
+  });
+
+  const result = await addChecklistItem(5, '  New  ', 'tok');
+
+  const [url, options] = (fetch as jest.Mock).mock.calls[0];
+  expect(url).toContain('/api/tasks/5/checklist');
+  expect(options.method).toBe('POST');
+  expect(JSON.parse(options.body)).toEqual({ title: 'New' });
+  expect(result).toEqual(mockItem);
 });

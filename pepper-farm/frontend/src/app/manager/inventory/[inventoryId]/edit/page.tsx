@@ -6,23 +6,24 @@ import { useParams, useRouter } from 'next/navigation';
 import { getInventoryById, updateInventory } from '@/services/inventory';
 import { InventoryResponse, InventoryUpdatePayload } from '@/types/inventory';
 import QuantityUpdateForm from '@/components/inventory/QuantityUpdateForm';
-
-function getFriendlyErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) return 'Something went wrong. Please try again.';
-  const msg = error.message.toLowerCase();
-  if (msg.includes('cannot exceed')) return 'Store quantity cannot exceed warehouse quantity.';
-  if (msg.includes('must be 0 for warehouse-only')) return 'This is a warehouse-only item and cannot have a store quantity.';
-  if (msg.includes('not found')) return 'Inventory record was not found.';
-  if (msg.includes('database connection timeout'))
-    return 'The server is taking too long to respond. Please try again in a moment.';
-  if (msg.includes('access denied') || msg.includes('403'))
-    return 'You do not have permission to perform this action.';
-  return error.message;
-}
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function EditInventoryPage() {
   const { inventoryId } = useParams<{ inventoryId: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
+  const inv = t.inventory;
+
+  function getFriendlyErrorMessage(error: unknown): string {
+    if (!(error instanceof Error)) return inv.errGeneric;
+    const msg = error.message.toLowerCase();
+    if (msg.includes('cannot exceed'))               return inv.errExceedsWarehouse;
+    if (msg.includes('must be 0 for warehouse-only')) return inv.errWarehouseOnlyNoStore;
+    if (msg.includes('not found'))                   return inv.errNotFound;
+    if (msg.includes('database connection timeout')) return inv.errServerTimeout;
+    if (msg.includes('access denied') || msg.includes('403')) return inv.errNoPermission;
+    return error.message;
+  }
 
   const [inventory, setInventory] = useState<InventoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ export default function EditInventoryPage() {
       }
     }
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inventoryId]);
 
   async function handleSubmit(payload: InventoryUpdatePayload) {
@@ -52,7 +54,7 @@ export default function EditInventoryPage() {
       setSubmitting(true);
       const updated = await updateInventory(Number(inventoryId), payload);
       setInventory(updated);
-      setSuccessMessage('Inventory updated successfully.');
+      setSuccessMessage(inv.updatedSuccessfully);
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
     } finally {
@@ -64,14 +66,14 @@ export default function EditInventoryPage() {
     <main className="mx-auto max-w-3xl p-6">
       <div className="mb-6">
         <button onClick={() => router.push('/manager/inventory')} className="text-sm text-gray-500 hover:text-gray-800">
-          ← Back to inventory
+          {inv.backToInventory}
         </button>
-        <h1 className="mt-3 text-3xl font-bold">Update Inventory</h1>
+        <h1 className="mt-3 text-3xl font-bold">{inv.updateTitle}</h1>
         {inventory && (
           <p className="mt-2 text-sm text-gray-600">
             {inventory.DisplayName}
             {inventory.ProductId === null && (
-              <span className="ml-2 rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs">Warehouse-only</span>
+              <span className="ml-2 rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs">{inv.typeWarehouseOnly}</span>
             )}
           </p>
         )}

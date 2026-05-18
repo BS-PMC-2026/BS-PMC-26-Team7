@@ -15,6 +15,31 @@ class AlertInfo(BaseModel):
     isResolved: bool
     createdAtUtc: str
 
+class ChecklistItemIn(BaseModel):
+    title: str
+
+    @field_validator("title")
+    @classmethod
+    def title_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Checklist item title is required.")
+        return v
+
+
+class ChecklistItemOut(BaseModel):
+    itemId: int
+    title: str
+    isCompleted: bool
+    position: int
+
+    model_config = {"from_attributes": True}
+
+
+class UpdateChecklistItemRequest(BaseModel):
+    title: Optional[str] = None
+    isCompleted: Optional[bool] = None
+
+
 class CreateTaskRequest(BaseModel):
     title: str
     taskType: str
@@ -26,6 +51,7 @@ class CreateTaskRequest(BaseModel):
     zoneId: Optional[int] = None
     zoneCode: Optional[str] = None  # alternative to zoneId; resolved server-side
     anomalyId: Optional[int] = None  # links task to the source SensorAlert
+    checklistItems: list[ChecklistItemIn] = []
 
 
 class UpdateTaskRequest(BaseModel):
@@ -71,5 +97,6 @@ class TaskResponse(BaseModel):
     alertInfo: Optional[AlertInfo] = None
     createdAt: datetime
     updatedAt: datetime
+    checklistItems: list[ChecklistItemOut] = []
 
     model_config = {"from_attributes": True}

@@ -11,7 +11,7 @@ SECRET_KEY     = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM      = "HS256"
 EXPIRE_MINUTES = 60
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def create_token(data: dict) -> str:

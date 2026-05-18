@@ -6,6 +6,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { getAllPlants, PlantData, createPlant } from '@/services/plants';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
+import { useLanguage } from '@/context/LanguageContext';
 
 const ZONE_CODE_TO_ID: Record<string, number> = {
   'GH-01': 1,  'GH-02': 2,  'GH-03': 3,  'GH-04': 4,
@@ -16,6 +17,8 @@ const ZONE_CODE_TO_ID: Record<string, number> = {
 };
 
 export default function ManagerMapPage() {
+  const { t } = useLanguage();
+  const mp = t.map;
   const [peppers,        setPeppers]        = useState<Pepper[]>([]);
   const [plants,         setPlants]         = useState<PlantData[]>([]);
   const [selectedPepper, setSelectedPepper] = useState<number | "">("");
@@ -33,7 +36,7 @@ export default function ManagerMapPage() {
 
   const handleAssignToZone = async (section: FarmSection) => {
     if (!selectedPepper) {
-      setMessage({ text: "Please select a pepper first.", ok: false });
+      setMessage({ text: mp.pleaseSelectPepper, ok: false });
       return;
     }
     setSaving(true);
@@ -51,25 +54,25 @@ export default function ManagerMapPage() {
         IsActive:  true,
       });
 
-      setMessage({ text: `${pepper?.PepperName} assigned to ${section.name} successfully.`, ok: true });
+      setMessage({ text: `${pepper?.PepperName} — ${section.name} — ${mp.assignedSuccessfully}`, ok: true });
       setSelectedPepper("");
       const updated = await getAllPlants(token);
       setPlants(updated);
     } catch (err: unknown) {
-      setMessage({ text: err instanceof Error ? err.message : "Failed to assign.", ok: false });
+      setMessage({ text: err instanceof Error ? err.message : mp.failedToAssign, ok: false });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen">
+      <div className="border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <PageHeader
-            label="PepperFarm"
-            title="Farm Map — Assign Peppers to Zones"
-            subtitle="Select a pepper variety and click a zone to plant it there"
+            label={mp.label}
+            title={mp.title}
+            subtitle={mp.subtitle}
           />
         </div>
       </div>
@@ -79,14 +82,14 @@ export default function ManagerMapPage() {
         {/* Pepper selector */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6 flex items-center gap-4 flex-wrap">
           <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-            Select Pepper:
+            {mp.selectPepper}
           </label>
           <select
             value={selectedPepper}
             onChange={e => setSelectedPepper(e.target.value === "" ? "" : Number(e.target.value))}
             className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-64"
           >
-            <option value="">-- Choose a pepper --</option>
+            <option value="">{mp.choosePepper}</option>
             {peppers.map(p => (
               <option key={p.PepperId} value={p.PepperId}>
                 🌶️ {p.PepperName}
@@ -95,7 +98,7 @@ export default function ManagerMapPage() {
           </select>
           {selectedPepper && (
             <span className="text-sm text-green-600 font-medium">
-              ✅ Now click a zone on the map to plant it
+              ✅ {mp.clickZoneHint}
             </span>
           )}
         </div>
@@ -121,7 +124,7 @@ export default function ManagerMapPage() {
                   disabled={!selectedPepper || saving}
                   className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
                 >
-                  {saving ? "Planting..." : selectedPepper ? "Plant here 🌱" : "Select a pepper first"}
+                  {saving ? mp.planting : selectedPepper ? mp.plantHere : mp.selectPepperFirst}
                 </button>
               </div>
             )}
