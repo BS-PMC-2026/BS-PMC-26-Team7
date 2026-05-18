@@ -6,6 +6,7 @@ import { PlantData } from '@/services/plants';
 import { useLanguage } from '@/context/LanguageContext';
 import { Task } from '@/types/task';
 import { ZoneHealth } from '@/types/anomaly';
+import { API_URL } from '@/lib/constants';
 
 interface ZoneData {
   ZoneName: string;
@@ -166,7 +167,7 @@ export default function FarmMap({
     setSelected(section);
     setZoneData(null);
     setZoneLoading(true);
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://hadinerim.azurewebsites.net'}/api/zones/${section.id}`)
+    fetch(`${API_URL}/api/zones/${section.id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setZoneData(data))
       .catch(() => setZoneData(null))

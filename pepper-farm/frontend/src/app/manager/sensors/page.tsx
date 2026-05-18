@@ -27,9 +27,7 @@ import {
 } from '@/services/sensors';
 import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
 import { useLanguage } from '@/context/LanguageContext';
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://hadinerim.azurewebsites.net";
+import { API_URL as API_BASE } from '@/lib/constants';
   
 function sensorLabel(s: SensorInfo, inactiveText: string): string {
   const name = s.DeviceName || s.MacAddress;
