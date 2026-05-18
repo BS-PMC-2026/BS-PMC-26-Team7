@@ -15,16 +15,12 @@ import Alert from '@/components/ui/Alert';
 import TaskProgressBar from '@/components/tasks/TaskProgressBar';
 import { useLanguage } from '@/context/LanguageContext';
 import { getManagerDashboardData, ManagerDashboardData } from '@/lib/managerDashboardApi';
+import { groupDashboardTasks, isTaskOpen } from '@/lib/taskUrgency';
 import { InventoryResponse } from '@/types/inventory';
 import { Task } from '@/types/task';
 
-const OPEN_TASK_STATUSES = new Set(['todo', 'pending', 'in_progress', 'in progress', 'not_completed', 'not completed']);
 const LOW_STOCK_LIMIT = 5;
 const STORE_LOW_LIMIT = 2;
-
-function isOpenTask(task: Task): boolean {
-  return OPEN_TASK_STATUSES.has(String(task.status).toLowerCase());
-}
 
 function displayDate(value: string | null, locale: string, fallback: string): string {
   if (!value) return fallback;
@@ -91,6 +87,7 @@ export default function ManagerPage() {
   const [error, setError] = useState<string | null>(null);
   const [managerName, setManagerName] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<MapFilter>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token') ?? '';
@@ -109,15 +106,19 @@ export default function ManagerPage() {
     return map;
   }, [data?.users]);
 
+  // All open tasks — passed to FarmMap for zone highlighting
   const openTasks = useMemo(
-    () => (data?.tasks ?? []).filter(isOpenTask).sort((a, b) => {
-      if (!a.dueDate && !b.dueDate) return 0;
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    }),
+    () => (data?.tasks ?? []).filter(isTaskOpen),
     [data?.tasks],
   );
+
+  // Tasks grouped by urgency for the dashboard card
+  const { overdue: overdueTasks, dueSoon: dueSoonTasks, normal: normalTasks, recentlyCompleted } = useMemo(
+    () => groupDashboardTasks(data?.tasks ?? []),
+    [data?.tasks],
+  );
+
+  const openTaskCount = overdueTasks.length + dueSoonTasks.length + normalTasks.length;
 
   const inventoryAlerts = useMemo(
     () => (data?.inventory ?? []).filter(isInventoryAlert),
@@ -130,11 +131,37 @@ export default function ManagerPage() {
   const highSeverity = data?.anomalySummary?.highSeverity ?? 0;
   const affectedZones = data?.anomalySummary?.affectedZones ?? data?.zoneHealth.filter((zone) => zone.health !== 'normal').length ?? 0;
   const readingAge = latestReadingAge(data?.latestReadings ?? [], d.noSensorDataAvailable);
+
   const mapFilters: { id: NonNullable<MapFilter>; label: string }[] = [
     { id: 'pepper', label: t.map.filterPlantedPepper },
-    { id: 'task', label: t.map.filterOpenTask },
+    { id: 'task',   label: t.map.filterOpenTask },
     { id: 'sensor', label: t.map.filterSensorAnomaly },
   ];
+
+  // Legend items change with the active filter — mirrors FarmMap's internal FILTER_LEGENDS
+  const legendItems = useMemo(() => {
+    if (activeFilter === 'pepper') return [
+      { label: t.map.legendHasPepper, color: 'rgba(22,163,74,0.18)',  border: '#16a34a' },
+      { label: t.map.legendNoPepper,  color: 'rgba(209,213,219,0.5)', border: '#9ca3af' },
+    ];
+    if (activeFilter === 'task') return [
+      { label: t.map.legendHasTasks, color: 'rgba(239,68,68,0.18)',  border: '#ef4444' },
+      { label: t.map.legendNoTasks,  color: 'rgba(209,213,219,0.5)', border: '#9ca3af' },
+    ];
+    if (activeFilter === 'sensor') return [
+      { label: t.map.legendSensorHigh,   color: 'rgba(239,68,68,0.2)',   border: '#ef4444' },
+      { label: t.map.legendSensorMedium, color: 'rgba(249,115,22,0.18)', border: '#f97316' },
+      { label: t.map.legendSensorNormal, color: 'rgba(74,222,128,0.2)',  border: '#4ade80' },
+      { label: t.map.legendNoSensorData, color: 'rgba(229,231,235,0.6)', border: '#9ca3af' },
+    ];
+    // null — default alert view
+    return [
+      { label: t.map.legendBothAlerts,  color: 'rgba(220,38,38,0.2)',   border: '#dc2626' },
+      { label: t.map.legendTaskAlert,   color: 'rgba(239,68,68,0.15)',  border: '#ef4444' },
+      { label: t.map.legendSensorAlert, color: 'rgba(249,115,22,0.15)', border: '#f97316' },
+      { label: t.map.legendNeutral,     color: 'transparent',           border: '#9ca3af' },
+    ];
+  }, [activeFilter, t.map]);
 
   return (
     <main className="min-h-screen bg-[#F6F8F4]" dir={dir}>
@@ -169,41 +196,125 @@ export default function ManagerPage() {
         ) : (
           <>
             <section className="grid gap-5 lg:grid-cols-[minmax(270px,0.65fr)_minmax(760px,2.4fr)_minmax(280px,0.75fr)]" dir="ltr">
-              <DashboardCard title={d.openTasks} icon={<ClipboardList className="h-4 w-4" />} direction={dir}>
-                {openTasks.length === 0 ? (
+
+              {/* ── Open Tasks card ── */}
+              <DashboardCard
+                title={d.openTasks}
+                icon={<ClipboardList className="h-4 w-4" />}
+                direction={dir}
+              >
+                {openTaskCount === 0 && recentlyCompleted.length === 0 ? (
                   <EmptyMessage text={d.noOpenTasks} />
                 ) : (
                   <>
-                    <p className="mb-2 text-xs font-medium text-gray-500">
-                      {d.openTasksCount.replace('{count}', String(openTasks.length))}
-                    </p>
+                    {/* Count + toggle */}
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      {openTaskCount > 0 && (
+                        <p className="text-xs font-medium text-gray-500">
+                          {d.openTasksCount.replace('{count}', String(openTaskCount))}
+                        </p>
+                      )}
+                      {recentlyCompleted.length > 0 && (
+                        <button
+                          type="button"
+                          data-testid="toggle-completed"
+                          onClick={() => setShowCompleted((c) => !c)}
+                          className={`ms-auto rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                            showCompleted
+                              ? 'border-green-200 bg-green-50 text-green-700'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          }`}
+                        >
+                          {showCompleted ? d.hideCompleted : d.showCompleted}
+                        </button>
+                      )}
+                    </div>
+
                     <div
                       data-testid="open-tasks-scroll"
-                      className="max-h-[440px] overflow-y-auto space-y-3 pr-1"
+                      className="max-h-[440px] overflow-y-auto space-y-2 pr-1"
                     >
-                      {openTasks.map((task) => (
-                        <article key={task.id} className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
-                          <h3 className="text-sm font-semibold text-gray-900" dir="auto">{task.title}</h3>
-                          <dl className="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-500">
-                            <InfoRow label={d.dueDate} value={displayDate(task.dueDate, locale, d.noDueDate)} />
-                            <InfoRow label={d.assignedTo} value={task.assignedToUserId ? workersById.get(task.assignedToUserId) ?? d.unknownWorker : d.unassigned} />
-                          </dl>
-                          {task.checklistItems && task.checklistItems.length > 0 && (
-                            <TaskProgressBar checklistItems={task.checklistItems} />
-                          )}
-                        </article>
+                      {/* Group 1: Overdue */}
+                      {overdueTasks.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-red-600" data-testid="group-label-overdue">
+                            {d.overdue}
+                          </p>
+                          {overdueTasks.map((task) => (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              urgency="overdue"
+                              d={d}
+                              workersById={workersById}
+                              locale={locale}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Group 2: Due soon */}
+                      {dueSoonTasks.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-amber-600" data-testid="group-label-due-soon">
+                            {d.dueSoon}
+                          </p>
+                          {dueSoonTasks.map((task) => (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              urgency="due-soon"
+                              d={d}
+                              workersById={workersById}
+                              locale={locale}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Group 3: Normal open tasks */}
+                      {normalTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          urgency="normal"
+                          d={d}
+                          workersById={workersById}
+                          locale={locale}
+                        />
                       ))}
+
+                      {/* Group 4: Recently completed (toggle) */}
+                      {showCompleted && recentlyCompleted.length > 0 && (
+                        <div className="mt-2 border-t border-green-100 pt-3">
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-green-700" data-testid="group-label-completed">
+                            {d.recentlyCompleted}
+                          </p>
+                          {recentlyCompleted.map((task) => (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              urgency="completed"
+                              d={d}
+                              workersById={workersById}
+                              locale={locale}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
               </DashboardCard>
 
+              {/* ── Farm Map card ── */}
               <DashboardCard title={d.farmMap} icon={<MapIcon className="h-4 w-4" />} className="min-w-0" direction={dir}>
                 <div className="mb-3 flex flex-wrap items-center gap-2" dir={dir}>
                   {mapFilters.map((filter) => (
                     <button
                       key={filter.id}
                       type="button"
+                      data-testid={`filter-${filter.id}`}
                       onClick={() => setActiveFilter((current) => (current === filter.id ? null : filter.id))}
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         activeFilter === filter.id
@@ -217,6 +328,7 @@ export default function ManagerPage() {
                   {activeFilter !== null && (
                     <button
                       type="button"
+                      data-testid="filter-clear"
                       onClick={() => setActiveFilter(null)}
                       className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
                     >
@@ -233,16 +345,10 @@ export default function ManagerPage() {
                     showLegend={false}
                   />
                 </div>
-                <DashboardMapLegend
-                  items={[
-                    { label: t.map.legendBothAlerts, color: 'rgba(220,38,38,0.2)', border: '#dc2626' },
-                    { label: t.map.legendTaskAlert, color: 'rgba(239,68,68,0.15)', border: '#ef4444' },
-                    { label: t.map.legendSensorAlert, color: 'rgba(249,115,22,0.15)', border: '#f97316' },
-                    { label: t.map.legendNeutral, color: 'transparent', border: '#9ca3af' },
-                  ]}
-                />
+                <DashboardMapLegend items={legendItems} />
               </DashboardCard>
 
+              {/* ── Deviation Data card ── */}
               <DashboardCard title={d.deviationData} icon={<AlertTriangle className="h-4 w-4" />} direction={dir}>
                 {(data?.latestReadings.length ?? 0) === 0 && activeAnomalies === 0 ? (
                   <EmptyMessage text={d.noSensorDataAvailable} />
@@ -315,6 +421,62 @@ export default function ManagerPage() {
   );
 }
 
+// ── Shared card for a single task (all urgency levels) ─────────────────────────
+
+type UrgencyLevel = 'overdue' | 'due-soon' | 'normal' | 'completed';
+
+const URGENCY_STYLES: Record<UrgencyLevel, string> = {
+  overdue:   'border-s-4 border-s-red-400    border border-red-100    bg-red-50/50',
+  'due-soon':'border-s-4 border-s-amber-400  border border-amber-100  bg-amber-50/50',
+  normal:    'border border-gray-100 bg-gray-50/70',
+  completed: 'border-s-4 border-s-green-400  border border-green-100  bg-green-50/50',
+};
+
+const URGENCY_TEST_IDS: Record<UrgencyLevel, string> = {
+  overdue:   'urgency-overdue',
+  'due-soon':'urgency-due-soon',
+  normal:    'urgency-normal',
+  completed: 'completed-task',
+};
+
+function TaskCard({
+  task,
+  urgency,
+  d,
+  workersById,
+  locale,
+}: {
+  task: Task;
+  urgency: UrgencyLevel;
+  d: ReturnType<typeof useLanguage>['t']['dashboard'];
+  workersById: Map<number, string>;
+  locale: string;
+}) {
+  return (
+    <article
+      data-testid={URGENCY_TEST_IDS[urgency]}
+      className={`mb-2 rounded-lg p-3 ${URGENCY_STYLES[urgency]}`}
+    >
+      <h3 className="text-sm font-semibold text-gray-900" dir="auto">{task.title}</h3>
+      <dl className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-500">
+        <InfoRow label={d.dueDate} value={displayDate(task.dueDate, locale, d.noDueDate)} />
+        {urgency === 'completed' && task.completedAt && (
+          <InfoRow label={d.completedAt} value={displayDate(task.completedAt, locale, '')} />
+        )}
+        <InfoRow
+          label={d.assignedTo}
+          value={task.assignedToUserId ? workersById.get(task.assignedToUserId) ?? d.unknownWorker : d.unassigned}
+        />
+      </dl>
+      {task.checklistItems && task.checklistItems.length > 0 && (
+        <TaskProgressBar checklistItems={task.checklistItems} />
+      )}
+    </article>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 function DashboardCard({
   title,
   icon,
@@ -353,7 +515,7 @@ function DashboardMapLegend({
   items: Array<{ label: string; color: string; border: string }>;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2" data-testid="dashboard-legend">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-1.5">
           <span
@@ -391,11 +553,11 @@ function StatTile({
   tone: 'red' | 'amber' | 'green' | 'blue' | 'gray';
 }) {
   const tones = {
-    red: 'bg-red-50 text-red-700 border-red-100',
+    red:   'bg-red-50 text-red-700 border-red-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
     green: 'bg-green-50 text-green-700 border-green-100',
-    blue: 'bg-blue-50 text-blue-700 border-blue-100',
-    gray: 'bg-gray-50 text-gray-700 border-gray-100',
+    blue:  'bg-blue-50 text-blue-700 border-blue-100',
+    gray:  'bg-gray-50 text-gray-700 border-gray-100',
   };
 
   return (
