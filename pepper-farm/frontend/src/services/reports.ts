@@ -1,4 +1,4 @@
-import { API_URL } from "@/lib/constants";
+import { apiFetch } from "./apiClient";
 
 export interface InventoryReportRow {
   InventoryId:       number;
@@ -19,21 +19,14 @@ export interface InventoryReportFilters {
 }
 
 export async function getInventoryReport(
-  filters: InventoryReportFilters = {}
+  filters: InventoryReportFilters = {},
 ): Promise<InventoryReportRow[]> {
-  const token = localStorage.getItem("token") ?? "";
   const params = new URLSearchParams();
-  if (filters.category)    params.set("category", filters.category);
+  if (filters.category)     params.set("category", filters.category);
   if (filters.lowStockOnly) params.set("low_stock_only", "true");
-  if (filters.sortBy)      params.set("sort_by", filters.sortBy);
-
+  if (filters.sortBy)       params.set("sort_by", filters.sortBy);
   const query = params.toString();
-  const url = `${API_URL}/api/inventory/report${query ? `?${query}` : ""}`;
-
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Failed to load inventory report.");
-  return json;
+  return apiFetch<InventoryReportRow[]>(
+    `/api/inventory/report${query ? `?${query}` : ""}`,
+  );
 }

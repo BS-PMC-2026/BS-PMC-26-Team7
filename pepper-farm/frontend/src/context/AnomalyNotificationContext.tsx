@@ -14,7 +14,6 @@ import { getCompletedTasks } from '@/services/tasks';
 import type { RecentAlert } from '@/types/anomaly';
 import type { Task } from '@/types/task';
 import { useToast } from '@/context/ToastContext';
-import { API_URL } from '@/lib/constants';
 
 const FALLBACK_INTERVAL_MS = 30_000;
 const TASK_POLL_INTERVAL_MS = 30_000;
@@ -124,7 +123,7 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
       esRef.current.close();
       esRef.current = null;
     }
-    const url = `${API_URL}/api/manager/anomalies/stream?last_alert_id=${maxAlertId.current}`;
+    const url = `/api/manager/anomalies/stream?last_alert_id=${maxAlertId.current}`;
     const es = new EventSource(url);
     esRef.current = es;
 
@@ -150,12 +149,15 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
   // Mount: initial full load, then open SSE + start task polling
   // ------------------------------------------------------------------
   useEffect(() => {
+    // Only run when a token is present (authenticated pages only)
+    if (typeof window !== 'undefined' && !localStorage.getItem('token')) return;
+
     let cancelled = false;
 
     async function init() {
       // Load alerts
       try {
-        const result = await getRecentAlerts({ limit: 100 });
+        const result = await getRecentAlerts({ limit: 20 });
         if (cancelled) return;
         const alerts = result.items;
         setLiveAlerts(alerts);

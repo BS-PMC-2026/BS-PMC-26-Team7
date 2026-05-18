@@ -153,6 +153,7 @@ export interface DashboardDictionary {
   noDueDate:             string;
   unknownWorker:         string;
   unassigned:            string;
+  openTasksCount:        string;
 }
 
 export interface UsersDictionary {
@@ -968,6 +969,7 @@ const en: Dictionary = {
     noDueDate:             'No due date',
     unknownWorker:         'Unknown worker',
     unassigned:            'Unassigned',
+    openTasksCount:        '{count} open tasks',
   },
 
   users: {
@@ -1727,6 +1729,7 @@ const he: Dictionary = {
     noDueDate:             'אין תאריך יעד',
     unknownWorker:         'עובד לא ידוע',
     unassigned:            'לא מוקצה',
+    openTasksCount:        '{count} משימות פתוחות',
   },
 
   users: {

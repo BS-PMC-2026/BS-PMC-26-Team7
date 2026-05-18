@@ -1,7 +1,5 @@
-import { apiFetch } from './api';
-import { API_URL } from '@/lib/constants';
+import { apiFetch } from './apiClient';
 import { ChecklistFormItem, ChecklistItem, CreateTaskFormData, Task } from '@/types/task';
-
 
 interface CreateTaskPayload {
   title: string;
@@ -32,12 +30,9 @@ function toPayload(data: CreateTaskFormData): Omit<CreateTaskPayload, 'anomalyId
 }
 
 export async function getMyTasks(token: string): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/my`, {
+  return apiFetch<Task[]>('/api/tasks/my', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks.');
-  return json;
 }
 
 export async function getTasks(): Promise<Task[]> {
@@ -45,22 +40,14 @@ export async function getTasks(): Promise<Task[]> {
 }
 
 export async function createTask(data: CreateTaskFormData, anomalyId?: number): Promise<Task> {
-  const token = localStorage.getItem('token') ?? '';
   const payload: CreateTaskPayload = {
     ...toPayload(data),
     ...(anomalyId !== undefined ? { anomalyId } : {}),
   };
-  const res = await fetch(`${API_URL}/api/tasks`, {
+  return apiFetch<Task>('/api/tasks', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(payload),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to create task.');
-  return json;
 }
 
 export async function updateTask(
@@ -68,54 +55,38 @@ export async function updateTask(
   data: Partial<CreateTaskFormData> & { status?: string },
   token: string,
 ): Promise<Task> {
-  const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+  return apiFetch<Task>(`/api/tasks/${taskId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({
       ...(data.title !== undefined && { title: data.title.trim() }),
       ...(data.description !== undefined && { description: data.description.trim() || null }),
       ...(data.taskType !== undefined && { taskType: data.taskType }),
       ...(data.priority !== undefined && { priority: data.priority }),
-      ...(data.assignedToUserId !== undefined && { assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null }),
+      ...(data.assignedToUserId !== undefined && {
+        assignedToUserId: data.assignedToUserId ? Number(data.assignedToUserId) : null,
+      }),
       ...(data.dueDate !== undefined && { dueDate: data.dueDate || null }),
       ...(data.zoneCode !== undefined && { zoneCode: data.zoneCode || null }),
       ...(data.status !== undefined && { status: data.status }),
     }),
+    headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to update task.');
-  return json;
 }
 
 export async function getTasksReport(token: string): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/report`, {
+  return apiFetch<Task[]>('/api/tasks/report', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
-  return json;
 }
 
 export async function getTasksReportByWorker(token: string, workerId: number): Promise<Task[]> {
-  const res = await fetch(`${API_URL}/api/tasks/report?worker_id=${workerId}`, {
+  return apiFetch<Task[]>(`/api/tasks/report?worker_id=${workerId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to fetch tasks report.');
-  return json;
 }
 
 export async function getCompletedTasks(): Promise<Task[]> {
-  const token = localStorage.getItem('token') ?? '';
-
-  return apiFetch<Task[]>('/api/tasks/completed', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch<Task[]>('/api/tasks/completed');
 }
 
 export async function addChecklistItem(
@@ -123,17 +94,11 @@ export async function addChecklistItem(
   title: string,
   token: string,
 ): Promise<ChecklistItem> {
-  const res = await fetch(`${API_URL}/api/tasks/${taskId}/checklist`, {
+  return apiFetch<ChecklistItem>(`/api/tasks/${taskId}/checklist`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ title: title.trim() }),
+    headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to add checklist item.');
-  return json;
 }
 
 export async function updateChecklistItem(
@@ -142,23 +107,14 @@ export async function updateChecklistItem(
   patch: { title?: string; isCompleted?: boolean },
   token: string,
 ): Promise<ChecklistItem> {
-  const res = await fetch(
-    `${API_URL}/api/tasks/${taskId}/checklist/${itemId}`,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...(patch.title !== undefined && { title: patch.title.trim() }),
-        ...(patch.isCompleted !== undefined && { isCompleted: patch.isCompleted }),
-      }),
-    },
-  );
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? 'Failed to update checklist item.');
-  return json;
+  return apiFetch<ChecklistItem>(`/api/tasks/${taskId}/checklist/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(patch.title !== undefined && { title: patch.title.trim() }),
+      ...(patch.isCompleted !== undefined && { isCompleted: patch.isCompleted }),
+    }),
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function deleteChecklistItem(
@@ -166,17 +122,10 @@ export async function deleteChecklistItem(
   itemId: number,
   token: string,
 ): Promise<void> {
-  const res = await fetch(
-    `${API_URL}/api/tasks/${taskId}/checklist/${itemId}`,
-    {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  );
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.detail ?? 'Failed to delete checklist item.');
-  }
+  await apiFetch<void>(`/api/tasks/${taskId}/checklist/${itemId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 /**
@@ -206,7 +155,7 @@ export async function syncChecklistItems(
   const result: ChecklistItem[] = [];
   for (const item of updated) {
     const title = item.title.trim();
-    if (!title) continue; // skip empty
+    if (!title) continue;
 
     if (item.itemId !== undefined) {
       const orig = originalById.get(item.itemId);

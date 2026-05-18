@@ -1,4 +1,4 @@
-import { API_URL } from "@/lib/constants";
+import { apiFetch } from "./apiClient";
 
 export interface UserData {
   userId:   number;
@@ -9,33 +9,21 @@ export interface UserData {
 }
 
 export async function getAllUsers(token: string): Promise<UserData[]> {
-  const res = await fetch(`${API_URL}/api/users`, {
+  return apiFetch<UserData[]>("/api/users", {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Failed to fetch users.");
-  return json;
 }
 
 export async function promoteUser(token: string, userId: number, roleId: number): Promise<UserData> {
-  const res = await fetch(`${API_URL}/api/users/${userId}/role`, {
-    method:  "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization:  `Bearer ${token}`,
-    },
+  return apiFetch<UserData>(`/api/users/${userId}/role`, {
+    method: "PUT",
     body: JSON.stringify({ roleId }),
+    headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Failed to promote user.");
-  return json;
 }
 
 export async function searchUsers(token: string, name: string): Promise<UserData[]> {
-  const res = await fetch(`${API_URL}/api/users/search?name=${encodeURIComponent(name)}`, {
+  return apiFetch<UserData[]>(`/api/users/search?name=${encodeURIComponent(name)}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Failed to search users.");
-  return json;
 }

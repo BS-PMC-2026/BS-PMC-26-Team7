@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings, sensors, zones, spray
 from routers.anomalies import router as anomalies_router, resolve_router
-from routers import tasks, users, auth, peppers, plants, products, inventory, sensors, zones,spray
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -18,7 +17,6 @@ from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routers import peppers, plants, zones
 from services.sensor_auto_sync_service import (
     start_sensor_scheduler,
     stop_sensor_scheduler,

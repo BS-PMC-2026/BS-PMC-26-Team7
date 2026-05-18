@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import FarmMap, { MapFilter } from '@/components/map/FarmMap';
 import Alert from '@/components/ui/Alert';
+import TaskProgressBar from '@/components/tasks/TaskProgressBar';
 import { useLanguage } from '@/context/LanguageContext';
 import { getManagerDashboardData, ManagerDashboardData } from '@/lib/managerDashboardApi';
 import { InventoryResponse } from '@/types/inventory';
@@ -172,17 +173,28 @@ export default function ManagerPage() {
                 {openTasks.length === 0 ? (
                   <EmptyMessage text={d.noOpenTasks} />
                 ) : (
-                  <div className="space-y-3">
-                    {openTasks.slice(0, 7).map((task) => (
-                      <article key={task.id} className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
-                        <h3 className="text-sm font-semibold text-gray-900" dir="auto">{task.title}</h3>
-                        <dl className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-500">
-                          <InfoRow label={d.dueDate} value={displayDate(task.dueDate, locale, d.noDueDate)} />
-                          <InfoRow label={d.assignedTo} value={task.assignedToUserId ? workersById.get(task.assignedToUserId) ?? d.unknownWorker : d.unassigned} />
-                        </dl>
-                      </article>
-                    ))}
-                  </div>
+                  <>
+                    <p className="mb-2 text-xs font-medium text-gray-500">
+                      {d.openTasksCount.replace('{count}', String(openTasks.length))}
+                    </p>
+                    <div
+                      data-testid="open-tasks-scroll"
+                      className="max-h-[440px] overflow-y-auto space-y-3 pr-1"
+                    >
+                      {openTasks.map((task) => (
+                        <article key={task.id} className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
+                          <h3 className="text-sm font-semibold text-gray-900" dir="auto">{task.title}</h3>
+                          <dl className="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-500">
+                            <InfoRow label={d.dueDate} value={displayDate(task.dueDate, locale, d.noDueDate)} />
+                            <InfoRow label={d.assignedTo} value={task.assignedToUserId ? workersById.get(task.assignedToUserId) ?? d.unknownWorker : d.unassigned} />
+                          </dl>
+                          {task.checklistItems && task.checklistItems.length > 0 && (
+                            <TaskProgressBar checklistItems={task.checklistItems} />
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  </>
                 )}
               </DashboardCard>
 

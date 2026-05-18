@@ -14,6 +14,8 @@ from models.user import User
 from models.task import Task
 from models.farm_zone import FarmZone
 from models.pepper_variety import PepperVariety
+import models.plant   # noqa: F401 — registers Plants table referenced by SensorAssignment FK
+import models.sensor  # noqa: F401 — registers SensorAssignment, SensorAlert, etc.
 from schemas.task import ChecklistItemIn, CreateTaskRequest, UpdateChecklistItemRequest
 from services.task_service import (
     add_checklist_item,
