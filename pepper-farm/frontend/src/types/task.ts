@@ -19,6 +19,13 @@ export interface ChecklistItem {
   position: number;
 }
 
+// Used inside TaskForm: existing items carry itemId + isCompleted; new items don't.
+export interface ChecklistFormItem {
+  itemId?: number;
+  title: string;
+  isCompleted: boolean;
+}
+
 export interface CreateTaskFormData {
   title: string;
   description: string;
@@ -27,7 +34,7 @@ export interface CreateTaskFormData {
   assignedToUserId: string;
   dueDate: string;
   zoneCode: string; // section id like 'GH-01', empty = none
-  checklistItems: { title: string }[];
+  checklistItems: ChecklistFormItem[];
 }
 
 export interface Task {

@@ -285,3 +285,82 @@ def test_delete_checklist_item_removes_row(db):
         db, created.id, item_id, UpdateChecklistItemRequest(isCompleted=True)
     )
     assert post_error == "Checklist item not found."
+
+
+def test_update_checklist_item_updates_title(db):
+    """update_checklist_item replaces the title without touching isCompleted."""
+    dto = CreateTaskRequest(
+        title="Rename step",
+        taskType="inspection",
+        priority="medium",
+        checklistItems=[ChecklistItemIn(title="Old title")],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+    item_id = created.checklistItems[0].itemId
+
+    updated, error = update_checklist_item(
+        db, created.id, item_id, UpdateChecklistItemRequest(title="New title")
+    )
+    assert error is None
+    assert updated.title == "New title"
+    assert updated.isCompleted is False  # unchanged
+
+
+def test_update_checklist_item_empty_title_returns_error(db):
+    """update_checklist_item rejects a blank title update."""
+    dto = CreateTaskRequest(
+        title="t",
+        taskType="other",
+        priority="low",
+        checklistItems=[ChecklistItemIn(title="Original")],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+    item_id = created.checklistItems[0].itemId
+
+    result, error = update_checklist_item(
+        db, created.id, item_id, UpdateChecklistItemRequest(title="   ")
+    )
+    assert result is None
+    assert error is not None
+    assert "empty" in error.lower() or "cannot" in error.lower()
+
+
+def test_create_task_checklist_items_have_correct_positions(db):
+    """Each checklist item gets a sequential Position starting from 0."""
+    dto = CreateTaskRequest(
+        title="Ordered task",
+        taskType="inspection",
+        priority="medium",
+        checklistItems=[
+            ChecklistItemIn(title="First"),
+            ChecklistItemIn(title="Second"),
+            ChecklistItemIn(title="Third"),
+        ],
+    )
+    created, _ = create_task(db, MANAGER_ID, dto)
+
+    positions = [i.position for i in created.checklistItems]
+    assert positions == [0, 1, 2]
+
+
+def test_checklist_items_belong_to_correct_task(db):
+    """Checklist items created for one task are not returned for another."""
+    dto_a = CreateTaskRequest(
+        title="Task A",
+        taskType="inspection",
+        priority="low",
+        checklistItems=[ChecklistItemIn(title="Item A")],
+    )
+    dto_b = CreateTaskRequest(
+        title="Task B",
+        taskType="inspection",
+        priority="low",
+        checklistItems=[ChecklistItemIn(title="Item B")],
+    )
+    task_a, _ = create_task(db, MANAGER_ID, dto_a)
+    task_b, _ = create_task(db, MANAGER_ID, dto_b)
+
+    assert len(task_a.checklistItems) == 1
+    assert task_a.checklistItems[0].title == "Item A"
+    assert len(task_b.checklistItems) == 1
+    assert task_b.checklistItems[0].title == "Item B"

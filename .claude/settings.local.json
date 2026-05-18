@@ -38,7 +38,13 @@
       "Bash(ls /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/tests/Worker*)",
       "Bash(ls /Users/omerelkabets/Documents/GitHub/BS-PMC-26-Team7/pepper-farm/frontend/tests/Landing*)",
       "Bash(npx jest --testPathPattern=\"ManagerNavbar|WorkerNavbar|LandingNavbar\" --no-coverage)",
-      "Bash(npx jest --testPathPatterns=\"ManagerNavbar|WorkerNavbar|LandingNavbar\" --no-coverage)"
+      "Bash(npx jest --testPathPatterns=\"ManagerNavbar|WorkerNavbar|LandingNavbar\" --no-coverage)",
+      "Bash(python -m pytest tests/test_task_service.py tests/test_tasks_api.py -v)",
+      "Bash(npx jest *)",
+      "Bash(npm test *)",
+      "Bash(dir \"d:\\\\Barbershop\\\\BS-PMC-26-Team7\\\\pepper-farm\\\\frontend\\\\tests\")",
+      "Bash(python -m pytest tests -x -q)",
+      "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\Barbershop\\\\BS-PMC-26-Team7\\\\pepper-farm\\\\frontend\\\\src\\\\services\\\\__tests__\")"
     ]
   }
 }

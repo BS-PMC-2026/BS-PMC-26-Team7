@@ -46,15 +46,16 @@ describe('TaskForm', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        checklistItems: [
-          { title: 'Check humidity' },
-          { title: 'Check temperature' },
-        ],
+        checklistItems: expect.arrayContaining([
+          expect.objectContaining({ title: 'Check humidity' }),
+          expect.objectContaining({ title: 'Check temperature' }),
+        ]),
       }),
     );
+    expect(onSubmit.mock.calls[0][0].checklistItems).toHaveLength(2);
   });
 
-  it('does not show the checklist section when editing an existing task', () => {
+  it('shows the checklist section when editing an existing task', () => {
     render(
       <TaskForm
         onSubmit={jest.fn()}
@@ -71,7 +72,34 @@ describe('TaskForm', () => {
         }}
       />,
     );
-    expect(screen.queryByPlaceholderText('e.g. Check humidity')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '+ Add item' })).not.toBeInTheDocument();
+    // Checklist section is now always visible so managers can add/edit items in edit mode too.
+    expect(screen.getByPlaceholderText('e.g. Check humidity')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add item' })).toBeInTheDocument();
+  });
+
+  it('renders existing checklist items as editable inputs when editing', () => {
+    render(
+      <TaskForm
+        onSubmit={jest.fn()}
+        zones={zones}
+        initialData={{
+          title: 'Existing',
+          description: 'desc',
+          taskType: 'inspection',
+          priority: 'medium',
+          assignedToUserId: '',
+          dueDate: '',
+          zoneCode: '',
+          checklistItems: [
+            { itemId: 1, title: 'Step 1', isCompleted: false },
+            { itemId: 2, title: 'Step 2', isCompleted: true },
+          ],
+        }}
+      />,
+    );
+    const editInputs = screen.getAllByRole('textbox', { name: 'Edit item' });
+    expect(editInputs).toHaveLength(2);
+    expect((editInputs[0] as HTMLInputElement).value).toBe('Step 1');
+    expect((editInputs[1] as HTMLInputElement).value).toBe('Step 2');
   });
 });

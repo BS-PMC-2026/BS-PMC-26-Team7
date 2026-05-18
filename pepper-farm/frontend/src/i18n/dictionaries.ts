@@ -223,7 +223,10 @@ export interface TasksDictionary {
   checklist:                    string;
   addItem:                      string;
   removeItem:                   string;
+  editItem:                     string;
   itemPlaceholder:              string;
+  noChecklistItems:             string;
+  errChecklistItemEmpty:        string;
   progress:                     string;
   progressOf:                   string;
   failedToUpdateChecklistItem:  string;
@@ -991,7 +994,10 @@ const en: Dictionary = {
     checklist:                   'Checklist',
     addItem:                     '+ Add item',
     removeItem:                  'Remove',
+    editItem:                    'Edit item',
     itemPlaceholder:             'e.g. Check humidity',
+    noChecklistItems:            'No checklist items',
+    errChecklistItemEmpty:       'Checklist item cannot be empty',
     progress:                    'Progress',
     progressOf:                  '{done} / {total} completed',
     failedToUpdateChecklistItem: 'Failed to update checklist item.',
@@ -1705,7 +1711,10 @@ const he: Dictionary = {
     checklist:                   'רשימת משימות',
     addItem:                     '+ הוסף פריט',
     removeItem:                  'הסר',
+    editItem:                    'ערוך פריט',
     itemPlaceholder:             'לדוג׳ בדוק לחות',
+    noChecklistItems:            'אין פריטים ברשימה',
+    errChecklistItemEmpty:       'פריט ברשימה לא יכול להיות ריק',
     progress:                    'התקדמות',
     progressOf:                  '{done} / {total} הושלמו',
     failedToUpdateChecklistItem: 'עדכון פריט נכשל.',

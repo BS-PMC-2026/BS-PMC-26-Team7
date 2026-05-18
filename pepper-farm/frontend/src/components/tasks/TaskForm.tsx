@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
-import { CreateTaskFormData, TaskPriority } from '@/types/task';
+import { ChecklistFormItem, CreateTaskFormData, TaskPriority } from '@/types/task';
 import { Worker } from '@/types/user';
 import type { ZoneSummary } from '@/services/zones';
 import { useLanguage } from '@/context/LanguageContext';
@@ -51,18 +51,25 @@ export default function TaskForm({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [newItemTitle, setNewItemTitle] = useState('');
-  // Checklist editing is only offered at creation time — manager edits to existing
-  // tasks go through the dedicated checklist endpoints, not this form.
-  const showChecklistSection = !initialData;
 
   const addItem = () => {
     const trimmed = newItemTitle.trim();
     if (!trimmed) return;
+    const newItem: ChecklistFormItem = { title: trimmed, isCompleted: false };
     setForm((prev) => ({
       ...prev,
-      checklistItems: [...prev.checklistItems, { title: trimmed }],
+      checklistItems: [...prev.checklistItems, newItem],
     }));
     setNewItemTitle('');
+  };
+
+  const updateItem = (index: number, title: string) => {
+    setForm((prev) => ({
+      ...prev,
+      checklistItems: prev.checklistItems.map((item, i) =>
+        i === index ? { ...item, title } : item,
+      ),
+    }));
   };
 
   const removeItem = (index: number) => {
@@ -141,53 +148,60 @@ export default function TaskForm({
         />
       </div>
 
-      {showChecklistSection && (
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            {tk.checklist}
-          </label>
+      {/* Checklist — shown in both create and edit modes */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-gray-700">
+          {tk.checklist}
+        </label>
 
-          {form.checklistItems.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {form.checklistItems.map((item, idx) => (
-                <li
-                  key={idx}
-                  className="flex items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-sm"
+        {form.checklistItems.length === 0 ? (
+          <p className="text-xs text-gray-400">{tk.noChecklistItems}</p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {form.checklistItems.map((item, idx) => (
+              <li
+                key={item.itemId ?? `new-${idx}`}
+                className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-1.5"
+              >
+                <input
+                  type="text"
+                  value={item.title}
+                  onChange={(e) => updateItem(idx, e.target.value)}
+                  aria-label={tk.editItem}
+                  className="flex-1 bg-transparent text-sm outline-none focus:ring-1 focus:ring-green-500 rounded"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(idx)}
+                  className="shrink-0 text-xs text-red-600 hover:text-red-700"
                 >
-                  <span className="text-gray-800">{item.title}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(idx)}
-                    className="text-xs text-red-600 hover:text-red-700"
-                  >
-                    {tk.removeItem}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                  {tk.removeItem}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              aria-label={tk.checklist}
-              placeholder={tk.itemPlaceholder}
-              value={newItemTitle}
-              onChange={(e) => setNewItemTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addItem();
-                }
-              }}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500"
-            />
-            <Button type="button" variant="secondary" onClick={addItem}>
-              {tk.addItem}
-            </Button>
-          </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            aria-label={tk.checklist}
+            placeholder={tk.itemPlaceholder}
+            value={newItemTitle}
+            onChange={(e) => setNewItemTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addItem();
+              }
+            }}
+            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <Button type="button" variant="secondary" onClick={addItem}>
+            {tk.addItem}
+          </Button>
         </div>
-      )}
+      </div>
 
       <Select
         id="taskType"
