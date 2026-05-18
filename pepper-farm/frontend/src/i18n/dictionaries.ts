@@ -259,6 +259,18 @@ export interface TasksDictionary {
   completeButton:           string;
   allowedRange:             string;
   clear:                    string;
+  // Checklist (US39)
+  checklist:                    string;
+  addItem:                      string;
+  removeItem:                   string;
+  editItem:                     string;
+  itemPlaceholder:              string;
+  noChecklistItems:             string;
+  errChecklistItemEmpty:        string;
+  progress:                     string;
+  progressOf:                   string;
+  failedToUpdateChecklistItem:  string;
+  completeBlockedByChecklist:   string;
 }
 
 export interface InventoryDictionary {
@@ -1060,6 +1072,17 @@ const en: Dictionary = {
     completeButton:      'Complete',
     allowedRange:        'allowed',
     clear:               'Clear',
+    checklist:                   'Checklist',
+    addItem:                     '+ Add item',
+    removeItem:                  'Remove',
+    editItem:                    'Edit item',
+    itemPlaceholder:             'e.g. Check humidity',
+    noChecklistItems:            'No checklist items',
+    errChecklistItemEmpty:       'Checklist item cannot be empty',
+    progress:                    'Progress',
+    progressOf:                  '{done} / {total} completed',
+    failedToUpdateChecklistItem: 'Failed to update checklist item.',
+    completeBlockedByChecklist:  'Complete all checklist items first',
   },
 
   inventory: {
@@ -1806,6 +1829,17 @@ const he: Dictionary = {
     completeButton:      'סיים',
     allowedRange:        'מותר',
     clear:               'נקה',
+    checklist:                   'רשימת משימות',
+    addItem:                     '+ הוסף פריט',
+    removeItem:                  'הסר',
+    editItem:                    'ערוך פריט',
+    itemPlaceholder:             'לדוג׳ בדוק לחות',
+    noChecklistItems:            'אין פריטים ברשימה',
+    errChecklistItemEmpty:       'פריט ברשימה לא יכול להיות ריק',
+    progress:                    'התקדמות',
+    progressOf:                  '{done} / {total} הושלמו',
+    failedToUpdateChecklistItem: 'עדכון פריט נכשל.',
+    completeBlockedByChecklist:  'יש לסיים את כל פריטי הרשימה תחילה',
   },
 
   inventory: {

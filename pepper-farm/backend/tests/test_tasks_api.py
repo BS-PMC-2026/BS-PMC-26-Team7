@@ -350,6 +350,7 @@ def make_mock_task(task_id=1, assigned_to=2, status="todo", anomaly_id=None, ale
     task.CreatedAt.isoformat.return_value = "2026-05-01T00:00:00"
     task.UpdatedAt = MagicMock()
     task.UpdatedAt.isoformat.return_value = "2026-05-01T00:00:00"
+    task.checklist_items = []
     return task
 
 
@@ -472,3 +473,91 @@ def test_regular_task_has_no_alert_info():
 
     assert response.anomalyId is None
     assert response.alertInfo is None
+
+
+# ------------------------------------------------------------------ #
+# US39 — Checklist endpoint permissions
+# ------------------------------------------------------------------ #
+
+def test_manager_can_add_checklist_item():
+    """POST /api/tasks/{id}/checklist with manager role returns 201."""
+    from routers import tasks as tasks_router
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        fake_item = {
+            "itemId": 1, "title": "Step", "isCompleted": False, "position": 0,
+        }
+        with patch.object(tasks_router, "add_checklist_item",
+                          return_value=(fake_item, None)):
+            res = client.post("/api/tasks/5/checklist", json={"title": "Step"})
+        assert res.status_code == 201
+        assert res.json()["title"] == "Step"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_worker_cannot_add_checklist_item():
+    """POST /api/tasks/{id}/checklist as worker is rejected by require_role."""
+    app.dependency_overrides[get_db] = lambda: MagicMock()
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        res = client.post("/api/tasks/5/checklist", json={"title": "Step"})
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_worker_can_toggle_item_on_assigned_task():
+    """Worker PATCH /api/tasks/{id}/checklist/{item_id} succeeds when assignee matches."""
+    from services import task_service
+
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, assigned_to=2)  # fake_worker has user_id=2
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        fake_item = {
+            "itemId": 9, "title": "Step", "isCompleted": True, "position": 0,
+        }
+        with patch.object(task_service, "update_checklist_item",
+                          return_value=(fake_item, None)):
+            res = client.patch(
+                "/api/tasks/5/checklist/9", json={"isCompleted": True}
+            )
+        assert res.status_code == 200
+        assert res.json()["isCompleted"] is True
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_worker_cannot_toggle_item_on_other_workers_task():
+    """Worker PATCH on a task assigned to someone else returns 403."""
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, assigned_to=999)  # not user_id=2
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        res = client.patch(
+            "/api/tasks/5/checklist/9", json={"isCompleted": True}
+        )
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_worker_cannot_delete_checklist_item():
+    """DELETE /api/tasks/{id}/checklist/{item_id} as worker is rejected."""
+    app.dependency_overrides[get_db] = lambda: MagicMock()
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        res = client.delete("/api/tasks/5/checklist/9")
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.clear()

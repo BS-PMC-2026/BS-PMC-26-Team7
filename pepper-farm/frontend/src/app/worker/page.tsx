@@ -7,8 +7,8 @@ import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
-import { Task, TaskStatus } from '@/types/task';
-import { getMyTasks, updateTask } from '@/services/tasks';
+import { ChecklistItem, Task, TaskStatus } from '@/types/task';
+import { getMyTasks, updateChecklistItem, updateTask } from '@/services/tasks';
 import { getAllPlants, PlantData, createPlant } from '@/services/plants';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
@@ -76,6 +76,31 @@ export default function WorkerPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     } catch {
       setError(wk.failedToUpdateStatus);
+    }
+  };
+
+  const handleToggleChecklistItem = async (
+    task: Task,
+    item: ChecklistItem,
+    nextCompleted: boolean,
+  ) => {
+    const token = localStorage.getItem('token') ?? '';
+    try {
+      const updated = await updateChecklistItem(task.id, item.itemId, { isCompleted: nextCompleted }, token);
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id
+            ? {
+                ...t,
+                checklistItems: t.checklistItems.map((ci) =>
+                  ci.itemId === updated.itemId ? updated : ci,
+                ),
+              }
+            : t,
+        ),
+      );
+    } catch {
+      setError(t.tasks.failedToUpdateChecklistItem);
     }
   };
 
@@ -250,7 +275,7 @@ export default function WorkerPage() {
           ) : filteredTasks.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">{wk.noTasksMatchFilter}</p>
           ) : (
-            <TaskList tasks={filteredTasks} onStatusChange={handleStatusChange} />
+            <TaskList tasks={filteredTasks} onStatusChange={handleStatusChange} onToggleChecklistItem={handleToggleChecklistItem} />
           )}
         </div>
       </div>

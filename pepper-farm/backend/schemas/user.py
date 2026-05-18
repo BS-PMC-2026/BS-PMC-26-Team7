@@ -59,6 +59,12 @@ class LoginResponse(BaseModel):
     fullName: str
 
 
+class TokenResponse(BaseModel):
+    """OAuth2-compliant response for the Swagger /token endpoint."""
+    access_token: str
+    token_type: str = "bearer"
+
+
 class UserResponse(BaseModel):
     userId: int
     fullName: str
