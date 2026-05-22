@@ -28,6 +28,11 @@ export async function getZoneSprayMap(): Promise<ZoneSprayStatusData[]> {
   return apiFetch<ZoneSprayStatusData[]>("/api/spray-reports/zone-map");
 }
 
+// US31 — All-user restricted zone map (Worker, Visitor, FarmManager)
+export async function getRestrictedZones(): Promise<ZoneSprayStatusData[]> {
+  return apiFetch<ZoneSprayStatusData[]>("/api/spray-reports/restricted-zones");
+}
+
 // US30 — Manager spray alert functions
 
 export async function getSprayAlerts(): Promise<SprayAlert[]> {

@@ -78,6 +78,12 @@ export default function VisitorPage() {
                   >
                     🗺️ {vi.map}
                   </Link>
+                  <Link
+                    href="/visitor/spray-restrictions"
+                    className="border border-amber-500 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-50 transition"
+                  >
+                    🛡️ Safety Map
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"

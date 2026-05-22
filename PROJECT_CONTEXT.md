@@ -100,6 +100,8 @@ BS-PMC-26-Team7/
 | `/worker/products` | `src/app/worker/products/page.tsx` | View products | `/api/products/*` | Product list |
 | `/manager/spray-alerts` | `src/app/manager/spray-alerts/page.tsx` | **US30** Redirect only — immediately sends to `/manager/spray-map#spray-alerts` (keeps old bookmarks working) | — | — |
 | `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30** Spray safety map (zones) + Spray Alert History section (`id="spray-alerts"`) | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts` | SprayZoneMap, spray-alerts table |
+| `/worker/spray-restrictions` | `src/app/worker/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map for workers — shows which zones are currently restricted due to spraying | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, zone table |
+| `/visitor/spray-restrictions` | `src/app/visitor/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map for visitors — same safety data, visitor-friendly presentation | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, zone table |
 
 **Proxy architecture:** The frontend calls `/api/...` relative paths. `next.config.ts` rewrites these to `API_PROXY_TARGET` (localhost:8000 in dev, Azure in prod), eliminating CORS.
 
@@ -176,6 +178,7 @@ BS-PMC-26-Team7/
 | PATCH | `/api/spray-reports/alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` | **US30** Mark a spray alert as read (FarmManager only) |
 | GET | `/api/spray-reports/alerts/{alert_id}` | `pepper-farm/backend/routers/spray.py` | **US30** Get a single spray alert by ID (FarmManager only) |
 | GET | `/api/spray-reports/pesticides` | `pepper-farm/backend/routers/spray.py` |  |
+| GET | `/api/spray-reports/restricted-zones` | `pepper-farm/backend/routers/spray.py` | **US31** All-user restricted zone map (FarmManager, Worker, Visitor) |
 | GET | `/api/spray-reports/zone-map` | `pepper-farm/backend/routers/spray.py` |  |
 | POST | `/api/spray-reports` | `pepper-farm/backend/routers/spray.py` |  |
 | GET | `/api/tasks/completed` | `pepper-farm/backend/routers/tasks.py` |  |
@@ -321,6 +324,9 @@ BS-PMC-26-Team7/
 18. **US30: `SprayAlerts` table requires manual DDL in production.**  
     The project has no Alembic auto-migration. Run `pepper-farm/database/schema/SprayAlerts.sql` against the Azure SQL instance before deploying the US30 backend. If spray reports already exist without matching alerts, run `pepper-farm/database/schema/backfill_spray_alerts.sql` once to backfill them.
 
+20. **US31: Restricted-zone map uses the same `ZoneSprayStatusResponse` schema as US28.**  
+    `GET /api/spray-reports/restricted-zones` is the all-user (FarmManager, Worker, Visitor) counterpart of the manager-only `GET /api/spray-reports/zone-map`. Both call `get_zone_spray_map()` — auth is the only difference. Worker route: `/worker/spray-restrictions`. Visitor route: `/visitor/spray-restrictions`. The `SprayZoneMap` component is shared; neither page exposes spray-alert management UI.
+
 19. **US30: Spray alert UX lives in the Spray Map page, not a separate route.**  
     The bell-panel "View all" link and each spray-alert item link to `/manager/spray-map#spray-alerts`. The `/manager/spray-alerts` route is a client-side redirect to that anchor. The manager navbar has no separate "Spray Alerts" nav item — alerts are reached via the "Spray Map" link or the bell panel.
 
@@ -348,8 +354,10 @@ BS-PMC-26-Team7/
 | Frontend — E2E | Playwright | `e2e/test_edit_pepper_flow.spec.ts`, `e2e/navbar.spec.ts` | `npx playwright test` (from `pepper-farm/frontend`) |
 
 | Backend — spray map | Unit/API | `tests/test_spray_map_api.py` (12 tests) | same |
+| Backend — spray restrictions | Unit/API | `tests/test_spray_restrictions_api.py` (16 tests — role access for Manager/Worker/Visitor, US28 zone-map still 403 for Worker/Visitor, REI logic, sanitisation, insertion-order robustness) | same |
 | Frontend — spray alerts redirect | Jest | `tests/SprayAlertsPage.test.tsx` (2 tests — verifies redirect to spray-map#spray-alerts) | `npm --prefix pepper-farm/frontend run test` |
 | Frontend — spray map page (US28 + US30) | Jest | `tests/SprayMapPage.test.tsx` (8 tests — zone map title, alerts section loading/empty/list/error) | same |
+| Frontend — spray restrictions page (US31) | Jest | `tests/SprayRestrictionsPage.test.tsx` (13 tests — title, loading, map renders, safety notice, summary cards, restricted banner, zone table, status labels, error state, no manager alerts) | same |
 | Frontend — manager navbar (US30 additions) | Jest | `tests/ManagerNavbar.test.tsx` (updated — spray map nav link, bell panel spray section, anchor hrefs, badge count) | same |
 
 **Notable gaps:** No backend tests for Zones router. No E2E coverage for worker flows (tasks, spray). No frontend tests for sensor detail views. `tests/test_task_report.py` has 3 pre-existing failures unrelated to US28/29/30 — needs investigation.
@@ -418,6 +426,6 @@ Files a new agent should read first when starting work:
 
 ## 14. Last Updated
 
-- **Generated:** 2026-05-22
+- **Generated:** 2026-05-23 (US31 added)
 - **Method:** Manual initial creation based on full codebase scan; AUTO-GENERATED sections can be refreshed by running `python scripts/generate_project_context.py` from the repo root.
 - **To update:** Run `npm run context:update` or `python scripts/generate_project_context.py`. The script rewrites only content between `<!-- AUTO-GENERATED-START:* -->` and `<!-- AUTO-GENERATED-END:* -->` markers. All other sections are left untouched.
