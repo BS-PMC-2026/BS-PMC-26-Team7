@@ -1,21 +1,16 @@
 """
-Tests for GET /api/spray-reports/restricted-zones (US31 – All-User Restriction Map).
+Tests for:
+  - GET /api/spray-reports/restricted-zones      (US31 – authenticated all-user map)
+  - GET /api/spray-reports/public-restricted-zones (US31 – public unauthenticated map)
 
 Covers:
-  - Endpoint returns 200 for FarmManager role
-  - Endpoint returns 200 for Worker role
-  - Endpoint returns 200 for Visitor role
-  - Endpoint returns 401/403 for unauthenticated requests
-  - All active zones are returned (never_sprayed when no reports exist)
-  - Inactive zones are excluded
-  - Zone within REI is 'unsafe' (restricted)
-  - Zone past REI is 'safe'
-  - Zone with unverified pesticide → 'requires_approval'
-  - Zone with only a planned spray → 'pending'
-  - No spray report for a zone → 'never_sprayed' (safe, no restriction)
-  - Response does not expose manager-only fields (ReportedByUserId, SprayAlertId)
-  - Manager-only endpoint /zone-map returns 403 for Worker role
-  - Manager-only endpoint /zone-map returns 403 for Visitor role
+  - /restricted-zones returns 200 for FarmManager, Worker, Visitor roles
+  - /restricted-zones returns 401/403 for unauthenticated requests
+  - /public-restricted-zones returns 200 with NO auth token (unauthenticated visitor)
+  - /public-restricted-zones returns same sanitized safety data
+  - /public-restricted-zones does not expose manager-only fields
+  - Zone status logic: safe / unsafe / requires_approval / pending / never_sprayed
+  - Manager-only /zone-map remains 403 for non-manager roles
 """
 
 import sys
@@ -332,3 +327,117 @@ def test_uses_most_recent_completed_report(worker_client, db):
     zone_data = next(z for z in data if z["zoneCode"] == "GH-09")
     assert zone_data["pesticideName"] == "NewProduct"
     assert zone_data["sprayStatus"] == "unsafe"
+
+
+# ── Public endpoint tests (/public-restricted-zones) ─────────────────────────
+
+@pytest.fixture()
+def public_client(db):
+    """TestClient with NO auth override — simulates an unauthenticated visitor."""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+    # No get_current_user override — public endpoint has no auth dependency.
+
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
+
+
+def test_public_endpoint_returns_200_without_auth(public_client, db):
+    """Unauthenticated request to the public endpoint must return 200."""
+    response = public_client.get("/api/spray-reports/public-restricted-zones")
+    assert response.status_code == 200
+
+
+def test_public_endpoint_returns_empty_list_when_no_zones(public_client, db):
+    response = public_client.get("/api/spray-reports/public-restricted-zones")
+    assert response.json() == []
+
+
+def test_public_endpoint_returns_active_zones(public_client, db):
+    seed_zone(db, "GH-01", "Greenhouse 1")
+    seed_zone(db, "GH-02", "Greenhouse 2")
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    assert len(data) == 2
+
+
+def test_public_endpoint_excludes_inactive_zones(public_client, db):
+    seed_zone(db, "GH-01", "Active Zone", active=True)
+    seed_zone(db, "GH-99", "Inactive Zone", active=False)
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    codes = [z["zoneCode"] for z in data]
+    assert "GH-01" in codes
+    assert "GH-99" not in codes
+
+
+def test_public_endpoint_shows_unsafe_when_within_rei(public_client, db):
+    """REI=12h, sprayed 1h ago → restricted/unsafe, visible to public."""
+    zone = seed_zone(db, "GH-02", "Greenhouse 2")
+    pesticide = seed_verified_pesticide(db, rei_hours=12)
+    seed_completed_report(db, zone.ZoneId, pesticide.PesticideId,
+                           completed_at=datetime.utcnow() - timedelta(hours=1))
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    zone_data = next(z for z in data if z["zoneCode"] == "GH-02")
+    assert zone_data["sprayStatus"] == "unsafe"
+    assert zone_data["safeToReEnterAtUtc"] is not None
+
+
+def test_public_endpoint_shows_safe_when_rei_passed(public_client, db):
+    zone = seed_zone(db, "GH-03", "Greenhouse 3")
+    pesticide = seed_verified_pesticide(db, rei_hours=12)
+    seed_completed_report(db, zone.ZoneId, pesticide.PesticideId,
+                           completed_at=datetime.utcnow() - timedelta(days=2))
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    zone_data = next(z for z in data if z["zoneCode"] == "GH-03")
+    assert zone_data["sprayStatus"] == "safe"
+
+
+def test_public_endpoint_shows_requires_approval_for_unverified(public_client, db):
+    zone = seed_zone(db, "GH-04", "Greenhouse 4")
+    pesticide = seed_unverified_pesticide(db)
+    seed_completed_report(db, zone.ZoneId, pesticide.PesticideId,
+                           completed_at=datetime.utcnow() - timedelta(hours=1))
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    zone_data = next(z for z in data if z["zoneCode"] == "GH-04")
+    assert zone_data["sprayStatus"] == "requires_approval"
+
+
+def test_public_endpoint_does_not_expose_reported_by_user_id(public_client, db):
+    """Public endpoint must never expose ReportedByUserId."""
+    zone = seed_zone(db, "GH-05", "Greenhouse 5")
+    pesticide = seed_verified_pesticide(db)
+    seed_completed_report(db, zone.ZoneId, pesticide.PesticideId)
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    for z in data:
+        assert "ReportedByUserId" not in z
+        assert "reportedByUserId" not in z
+
+
+def test_public_endpoint_does_not_expose_spray_alert_ids(public_client, db):
+    seed_zone(db, "GH-06", "Greenhouse 6")
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    for z in data:
+        assert "SprayAlertId" not in z
+        assert "sprayAlertId" not in z
+
+
+def test_public_endpoint_has_safety_fields(public_client, db):
+    """Public response must contain the fields needed for a safety decision."""
+    seed_zone(db, "GH-07", "Greenhouse 7")
+    data = public_client.get("/api/spray-reports/public-restricted-zones").json()
+    zone = data[0]
+    required = {"zoneId", "zoneCode", "zoneName", "sprayStatus",
+                "safeToReEnterAtUtc", "safeToHarvestAtUtc"}
+    assert required.issubset(zone.keys())
+
+
+def test_zone_map_returns_401_without_auth(public_client, db):
+    """US28 manager endpoint must still reject unauthenticated requests."""
+    response = public_client.get("/api/spray-reports/zone-map")
+    assert response.status_code in (401, 403)

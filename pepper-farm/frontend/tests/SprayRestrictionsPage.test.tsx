@@ -49,7 +49,8 @@ jest.mock('@/components/spray/SprayZoneMap', () =>
 const mockGetRestrictedZones = jest.fn();
 
 jest.mock('@/services/spray', () => ({
-  getRestrictedZones: (...args: unknown[]) => mockGetRestrictedZones(...args),
+  getRestrictedZones:       (...args: unknown[]) => mockGetRestrictedZones(...args),
+  getPublicRestrictedZones: jest.fn().mockResolvedValue([]),
 }));
 
 /* ── Fixtures ────────────────────────────────────────────────────────────── */

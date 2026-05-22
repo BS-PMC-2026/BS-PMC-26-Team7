@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import SprayZoneMap from '@/components/spray/SprayZoneMap';
-import { getRestrictedZones } from '@/services/spray';
+import { getPublicRestrictedZones } from '@/services/spray';
 import { ZoneSprayStatusData, ZoneSprayStatus } from '@/types/spray';
 import { ShieldAlert } from 'lucide-react';
 
@@ -32,7 +32,7 @@ export default function VisitorSprayRestrictionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getRestrictedZones();
+      const data = await getPublicRestrictedZones();
       setZones(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load restriction map.');
