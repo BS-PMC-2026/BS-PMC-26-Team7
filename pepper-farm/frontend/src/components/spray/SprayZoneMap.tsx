@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<
 > = {
   safe:              { fill: 'rgba(22,163,74,0.18)',   border: '#16a34a', label: 'Safe (re-entry allowed)',    emoji: '✅' },
   unsafe:            { fill: 'rgba(239,68,68,0.22)',   border: '#dc2626', label: 'Unsafe (within REI window)', emoji: '🚫' },
-  requires_approval: { fill: 'rgba(245,158,11,0.22)',  border: '#d97706', label: 'Requires approval',          emoji: '⚠️' },
+  requires_approval: { fill: 'rgba(245,158,11,0.22)',  border: '#d97706', label: 'Caution — Safety unverified', emoji: '⚠️' },
   pending:           { fill: 'rgba(99,102,241,0.18)',  border: '#6366f1', label: 'Spray planned',              emoji: '📅' },
   never_sprayed:     { fill: 'rgba(156,163,175,0.25)', border: '#9ca3af', label: 'Never sprayed',              emoji: '○' },
 };

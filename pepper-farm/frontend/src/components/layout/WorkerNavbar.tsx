@@ -17,6 +17,7 @@ import {
   Bell,
   X,
   ClipboardCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -188,7 +189,8 @@ export default function WorkerNavbar() {
         <NavLinkDirect href="/worker"              label="Dashboard"    icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
         <NavLinkDirect href="/worker/my-tasks"     label="My Tasks"     icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')}         scrolled={scrolled} />
         <NavLinkDirect href="/worker/products"     label="Products"     icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
-        <NavLinkDirect href="/worker/spray-report" label="Spray Report" icon={<Droplets size={14} />}        active={pathname.startsWith('/worker/spray-report')}     scrolled={scrolled} />
+        <NavLinkDirect href="/worker/spray-report"        label="Spray Report" icon={<Droplets size={14} />}     active={pathname.startsWith('/worker/spray-report')}         scrolled={scrolled} />
+        <NavLinkDirect href="/worker/spray-restrictions"  label="Safety Map"   icon={<ShieldAlert size={14} />} active={pathname.startsWith('/worker/spray-restrictions')}   scrolled={scrolled} />
 
         {/* Plants dropdown */}
         {NAV_GROUPS.map((group) => {

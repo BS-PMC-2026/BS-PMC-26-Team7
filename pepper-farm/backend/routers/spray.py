@@ -73,6 +73,27 @@ def get_spray_alert_endpoint(
     return alert
 
 
+@router.get("/restricted-zones", response_model=list[ZoneSprayStatusResponse])
+def zone_restriction_map_endpoint(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_any_role("FarmManager", "Worker", "Visitor")),
+):
+    """US31: Return spray restriction status for every active zone.
+    Accessible to all authenticated roles (FarmManager, Worker, Visitor).
+    Workers use this; unauthenticated public visitors use /public-restricted-zones."""
+    return get_zone_spray_map(db)
+
+
+@router.get("/public-restricted-zones", response_model=list[ZoneSprayStatusResponse])
+def public_zone_restriction_map_endpoint(
+    db: Session = Depends(get_db),
+):
+    """US31: Public (unauthenticated) spray restriction map.
+    Returns the same sanitized safety data as /restricted-zones but requires no JWT.
+    Used by the visitor/public safety map page."""
+    return get_zone_spray_map(db)
+
+
 @router.get("/pesticides", response_model=list[PesticideResponse])
 def list_pesticides_endpoint(
     db: Session = Depends(get_db),

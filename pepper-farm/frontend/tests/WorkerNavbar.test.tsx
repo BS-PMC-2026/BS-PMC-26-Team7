@@ -48,7 +48,7 @@ jest.mock('framer-motion', () => {
 jest.mock('lucide-react', () => {
   const icons = [
     'LayoutDashboard','ClipboardList','ShoppingBag','Sprout','ChevronDown',
-    'Leaf','LogOut','MapPin','Droplets','Bell','X','ClipboardCheck',
+    'Leaf','LogOut','MapPin','Droplets','Bell','X','ClipboardCheck','ShieldAlert',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {

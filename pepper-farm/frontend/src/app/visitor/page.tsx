@@ -64,6 +64,14 @@ export default function VisitorPage() {
               subtitle={vi.pepperVarietiesSubtitle}
             />
             <div className="flex gap-3 mt-1">
+              {/* Always visible — public safety information, no login required */}
+              <Link
+                href="/visitor/spray-restrictions"
+                className="border border-amber-500 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-50 transition"
+              >
+                🛡️ Safety Map
+              </Link>
+
               {isLoggedIn ? (
                 <>
                   <Link
