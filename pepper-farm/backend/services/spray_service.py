@@ -3,11 +3,12 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
-from models.spray import Pesticide, SprayReport
+from models.spray import Pesticide, SprayAlert, SprayReport
 from models.farm_zone import FarmZone
 from schemas.spray import (
     CreateSprayReportRequest,
     SafetyWarningResponse,
+    SprayAlertResponse,
     ZoneSprayStatusResponse,
 )
 
@@ -163,7 +164,99 @@ def create_spray_report(
     db.refresh(report)
 
     safety_warning = _build_safety_warning(pesticide, warning_reference_time)
+
+    # US30: generate a manager spray alert for every submitted report.
+    # Best-effort: if SprayAlerts table is missing in production (DDL not yet run)
+    # the spray report is already committed above and must still be returned to the worker.
+    try:
+        _generate_spray_alert(db, report, pesticide, zone, safety_warning)
+    except Exception:
+        pass
+
     return (report, safety_warning), None
+
+
+# -----------------------------------------------------------------------------
+# Spray alert generation (US30)
+# -----------------------------------------------------------------------------
+def _compute_severity(
+    pesticide: Pesticide,
+    report: SprayReport,
+) -> str:
+    """Return alert severity based on US29 safety rules.
+
+    'high'   — pesticide is unverified (unknown REI/PHI, requires approval)
+    'medium' — completed spray, within the active REI window
+    'low'    — planned report or completed spray whose REI has passed
+    """
+    if pesticide.VerificationStatus == "unverified":
+        return "high"
+    if report.Status == "completed" and report.CompletedAtUtc and pesticide.ReEntryIntervalHours:
+        rei_end = report.CompletedAtUtc + timedelta(hours=pesticide.ReEntryIntervalHours)
+        if datetime.utcnow() < rei_end:
+            return "medium"
+    return "low"
+
+
+def _generate_spray_alert(
+    db: Session,
+    report: SprayReport,
+    pesticide: Pesticide,
+    zone: FarmZone,
+    safety_warning: SafetyWarningResponse,
+) -> SprayAlert:
+    """Persist a SprayAlert row after every spray report submission (US30)."""
+    severity = _compute_severity(pesticide, report)
+    alert = SprayAlert(
+        SprayReportId=report.SprayReportId,
+        ZoneId=zone.ZoneId,
+        ZoneCode=zone.ZoneCode,
+        ZoneName=zone.ZoneName,
+        PesticideName=pesticide.Name,
+        ReportedByUserId=report.ReportedByUserId,
+        ReportStatus=report.Status,
+        Severity=severity,
+        SafetyMessage=safety_warning.message,
+        RequiresApproval=safety_warning.requiresApproval,
+        ReEntryIntervalHours=pesticide.ReEntryIntervalHours,
+        SafeToReEnterAtUtc=safety_warning.safeToReEnterAtUtc,
+        SafeToHarvestAtUtc=safety_warning.safeToHarvestAtUtc,
+        HazardLevel=pesticide.HazardLevel,
+        PpeRequired=pesticide.PpeRequired,
+        SprayedAtUtc=report.CompletedAtUtc or report.PlannedAtUtc,
+        IsRead=False,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+# -----------------------------------------------------------------------------
+# Spray alert queries (US30)
+# -----------------------------------------------------------------------------
+def get_spray_alerts(db: Session) -> list[SprayAlert]:
+    """Return all spray alerts, newest first (manager-only)."""
+    return (
+        db.query(SprayAlert)
+        .order_by(SprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_spray_alert_by_id(db: Session, alert_id: int) -> SprayAlert | None:
+    return db.query(SprayAlert).filter(SprayAlert.SprayAlertId == alert_id).first()
+
+
+def mark_spray_alert_read(db: Session, alert_id: int) -> SprayAlert | None:
+    alert = get_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None
+    if not alert.IsRead:
+        alert.IsRead = True
+        db.commit()
+        db.refresh(alert)
+    return alert
 
 
 # -----------------------------------------------------------------------------

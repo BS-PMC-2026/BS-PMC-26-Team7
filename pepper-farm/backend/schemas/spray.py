@@ -83,6 +83,41 @@ class SprayReportSubmissionResponse(BaseModel):
 # One entry per active zone, summarising the most recent spray event and the
 # computed safety state so the manager can see the farm at a glance.
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Spray alert (US30)
+# One entry per spray report — created when a worker submits a spray report.
+# Manager-only; returned by GET /api/spray-reports/alerts.
+# -----------------------------------------------------------------------------
+class SprayAlertResponse(BaseModel):
+    SprayAlertId: int
+    SprayReportId: int
+    ZoneId: int
+    ZoneCode: str
+    ZoneName: str
+    PesticideName: Optional[str] = None
+    ReportedByUserId: Optional[int] = None
+    ReportStatus: str
+    Severity: str
+    SafetyMessage: str
+    RequiresApproval: bool
+    ReEntryIntervalHours: Optional[int] = None
+    SafeToReEnterAtUtc: Optional[datetime] = None
+    SafeToHarvestAtUtc: Optional[datetime] = None
+    HazardLevel: Optional[str] = None
+    PpeRequired: Optional[str] = None
+    SprayedAtUtc: Optional[datetime] = None
+    IsRead: bool
+    CreatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# -----------------------------------------------------------------------------
+# Spray map (BSPMT7-234 US28)
+# One entry per active zone, summarising the most recent spray event and the
+# computed safety state so the manager can see the farm at a glance.
+# -----------------------------------------------------------------------------
 class ZoneSprayStatusResponse(BaseModel):
     """Per-zone spray status returned by GET /api/spray-reports/zone-map."""
     zoneId: int
