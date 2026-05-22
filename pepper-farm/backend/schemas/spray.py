@@ -76,3 +76,25 @@ class SafetyWarningResponse(BaseModel):
 class SprayReportSubmissionResponse(BaseModel):
     report: SprayReportResponse
     safetyWarning: SafetyWarningResponse
+
+
+# -----------------------------------------------------------------------------
+# Spray map (BSPMT7-234 US28)
+# One entry per active zone, summarising the most recent spray event and the
+# computed safety state so the manager can see the farm at a glance.
+# -----------------------------------------------------------------------------
+class ZoneSprayStatusResponse(BaseModel):
+    """Per-zone spray status returned by GET /api/spray-reports/zone-map."""
+    zoneId: int
+    zoneCode: str
+    zoneName: str
+    # safe | unsafe | requires_approval | pending | never_sprayed
+    sprayStatus: str
+    lastCompletedAtUtc: Optional[datetime] = None
+    pesticideName: Optional[str] = None
+    safeToReEnterAtUtc: Optional[datetime] = None
+    safeToHarvestAtUtc: Optional[datetime] = None
+    requiresApproval: bool = False
+    hazardLevel: Optional[str] = None
+    ppeRequired: Optional[str] = None
+    nextPlannedAtUtc: Optional[datetime] = None

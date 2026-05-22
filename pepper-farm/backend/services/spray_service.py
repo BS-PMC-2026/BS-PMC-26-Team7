@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from models.spray import Pesticide, SprayReport
@@ -7,6 +8,7 @@ from models.farm_zone import FarmZone
 from schemas.spray import (
     CreateSprayReportRequest,
     SafetyWarningResponse,
+    ZoneSprayStatusResponse,
 )
 
 
@@ -162,3 +164,132 @@ def create_spray_report(
 
     safety_warning = _build_safety_warning(pesticide, warning_reference_time)
     return (report, safety_warning), None
+
+
+# -----------------------------------------------------------------------------
+# Spray map data (BSPMT7-234 US28)
+# -----------------------------------------------------------------------------
+def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
+    """Return one ZoneSprayStatusResponse per active zone.
+
+    Status semantics:
+      never_sprayed     – no completed spray report exists for this zone
+      pending           – no completed report, but a future planned one exists
+      requires_approval – most-recent completed used an unverified pesticide
+      unsafe            – within the re-entry interval (REI) of the last spray
+      safe              – REI has passed since the last completed spray
+    """
+    now = datetime.utcnow()
+
+    # 1. All active zones.
+    zones = (
+        db.query(FarmZone)
+        .filter(FarmZone.IsActive == True)  # noqa: E712
+        .order_by(FarmZone.ZoneCode)
+        .all()
+    )
+
+    # 2. Latest completed SprayReport per zone (by max CompletedAtUtc).
+    latest_completed_sub = (
+        db.query(
+            SprayReport.ZoneId,
+            func.max(SprayReport.CompletedAtUtc).label("max_completed"),
+        )
+        .filter(SprayReport.Status == "completed")
+        .group_by(SprayReport.ZoneId)
+        .subquery()
+    )
+    completed_rows = (
+        db.query(SprayReport, Pesticide)
+        .join(
+            latest_completed_sub,
+            and_(
+                SprayReport.ZoneId == latest_completed_sub.c.ZoneId,
+                SprayReport.CompletedAtUtc == latest_completed_sub.c.max_completed,
+            ),
+        )
+        .join(Pesticide, SprayReport.PesticideId == Pesticide.PesticideId)
+        .all()
+    )
+    completed_by_zone: dict[int, tuple[SprayReport, Pesticide]] = {
+        report.ZoneId: (report, pesticide) for report, pesticide in completed_rows
+    }
+
+    # 3. Earliest future planned SprayReport per zone.
+    earliest_planned_sub = (
+        db.query(
+            SprayReport.ZoneId,
+            func.min(SprayReport.PlannedAtUtc).label("min_planned"),
+        )
+        .filter(
+            SprayReport.Status == "planned",
+            SprayReport.PlannedAtUtc > now,
+        )
+        .group_by(SprayReport.ZoneId)
+        .subquery()
+    )
+    planned_rows = db.query(earliest_planned_sub).all()
+    planned_by_zone: dict[int, datetime] = {
+        row.ZoneId: row.min_planned for row in planned_rows
+    }
+
+    # 4. Build per-zone response.
+    results: list[ZoneSprayStatusResponse] = []
+    for zone in zones:
+        zid = zone.ZoneId
+        planned_at = planned_by_zone.get(zid)
+
+        if zid not in completed_by_zone:
+            status = "pending" if planned_at else "never_sprayed"
+            results.append(
+                ZoneSprayStatusResponse(
+                    zoneId=zid,
+                    zoneCode=zone.ZoneCode,
+                    zoneName=zone.ZoneName,
+                    sprayStatus=status,
+                    nextPlannedAtUtc=planned_at,
+                )
+            )
+            continue
+
+        report, pesticide = completed_by_zone[zid]
+        requires_approval = pesticide.VerificationStatus != "verified"
+
+        if requires_approval:
+            status = "requires_approval"
+            safe_re_enter = None
+            safe_harvest = None
+        else:
+            safe_re_enter = (
+                report.CompletedAtUtc + timedelta(hours=pesticide.ReEntryIntervalHours)
+                if pesticide.ReEntryIntervalHours is not None
+                else None
+            )
+            safe_harvest = (
+                report.CompletedAtUtc + timedelta(days=pesticide.PreHarvestIntervalDays)
+                if pesticide.PreHarvestIntervalDays is not None
+                else None
+            )
+            if safe_re_enter is not None and now < safe_re_enter:
+                status = "unsafe"
+            else:
+                status = "safe"
+
+        results.append(
+            ZoneSprayStatusResponse(
+                zoneId=zid,
+                zoneCode=zone.ZoneCode,
+                zoneName=zone.ZoneName,
+                sprayStatus=status,
+                lastCompletedAtUtc=report.CompletedAtUtc,
+                pesticideName=pesticide.Name,
+                safeToReEnterAtUtc=safe_re_enter,
+                safeToHarvestAtUtc=safe_harvest,
+                requiresApproval=requires_approval,
+                hazardLevel=pesticide.HazardLevel,
+                ppeRequired=pesticide.PpeRequired,
+                nextPlannedAtUtc=planned_at,
+            )
+        )
+
+    return results

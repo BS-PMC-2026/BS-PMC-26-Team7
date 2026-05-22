@@ -7,12 +7,27 @@ from schemas.spray import (
     PesticideResponse,
     SprayReportResponse,
     SprayReportSubmissionResponse,
+    ZoneSprayStatusResponse,
 )
-from services.spray_service import create_spray_report, get_active_pesticides
-from utils.jwt import get_current_user, require_any_role
+from services.spray_service import (
+    create_spray_report,
+    get_active_pesticides,
+    get_zone_spray_map,
+)
+from utils.jwt import get_current_user, require_any_role, require_role
 
 
 router = APIRouter(prefix="/api/spray-reports", tags=["spray-reports"])
+
+
+@router.get("/zone-map", response_model=list[ZoneSprayStatusResponse])
+def zone_spray_map_endpoint(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """BSPMT7-234 US28: Return spray status for every active zone so the
+    manager can see the farm at a glance (safe / unsafe / pending / etc.)."""
+    return get_zone_spray_map(db)
 
 
 @router.get("/pesticides", response_model=list[PesticideResponse])

@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   X,
   ExternalLink,
+  Droplets,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -292,6 +293,9 @@ export default function ManagerNavbar() {
             </div>
           );
         })}
+
+        {/* Spray Map */}
+        <NavLinkDirect href="/manager/spray-map" label="Spray Map" icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
 
         {/* Analytics */}
         <NavLinkDirect href="/manager/reports" label="Analytics" icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />

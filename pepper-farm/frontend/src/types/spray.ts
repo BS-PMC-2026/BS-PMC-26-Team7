@@ -56,3 +56,26 @@ export interface SprayReportSubmissionResponse {
   report: SprayReport;
   safetyWarning: SafetyWarning;
 }
+
+// Per-zone spray status returned by GET /api/spray-reports/zone-map (US28).
+export type ZoneSprayStatus =
+  | 'safe'
+  | 'unsafe'
+  | 'requires_approval'
+  | 'pending'
+  | 'never_sprayed';
+
+export interface ZoneSprayStatusData {
+  zoneId: number;
+  zoneCode: string;
+  zoneName: string;
+  sprayStatus: ZoneSprayStatus;
+  lastCompletedAtUtc: string | null;
+  pesticideName: string | null;
+  safeToReEnterAtUtc: string | null;
+  safeToHarvestAtUtc: string | null;
+  requiresApproval: boolean;
+  hazardLevel: string | null;
+  ppeRequired: string | null;
+  nextPlannedAtUtc: string | null;
+}

@@ -3,6 +3,7 @@ import {
   CreateSprayReportRequest,
   Pesticide,
   SprayReportSubmissionResponse,
+  ZoneSprayStatusData,
 } from "@/types/spray";
 
 export async function getPesticides(token: string): Promise<Pesticide[]> {
@@ -20,4 +21,8 @@ export async function createSprayReport(
     body: JSON.stringify(data),
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function getZoneSprayMap(): Promise<ZoneSprayStatusData[]> {
+  return apiFetch<ZoneSprayStatusData[]>("/api/spray-reports/zone-map");
 }
