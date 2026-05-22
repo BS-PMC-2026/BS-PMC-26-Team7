@@ -5,6 +5,7 @@ from database import get_db
 from schemas.spray import (
     CreateSprayReportRequest,
     PesticideResponse,
+    SprayAlertResponse,
     SprayReportResponse,
     SprayReportSubmissionResponse,
     ZoneSprayStatusResponse,
@@ -12,7 +13,10 @@ from schemas.spray import (
 from services.spray_service import (
     create_spray_report,
     get_active_pesticides,
+    get_spray_alert_by_id,
+    get_spray_alerts,
     get_zone_spray_map,
+    mark_spray_alert_read,
 )
 from utils.jwt import get_current_user, require_any_role, require_role
 
@@ -28,6 +32,45 @@ def zone_spray_map_endpoint(
     """BSPMT7-234 US28: Return spray status for every active zone so the
     manager can see the farm at a glance (safe / unsafe / pending / etc.)."""
     return get_zone_spray_map(db)
+
+
+# ---------------------------------------------------------------------------
+# US30 — Manager spray alert endpoints (FarmManager only)
+# ---------------------------------------------------------------------------
+
+@router.get("/alerts", response_model=list[SprayAlertResponse])
+def list_spray_alerts_endpoint(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US30: Return all spray alerts for the manager, newest first."""
+    return get_spray_alerts(db)
+
+
+@router.patch("/alerts/{alert_id}/read", response_model=SprayAlertResponse)
+def mark_spray_alert_read_endpoint(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US30: Mark a spray alert as read/acknowledged."""
+    alert = mark_spray_alert_read(db, alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Spray alert not found.")
+    return alert
+
+
+@router.get("/alerts/{alert_id}", response_model=SprayAlertResponse)
+def get_spray_alert_endpoint(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US30: Return a single spray alert by ID."""
+    alert = get_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Spray alert not found.")
+    return alert
 
 
 @router.get("/pesticides", response_model=list[PesticideResponse])

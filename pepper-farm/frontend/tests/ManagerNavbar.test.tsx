@@ -51,7 +51,7 @@ jest.mock('lucide-react', () => {
   const icons = [
     'LayoutDashboard','ClipboardList','Radio','Leaf','ShoppingBag','Boxes',
     'Sprout','BarChart2','Users','Bell','LogOut','ChevronDown','AlertTriangle',
-    'CheckCircle2','X','ExternalLink',
+    'CheckCircle2','X','ExternalLink','Droplets','ShieldAlert','ShieldCheck','Clock',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {
@@ -64,12 +64,16 @@ jest.mock('lucide-react', () => {
 jest.mock('@/components/LanguageSwitcher', () => () => React.createElement('div', { 'data-testid': 'language-switcher' }));
 
 const mockClearUnread = jest.fn();
+const mockAcknowledgeSprayAlert = jest.fn();
 
 const defaultAnomalyContext = {
-  unreadCount:    0,
-  clearUnread:    mockClearUnread,
-  liveAlerts:     [] as never[],
-  completedTasks: [] as never[],
+  unreadCount:             0,
+  clearUnread:             mockClearUnread,
+  liveAlerts:              [] as never[],
+  completedTasks:          [] as never[],
+  sprayAlerts:             [] as never[],
+  sprayUnreadCount:        0,
+  acknowledgeSprayAlert:   mockAcknowledgeSprayAlert,
 };
 
 let anomalyContextValue = { ...defaultAnomalyContext };
@@ -94,6 +98,7 @@ describe('ManagerNavbar — rendering', () => {
     anomalyContextValue = { ...defaultAnomalyContext };
     mockPush.mockClear();
     mockClearUnread.mockClear();
+    mockAcknowledgeSprayAlert.mockClear();
   });
 
   it('renders the PepperFarm logo', () => {
@@ -113,6 +118,8 @@ describe('ManagerNavbar — rendering', () => {
     expect(screen.getByRole('link', { name: /sensor explorer/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /analytics/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
+    // Spray alerts are accessed via Spray Map (#spray-alerts anchor), not a separate nav link
+    expect(screen.getByRole('link', { name: /spray map/i })).toBeInTheDocument();
   });
 
   it('renders the Inventory dropdown button', () => {
@@ -167,6 +174,11 @@ describe('ManagerNavbar — nav link hrefs', () => {
   it('Users links to /manager/users', () => {
     renderNavbar();
     expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute('href', '/manager/users');
+  });
+
+  it('Spray Map links to /manager/spray-map', () => {
+    renderNavbar();
+    expect(screen.getByRole('link', { name: /spray map/i })).toHaveAttribute('href', '/manager/spray-map');
   });
 });
 
@@ -223,6 +235,7 @@ describe('ManagerNavbar — bell / notification panel', () => {
     mockPathname = '/manager';
     anomalyContextValue = { ...defaultAnomalyContext };
     mockClearUnread.mockClear();
+    mockAcknowledgeSprayAlert.mockClear();
   });
 
   it('notification panel is hidden before bell click', () => {
@@ -242,11 +255,68 @@ describe('ManagerNavbar — bell / notification panel', () => {
     expect(mockClearUnread).toHaveBeenCalled();
   });
 
-  it('shows "No active alerts" and "No completed tasks yet" when empty', () => {
+  it('shows "No active alerts", "No spray alerts" and "No completed tasks yet" when empty', () => {
     renderNavbar();
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
     expect(screen.getByText('No active alerts')).toBeInTheDocument();
+    expect(screen.getByText('No spray alerts')).toBeInTheDocument();
     expect(screen.getByText('No completed tasks yet')).toBeInTheDocument();
+  });
+
+  it('renders spray alert items in the panel', () => {
+    anomalyContextValue = {
+      ...defaultAnomalyContext,
+      sprayAlerts: [
+        {
+          SprayAlertId: 1, SprayReportId: 1, ZoneId: 1,
+          ZoneCode: 'GH-01', ZoneName: 'Greenhouse 1',
+          PesticideName: 'Confidor', ReportedByUserId: 2,
+          ReportStatus: 'completed', Severity: 'medium',
+          SafetyMessage: 'Do not re-enter.', RequiresApproval: false,
+          ReEntryIntervalHours: 12, SafeToReEnterAtUtc: null, SafeToHarvestAtUtc: null,
+          HazardLevel: 'medium', PpeRequired: 'Gloves',
+          SprayedAtUtc: new Date().toISOString(), IsRead: false,
+          CreatedAt: new Date().toISOString(),
+        } as never,
+      ],
+      sprayUnreadCount: 1,
+    };
+    renderNavbar();
+    fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    expect(screen.getByTestId('spray-alert-item')).toBeInTheDocument();
+  });
+
+  it('spray alert items link to /manager/spray-map#spray-alerts', () => {
+    anomalyContextValue = {
+      ...defaultAnomalyContext,
+      sprayAlerts: [
+        {
+          SprayAlertId: 1, SprayReportId: 1, ZoneId: 1,
+          ZoneCode: 'GH-01', ZoneName: 'Greenhouse 1',
+          PesticideName: 'Confidor', ReportedByUserId: 2,
+          ReportStatus: 'completed', Severity: 'medium',
+          SafetyMessage: 'Do not re-enter.', RequiresApproval: false,
+          ReEntryIntervalHours: 12, SafeToReEnterAtUtc: null, SafeToHarvestAtUtc: null,
+          HazardLevel: 'medium', PpeRequired: 'Gloves',
+          SprayedAtUtc: new Date().toISOString(), IsRead: false,
+          CreatedAt: new Date().toISOString(),
+        } as never,
+      ],
+      sprayUnreadCount: 1,
+    };
+    renderNavbar();
+    fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    expect(screen.getByTestId('spray-alert-item')).toHaveAttribute('href', '/manager/spray-map#spray-alerts');
+  });
+
+  it('spray alerts "View all" links to /manager/spray-map#spray-alerts', () => {
+    renderNavbar();
+    fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    const allLinks = screen.getAllByRole('link');
+    const sprayAnchorLink = allLinks.find(
+      (l) => l.getAttribute('href') === '/manager/spray-map#spray-alerts',
+    );
+    expect(sprayAnchorLink).toBeTruthy();
   });
 
   it('does not show notification badge when unreadCount is 0', () => {

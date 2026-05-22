@@ -45,3 +45,38 @@ class SprayReport(Base):
 
     RequiresApproval = Column(Boolean, nullable=False, default=False)
     CreatedAt = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
+
+
+class SprayAlert(Base):
+    """US30: Manager-facing alert created whenever a spray report is submitted.
+
+    Stores a snapshot of the key safety data so the manager can review alerts
+    even if the underlying report or pesticide is later changed.
+    Severity: 'high' (unverified pesticide), 'medium' (within REI), 'low' (informational).
+    """
+    __tablename__ = "SprayAlerts"
+
+    SprayAlertId = Column(Integer, primary_key=True, autoincrement=True)
+    SprayReportId = Column(Integer, ForeignKey("SprayReports.SprayReportId"), nullable=False)
+
+    ZoneId = Column(Integer, ForeignKey("FarmZones.ZoneId"), nullable=False)
+    ZoneCode = Column(String(50), nullable=False)
+    ZoneName = Column(String(100), nullable=False)
+
+    PesticideName = Column(String(100), nullable=True)
+    ReportedByUserId = Column(Integer, ForeignKey("Users.UserId"), nullable=True)
+
+    ReportStatus = Column(String(20), nullable=False)          # 'completed' | 'planned'
+    Severity = Column(String(20), nullable=False, default="low")  # 'high' | 'medium' | 'low'
+    SafetyMessage = Column(String(500), nullable=False)
+    RequiresApproval = Column(Boolean, nullable=False, default=False)
+
+    ReEntryIntervalHours = Column(Integer, nullable=True)
+    SafeToReEnterAtUtc = Column(DateTime, nullable=True)
+    SafeToHarvestAtUtc = Column(DateTime, nullable=True)
+    HazardLevel = Column(String(50), nullable=True)
+    PpeRequired = Column(String(200), nullable=True)
+    SprayedAtUtc = Column(DateTime, nullable=True)    # CompletedAtUtc or PlannedAtUtc
+
+    IsRead = Column(Boolean, nullable=False, default=False)
+    CreatedAt = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())

@@ -57,6 +57,30 @@ export interface SprayReportSubmissionResponse {
   safetyWarning: SafetyWarning;
 }
 
+// US30: Manager spray alert created when a worker submits a spray report.
+// Returned by GET /api/spray-reports/alerts (FarmManager only).
+export interface SprayAlert {
+  SprayAlertId: number;
+  SprayReportId: number;
+  ZoneId: number;
+  ZoneCode: string;
+  ZoneName: string;
+  PesticideName: string | null;
+  ReportedByUserId: number | null;
+  ReportStatus: 'completed' | 'planned';
+  Severity: 'high' | 'medium' | 'low';
+  SafetyMessage: string;
+  RequiresApproval: boolean;
+  ReEntryIntervalHours: number | null;
+  SafeToReEnterAtUtc: string | null;
+  SafeToHarvestAtUtc: string | null;
+  HazardLevel: string | null;
+  PpeRequired: string | null;
+  SprayedAtUtc: string | null;
+  IsRead: boolean;
+  CreatedAt: string;
+}
+
 // Per-zone spray status returned by GET /api/spray-reports/zone-map (US28).
 export type ZoneSprayStatus =
   | 'safe'

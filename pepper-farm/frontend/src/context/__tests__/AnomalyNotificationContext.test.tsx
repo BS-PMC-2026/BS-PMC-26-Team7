@@ -18,10 +18,19 @@ jest.mock('../../services/tasks', () => ({
   getCompletedTasks: jest.fn(),
 }));
 
-// ── Toast context mock ─────────────────────────────────────────────────────
-jest.mock('../ToastContext', () => ({
-  useToast: () => ({ show: jest.fn() }),
+jest.mock('../../services/spray', () => ({
+  getSprayAlerts:      jest.fn(),
+  markSprayAlertRead:  jest.fn(),
 }));
+
+// ── Toast context mock ─────────────────────────────────────────────────────
+// IMPORTANT: must return a STABLE `show` reference across renders.
+// A new jest.fn() per call would make handleNewSprayAlert referentially
+// unstable, causing useEffect to loop and tests to time out.
+jest.mock('../ToastContext', () => {
+  const stableShow = jest.fn();
+  return { useToast: () => ({ show: stableShow }) };
+});
 
 // ── EventSource mock ───────────────────────────────────────────────────────
 const mockESClose = jest.fn();
@@ -36,6 +45,7 @@ const mockESInstance = {
 
 import { getRecentAlerts } from '../../services/anomalies';
 import { getCompletedTasks } from '../../services/tasks';
+import { getSprayAlerts } from '../../services/spray';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function Wrapper() {
@@ -76,13 +86,41 @@ describe('AnomalyNotificationContext — unauthenticated guard', () => {
 
   it('calls getRecentAlerts when a token IS present', async () => {
     localStorage.setItem('token', 'test-jwt');
-    (getRecentAlerts as jest.Mock).mockResolvedValueOnce({ items: [] });
-    (getCompletedTasks as jest.Mock).mockResolvedValueOnce([]);
+    (getRecentAlerts as jest.Mock).mockResolvedValue({ items: [] });
+    (getCompletedTasks as jest.Mock).mockResolvedValue([]);
+    (getSprayAlerts as jest.Mock).mockResolvedValue([]);
 
     await act(async () => {
       render(<Wrapper />);
     });
 
     expect(getRecentAlerts).toHaveBeenCalled();
+  });
+
+  it('calls getSprayAlerts when a token IS present', async () => {
+    localStorage.setItem('token', 'test-jwt');
+    (getRecentAlerts as jest.Mock).mockResolvedValue({ items: [] });
+    (getCompletedTasks as jest.Mock).mockResolvedValue([]);
+    (getSprayAlerts as jest.Mock).mockResolvedValue([]);
+
+    await act(async () => {
+      render(<Wrapper />);
+    });
+
+    expect(getSprayAlerts).toHaveBeenCalled();
+  });
+
+  it('loads spray alerts even when getRecentAlerts fails', async () => {
+    localStorage.setItem('token', 'test-jwt');
+    (getRecentAlerts as jest.Mock).mockRejectedValue(new Error('Network error'));
+    (getCompletedTasks as jest.Mock).mockResolvedValue([]);
+    (getSprayAlerts as jest.Mock).mockResolvedValue([]);
+
+    await act(async () => {
+      render(<Wrapper />);
+    });
+
+    // Spray alerts must still be called even though sensor alerts failed
+    expect(getSprayAlerts).toHaveBeenCalled();
   });
 });

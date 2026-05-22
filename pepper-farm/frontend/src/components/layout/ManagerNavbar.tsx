@@ -22,6 +22,7 @@ import {
   X,
   ExternalLink,
   Droplets,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -84,7 +85,15 @@ function timeAgo(dateStr: string | null | undefined): string {
 export default function ManagerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { unreadCount, clearUnread, liveAlerts, completedTasks } = useAnomalyNotification();
+  const {
+    unreadCount,
+    clearUnread,
+    liveAlerts,
+    completedTasks,
+    sprayAlerts = [],
+    sprayUnreadCount = 0,
+    acknowledgeSprayAlert,
+  } = useAnomalyNotification();
 
   const [openGroup,  setOpenGroup]  = useState<string | null>(null);
   const [bellOpen,   setBellOpen]   = useState(false);
@@ -96,8 +105,9 @@ export default function ManagerNavbar() {
   const activeAlerts      = liveAlerts.filter((a) => !a.isResolved).slice(0, 6);
   const activeAlertsCount = liveAlerts.filter((a) => !a.isResolved).length;
   const recentCompleted   = completedTasks.slice(0, 6);
+  const recentSprayAlerts = sprayAlerts.slice(0, 6);
 
-  const badgeCount = activeAlertsCount + (unreadCount > activeAlertsCount ? unreadCount - activeAlertsCount : 0);
+  const badgeCount = activeAlertsCount + sprayUnreadCount + (unreadCount > activeAlertsCount ? unreadCount - activeAlertsCount : 0);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -294,7 +304,7 @@ export default function ManagerNavbar() {
           );
         })}
 
-        {/* Spray Map */}
+        {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
         <NavLinkDirect href="/manager/spray-map" label="Spray Map" icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
 
         {/* Analytics */}
@@ -368,7 +378,7 @@ export default function ManagerNavbar() {
                   </button>
                 </div>
 
-                {/* Active Alerts section */}
+                {/* Active Sensor Alerts section */}
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
@@ -409,6 +419,64 @@ export default function ManagerNavbar() {
                           </span>
                           <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
                             {timeAgo(alert.createdAtUtc)}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-gray-100 my-1" />
+
+                {/* US30 — Spray Alerts section */}
+                <div className="px-3.5 pt-2 pb-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+                      Spray Alerts
+                    </span>
+                    <Link
+                      href="/manager/spray-map#spray-alerts"
+                      onClick={() => setBellOpen(false)}
+                      className="flex items-center gap-0.5 text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
+                    >
+                      View all <ExternalLink size={9} />
+                    </Link>
+                  </div>
+
+                  {recentSprayAlerts.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-1.5 italic">No spray alerts</p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {recentSprayAlerts.map((alert) => (
+                        <Link
+                          key={alert.SprayAlertId}
+                          href="/manager/spray-map#spray-alerts"
+                          onClick={() => {
+                            setBellOpen(false);
+                            if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
+                          }}
+                          className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors ${!alert.IsRead ? 'bg-amber-50/50' : ''}`}
+                          data-testid="spray-alert-item"
+                        >
+                          <span className={`mt-0.5 shrink-0 ${
+                            alert.Severity === 'high' ? 'text-red-500' :
+                            alert.Severity === 'medium' ? 'text-amber-500' :
+                            'text-blue-400'
+                          }`}>
+                            <ShieldAlert size={13} />
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
+                              {alert.ZoneName}
+                              {alert.PesticideName ? ` — ${alert.PesticideName}` : ''}
+                            </span>
+                            <span className="block text-[10px] text-gray-400 mt-0.5 capitalize">
+                              {alert.ReportStatus} · {alert.Severity}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
+                            {timeAgo(alert.CreatedAt)}
                           </span>
                         </Link>
                       ))}
