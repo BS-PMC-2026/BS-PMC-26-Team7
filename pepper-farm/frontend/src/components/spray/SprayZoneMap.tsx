@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { FARM_SECTIONS, TYPE_BORDER_COLORS } from '@/data/farmSections';
-import { ZoneSprayStatusData, ZoneSprayStatus } from '@/types/spray';
+import { ZoneSprayStatusData, ZoneSprayStatus, EntryPermissionStatus } from '@/types/spray';
 
 // ── Colour palette per safety status ─────────────────────────────────────────
 
@@ -15,6 +15,19 @@ const STATUS_COLORS: Record<
   requires_approval: { fill: 'rgba(245,158,11,0.22)',  border: '#d97706', label: 'Caution — Safety unverified', emoji: '⚠️' },
   pending:           { fill: 'rgba(99,102,241,0.18)',  border: '#6366f1', label: 'Spray planned',              emoji: '📅' },
   never_sprayed:     { fill: 'rgba(156,163,175,0.25)', border: '#9ca3af', label: 'Never sprayed',              emoji: '○' },
+};
+
+// ── US33 Entry permission badge ───────────────────────────────────────────────
+
+const ENTRY_PERMISSION_STYLE: Record<
+  EntryPermissionStatus,
+  { bg: string; border: string; text: string; label: string; icon: string }
+> = {
+  allowed:         { bg: 'bg-green-50',  border: 'border-green-300',  text: 'text-green-800',  label: 'Entry Permitted',            icon: '✅' },
+  restricted:      { bg: 'bg-red-50',    border: 'border-red-300',    text: 'text-red-800',    label: 'Entry Restricted',           icon: '🚫' },
+  caution:         { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-800', label: 'Caution — Consult Staff',    icon: '⚠️' },
+  planned_warning: { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-800',   label: 'Entry Permitted (Spray Due)', icon: '📅' },
+  no_data:         { bg: 'bg-gray-50',   border: 'border-gray-300',   text: 'text-gray-700',   label: 'Entry Permitted — No Data',  icon: '○' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -185,29 +198,43 @@ export default function SprayZoneMap({ zones }: SprayZoneMapProps) {
       </div>
 
       {/* ── Legend ────────────────────────────────────────────────────────── */}
-      <div className="mt-4 flex flex-wrap gap-3">
-        {(Object.entries(STATUS_COLORS) as [ZoneSprayStatus, (typeof STATUS_COLORS)[ZoneSprayStatus]][]).map(
-          ([status, palette]) => (
-            <div key={status} className="flex items-center gap-1.5">
-              <span
-                style={{
-                  display:         'inline-block',
-                  width:           14,
-                  height:          14,
-                  backgroundColor: palette.fill,
-                  border:          `2px solid ${palette.border}`,
-                  borderRadius:    2,
-                  flexShrink:      0,
-                }}
-              />
-              <span className="text-xs text-gray-600">
-                {palette.emoji} {palette.label}
+      <div className="mt-4 space-y-2" data-testid="spray-map-legend">
+        {/* Spray status legend */}
+        <div className="flex flex-wrap gap-3">
+          {(Object.entries(STATUS_COLORS) as [ZoneSprayStatus, (typeof STATUS_COLORS)[ZoneSprayStatus]][]).map(
+            ([status, palette]) => (
+              <div key={status} className="flex items-center gap-1.5">
+                <span
+                  style={{
+                    display:         'inline-block',
+                    width:           14,
+                    height:          14,
+                    backgroundColor: palette.fill,
+                    border:          `2px solid ${palette.border}`,
+                    borderRadius:    2,
+                    flexShrink:      0,
+                  }}
+                />
+                <span className="text-xs text-gray-600">
+                  {palette.emoji} {palette.label}
+                </span>
+              </div>
+            ),
+          )}
+          <div className="text-xs text-gray-400 ml-2 flex items-center">
+            (non-sprayable zones shown in zone-type colour)
+          </div>
+        </div>
+        {/* US33 Entry permission legend */}
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100">
+          <span className="text-xs text-gray-500 font-semibold mr-1 self-center">Entry:</span>
+          {(Object.entries(ENTRY_PERMISSION_STYLE) as [EntryPermissionStatus, (typeof ENTRY_PERMISSION_STYLE)[EntryPermissionStatus]][]).map(
+            ([key, style]) => (
+              <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${style.bg} ${style.border} ${style.text}`}>
+                {style.icon} {style.label}
               </span>
-            </div>
-          ),
-        )}
-        <div className="text-xs text-gray-400 ml-2 flex items-center">
-          (non-sprayable zones shown in zone-type colour)
+            ),
+          )}
         </div>
       </div>
 
@@ -240,7 +267,31 @@ export default function SprayZoneMap({ zones }: SprayZoneMapProps) {
               </div>
             </div>
 
-            {/* Status badge */}
+            {/* US33 — Entry permission badge (primary decision) */}
+            {selected.entryPermissionStatus && (() => {
+              const ep = ENTRY_PERMISSION_STYLE[selected.entryPermissionStatus];
+              return (
+                <div
+                  className={`rounded-lg px-3 py-2.5 mb-3 ${ep.bg} border ${ep.border}`}
+                  data-testid="entry-permission-badge"
+                >
+                  <div className={`text-sm font-bold ${ep.text}`}>
+                    {ep.icon} {ep.label}
+                  </div>
+                  <p className={`text-xs mt-1 ${ep.text} opacity-90`}>{selected.entryMessage}</p>
+                  {selected.remainingRestrictionMinutes !== null &&
+                    selected.remainingRestrictionMinutes !== undefined && (
+                    <p className="text-xs mt-1 text-red-700 font-semibold">
+                      Restricted for {selected.remainingRestrictionMinutes >= 60
+                        ? `${Math.floor(selected.remainingRestrictionMinutes / 60)}h ${selected.remainingRestrictionMinutes % 60}m`
+                        : `${selected.remainingRestrictionMinutes}m`} more
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Spray status badge */}
             <div
               className="rounded-lg px-3 py-2 mb-4 text-sm font-medium"
               style={{

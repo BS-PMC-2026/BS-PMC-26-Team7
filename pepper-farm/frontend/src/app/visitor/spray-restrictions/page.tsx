@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import SprayZoneMap from '@/components/spray/SprayZoneMap';
 import { getPublicRestrictedZones } from '@/services/spray';
-import { ZoneSprayStatusData, ZoneSprayStatus } from '@/types/spray';
+import { ZoneSprayStatusData, ZoneSprayStatus, EntryPermissionStatus } from '@/types/spray';
 import { ShieldAlert } from 'lucide-react';
 
 const STATUS_LABEL: Record<ZoneSprayStatus, string> = {
@@ -21,6 +21,23 @@ const STATUS_STYLE: Record<ZoneSprayStatus, string> = {
   requires_approval: 'bg-yellow-100 text-yellow-700 border-yellow-200',
   pending:           'bg-indigo-100 text-indigo-700 border-indigo-200',
   never_sprayed:     'bg-gray-100 text-gray-600 border-gray-200',
+};
+
+// US33 — Entry permission badge styles
+const ENTRY_LABEL: Record<EntryPermissionStatus, string> = {
+  allowed:         'Entry Permitted',
+  restricted:      'Entry Restricted',
+  caution:         'Caution — Consult Staff',
+  planned_warning: 'Entry Permitted (Spray Due)',
+  no_data:         'Entry Permitted',
+};
+
+const ENTRY_STYLE: Record<EntryPermissionStatus, string> = {
+  allowed:         'bg-green-100 text-green-700 border-green-200',
+  restricted:      'bg-red-100 text-red-700 border-red-200',
+  caution:         'bg-yellow-100 text-yellow-700 border-yellow-200',
+  planned_warning: 'bg-blue-100 text-blue-700 border-blue-200',
+  no_data:         'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 export default function VisitorSprayRestrictionsPage() {
@@ -131,16 +148,16 @@ export default function VisitorSprayRestrictionsPage() {
 
         {/* Zone list */}
         {!loading && zones.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" data-testid="zone-table">
             <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-700">Zone Status</h2>
+              <h2 className="text-sm font-semibold text-gray-700">Zone Entry Status</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Entry Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Entry Permission</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Safe Re-entry Time</th>
                   </tr>
                 </thead>
@@ -152,7 +169,14 @@ export default function VisitorSprayRestrictionsPage() {
                         <span className="block text-xs text-gray-400 font-mono">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLE[z.sprayStatus]}`}>
+                        {/* US33 — primary entry permission badge */}
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${ENTRY_STYLE[z.entryPermissionStatus ?? 'no_data']}`}
+                          data-testid="entry-permission-status"
+                        >
+                          {ENTRY_LABEL[z.entryPermissionStatus ?? 'no_data']}
+                        </span>
+                        <span className={`block mt-0.5 text-xs ${STATUS_STYLE[z.sprayStatus]} rounded px-1`}>
                           {STATUS_LABEL[z.sprayStatus]}
                         </span>
                       </td>
@@ -161,7 +185,7 @@ export default function VisitorSprayRestrictionsPage() {
                           <span className={new Date(z.safeToReEnterAtUtc) > new Date() ? 'text-red-600 font-medium' : 'text-green-700'}>
                             {new Date(z.safeToReEnterAtUtc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
-                        ) : z.requiresApproval ? (
+                        ) : z.entryPermissionStatus === 'caution' ? (
                           <span className="text-yellow-700 text-xs">Consult farm staff</span>
                         ) : (
                           <span className="text-green-700 text-xs font-medium">Open for entry</span>

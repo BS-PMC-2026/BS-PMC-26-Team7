@@ -67,6 +67,11 @@ const makeZone = (overrides = {}) => ({
   safeToReEnterAtUtc: null, safeToHarvestAtUtc: null,
   requiresApproval: false, hazardLevel: 'medium', ppeRequired: 'Gloves',
   nextPlannedAtUtc: null,
+  // US33 entry permission fields
+  entryPermissionStatus: 'allowed' as const,
+  entryAllowed: true,
+  entryMessage: 'Entry is permitted. The re-entry interval (REI) for the last spray has passed.',
+  remainingRestrictionMinutes: null,
   ...overrides,
 });
 
@@ -165,7 +170,7 @@ describe('VisitorSprayRestrictionsPage — public access (no login required)', (
     expect(screen.queryByText('Spray Alert History')).not.toBeInTheDocument();
   });
 
-  it('does not show check-in or entry approval controls (no US33)', async () => {
+  it('does not show check-in or entry-approval action buttons (US33 is read-only)', async () => {
     mockGetPublicRestrictedZones.mockResolvedValue([makeZone()]);
     renderPage();
     await waitFor(() => expect(screen.getByTestId('spray-zone-map')).toBeInTheDocument());

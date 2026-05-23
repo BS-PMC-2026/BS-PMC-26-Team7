@@ -100,8 +100,8 @@ BS-PMC-26-Team7/
 | `/worker/products` | `src/app/worker/products/page.tsx` | View products | `/api/products/*` | Product list |
 | `/manager/spray-alerts` | `src/app/manager/spray-alerts/page.tsx` | **US30** Redirect only — immediately sends to `/manager/spray-map#spray-alerts` (keeps old bookmarks working) | — | — |
 | `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30 + US32** Spray safety map (zones) + Spray Alert History + Overdue Spray Alerts section (`id="overdue-spray-alerts"`) with assign-task modal | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts`, `GET /api/spray-reports/overdue-alerts`, `POST /api/spray-reports/overdue-alerts/{id}/assign` | SprayZoneMap, spray-alerts table, overdue-alerts table, AssignModal |
-| `/worker/spray-restrictions` | `src/app/worker/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map for workers — shows which zones are currently restricted due to spraying | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, zone table |
-| `/visitor/spray-restrictions` | `src/app/visitor/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map — **publicly accessible, no login required**. Public safety information: which zones are restricted after spraying | `GET /api/spray-reports/public-restricted-zones` _(no auth)_ | SprayZoneMap, restriction banner, zone table |
+| `/worker/spray-restrictions` | `src/app/worker/spray-restrictions/page.tsx` | **US31 + US33** Read-only spray restriction map for workers — shows which zones are restricted + explicit entry permission status (allowed / restricted / caution / planned_warning / no_data) | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, entry permission column, zone table |
+| `/visitor/spray-restrictions` | `src/app/visitor/spray-restrictions/page.tsx` | **US31 + US33** Read-only spray restriction map — **publicly accessible, no login required**. Public safety information: which zones are restricted after spraying + entry permission status | `GET /api/spray-reports/public-restricted-zones` _(no auth)_ | SprayZoneMap, restriction banner, entry permission column, zone table |
 
 **Proxy architecture:** The frontend calls `/api/...` relative paths. `next.config.ts` rewrites these to `API_PROXY_TARGET` (localhost:8000 in dev, Azure in prod), eliminating CORS.
 
@@ -351,7 +351,10 @@ BS-PMC-26-Team7/
 25. **US32: Task assignment from overdue alert is idempotent.**  
     `POST /api/spray-reports/overdue-alerts/{id}/assign` returns the existing task if `AssignedTaskId` is already set, without creating a duplicate. The created task uses `taskType="spray"` and `priority="high"` via the existing `create_task()` service.
 
-26. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
+26. **US33: Entry permission is computed server-side in `get_zone_spray_map()` and exposed on every zone response.**
+    Four new fields are added to `ZoneSprayStatusResponse` / `ZoneSprayStatusData`: `entryPermissionStatus` (`allowed | restricted | caution | planned_warning | no_data`), `entryAllowed` (bool), `entryMessage` (str), `remainingRestrictionMinutes` (int | null). The computation helper `_compute_entry_permission()` in `spray_service.py` derives these from `sprayStatus` + `safeToReEnterAtUtc` + current UTC time. Both public and authenticated restricted-zone endpoints return the same entry permission fields. Entry logic: `unsafe` → restricted, `requires_approval` → caution (entryAllowed=False), `pending` → planned_warning (entryAllowed=True), `safe` → allowed, `never_sprayed` → no_data (allowed). The manager spray map (`/zone-map`) also returns these fields. No physical gate/QR/IoT control — this is read-only safety information.
+
+27. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
     `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
 
 ---
@@ -384,7 +387,8 @@ BS-PMC-26-Team7/
 | Frontend — spray map page (US28 + US30 + US32) | Jest | `tests/SprayMapPage.test.tsx` (8 tests — zone map title, alerts section loading/empty/list/error) | same |
 | Frontend — overdue spray alerts section (US32) | Jest | `tests/OverdueSprayAlertsSection.test.tsx` (14 tests — section renders, loading/empty/list, severity badge, resolved/active status, assign button, modal, success/error) | same |
 | Frontend — spray restrictions page (US31, worker) | Jest | `tests/SprayRestrictionsPage.test.tsx` (13 tests — title, loading, map renders, safety notice, summary cards, restricted banner, zone table, status labels, error state, no manager alerts) | same |
-| Frontend — visitor spray restrictions page (US31, public) | Jest | `tests/VisitorSprayRestrictionsPage.test.tsx` (11 tests — renders without login, calls `getPublicRestrictedZones` not `getRestrictedZones`, visitor safety notice, restricted-areas banner, all-clear banner, zone table, error state, no manager controls, no US33 controls) | same |
+| Frontend — visitor spray restrictions page (US31, public) | Jest | `tests/VisitorSprayRestrictionsPage.test.tsx` (11 tests — renders without login, calls `getPublicRestrictedZones` not `getRestrictedZones`, visitor safety notice, restricted-areas banner, all-clear banner, zone table, error state, no manager controls, no action workflow buttons) | same |
+| Frontend — entry permission (US33) | Jest | `tests/EntryPermissionPage.test.tsx` (9 tests — restricted badge when within REI, allowed badge when REI passed, caution for unverified, planned_warning for future spray, no_data for no history, safe re-entry time column, no manager-only fields, no action buttons) | same |
 | Frontend — manager navbar (US30 additions) | Jest | `tests/ManagerNavbar.test.tsx` (updated — spray map nav link, bell panel spray section, anchor hrefs, badge count) | same |
 
 **Notable gaps:** No backend tests for Zones router. No E2E coverage for worker flows (tasks, spray). No frontend tests for sensor detail views. `tests/test_task_report.py` has 3 pre-existing failures unrelated to US28/29/30 — needs investigation.
@@ -453,6 +457,6 @@ Files a new agent should read first when starting work:
 
 ## 14. Last Updated
 
-- **Generated:** 2026-05-23 (US32 added — periodic overdue spray alerts, task assignment from alert, scheduler integration)
+- **Generated:** 2026-05-23 (US33 added — post-spray entry safety check; entry permission status computed server-side and displayed on public + worker spray restriction maps)
 - **Method:** Manual initial creation based on full codebase scan; AUTO-GENERATED sections can be refreshed by running `python scripts/generate_project_context.py` from the repo root.
 - **To update:** Run `npm run context:update` or `python scripts/generate_project_context.py`. The script rewrites only content between `<!-- AUTO-GENERATED-START:* -->` and `<!-- AUTO-GENERATED-END:* -->` markers. All other sections are left untouched.

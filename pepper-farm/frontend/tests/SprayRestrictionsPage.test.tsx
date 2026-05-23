@@ -63,6 +63,11 @@ const makeZone = (overrides = {}) => ({
   safeToReEnterAtUtc: null, safeToHarvestAtUtc: null,
   requiresApproval: false, hazardLevel: 'medium', ppeRequired: 'Gloves',
   nextPlannedAtUtc: null,
+  // US33 entry permission fields
+  entryPermissionStatus: 'allowed' as const,
+  entryAllowed: true,
+  entryMessage: 'Entry is permitted.',
+  remainingRestrictionMinutes: null,
   ...overrides,
 });
 
