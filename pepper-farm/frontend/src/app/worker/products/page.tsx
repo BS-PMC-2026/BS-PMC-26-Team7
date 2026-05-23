@@ -31,8 +31,8 @@ export default function WorkerProductsPage() {
   }, [loadProducts]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-[var(--color-muted)]">
+      <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <PageHeader
             label="PepperFarm"
@@ -54,14 +54,14 @@ export default function WorkerProductsPage() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse"
+                className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden animate-pulse"
               >
-                <div className="w-full h-48 bg-gray-100" />
+                <div className="w-full h-48 bg-[var(--color-muted)]" />
                 <div className="p-4 flex flex-col gap-2">
-                  <div className="h-3.5 bg-gray-100 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
-                  <div className="h-3 bg-gray-100 rounded w-full mt-1" />
-                  <div className="h-3 bg-gray-100 rounded w-5/6" />
+                  <div className="h-3.5 bg-[var(--color-muted)] rounded w-3/4" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-1/2" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-full mt-1" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-5/6" />
                 </div>
               </div>
             ))}
@@ -74,7 +74,7 @@ export default function WorkerProductsPage() {
           />
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-[var(--color-muted-foreground)] mb-4">
               {products.length} {products.length === 1 ? 'product' : 'products'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

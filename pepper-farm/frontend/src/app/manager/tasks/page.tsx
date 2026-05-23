@@ -41,27 +41,27 @@ function TaskHistoryContent() {
     <div className="p-6 max-w-7xl mx-auto">
       {error && <Alert className="mb-4">{error}</Alert>}
       {loading ? (
-        <p className="text-center text-gray-400 py-10">Loading completed tasks...</p>
+        <p className="text-center text-[var(--color-muted-foreground)] py-10">Loading completed tasks...</p>
       ) : tasks.length === 0 ? (
         <EmptyState title="No completed tasks found" description="Completed tasks will appear here." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-2">
           {tasks.map((task) => (
-            <div key={task.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 hover:shadow-lg transition-all">
+            <div key={task.id} className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-5 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between mb-3">
-                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">COMPLETED</span>
-                <span className="text-xs text-gray-400 uppercase">{task.priority}</span>
+                <span className="px-3 py-1 rounded-full bg-[var(--color-secondary-light)] text-[var(--color-primary)] text-xs font-semibold">COMPLETED</span>
+                <span className="text-xs text-[var(--color-muted-foreground)] uppercase">{task.priority}</span>
               </div>
-              <h2 className="text-lg font-bold text-gray-800 mb-2">{task.title}</h2>
-              <p className="text-sm text-gray-500 mb-4">{task.description || 'No description provided.'}</p>
+              <h2 className="text-lg font-bold text-[var(--color-foreground)] mb-2">{task.title}</h2>
+              <p className="text-sm text-[var(--color-muted-foreground)] mb-4">{task.description || 'No description provided.'}</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Task Type</span>
-                  <span className="font-medium text-gray-700">{task.taskType}</span>
+                  <span className="text-[var(--color-muted-foreground)]">Task Type</span>
+                  <span className="font-medium text-[var(--color-foreground)]">{task.taskType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Completed At</span>
-                  <span className="font-medium text-gray-700">{task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
+                  <span className="text-[var(--color-muted-foreground)]">Completed At</span>
+                  <span className="font-medium text-[var(--color-foreground)]">{task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -82,7 +82,7 @@ function TasksTabBar({ activeTab, onTabChange }: { activeTab: string; onTabChang
     { id: 'history', label: 'History', icon: <ClipboardCheck size={14} /> },
   ];
   return (
-    <div className="border-b border-gray-200/60">
+    <div className="border-b border-[var(--color-border)]/60">
       <div className="max-w-7xl mx-auto px-6 flex">
         {tabs.map((tab) => (
           <button
@@ -90,8 +90,8 @@ function TasksTabBar({ activeTab, onTabChange }: { activeTab: string; onTabChang
             onClick={() => onTabChange(tab.id)}
             className={`flex items-center gap-1.5 px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab.id
-                ? 'border-[#2F6F4E] text-[#2F6F4E]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border)]'
             }`}
           >
             {tab.icon}{tab.label}
@@ -283,7 +283,7 @@ function ManagerTasksPageContent() {
       </div>
 
       {alertSuccessId && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-4 py-3 text-sm text-[var(--color-primary)]">
           <span>
             {tk.createdFromAlert}
             <Link href="/manager/anomalies" className="underline font-medium" dir="ltr">
@@ -293,7 +293,7 @@ function ManagerTasksPageContent() {
           </span>
           <button
             onClick={() => setAlertSuccessId(null)}
-            className="text-green-500 hover:text-green-700 font-medium leading-none cursor-pointer"
+            className="text-[var(--color-primary)] hover:text-[var(--color-primary)] font-medium leading-none cursor-pointer"
             aria-label="Dismiss"
           >
             ×
@@ -304,7 +304,7 @@ function ManagerTasksPageContent() {
       {showCreateForm && (
         <Card className="p-6 mb-6">
           {sourceAlertId && (
-            <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
               <span>
                 {tk.preFilledFromAlert}
                 <span dir="ltr">#{sourceAlertId}</span>.
@@ -315,7 +315,7 @@ function ManagerTasksPageContent() {
             </div>
           )}
 
-          <h2 className="text-lg font-medium text-gray-700 mb-4">{tk.newTask}</h2>
+          <h2 className="text-lg font-medium text-[var(--color-foreground)] mb-4">{tk.newTask}</h2>
 
           {submitError && <Alert className="mb-4">{submitError}</Alert>}
 
@@ -353,7 +353,7 @@ function ManagerTasksPageContent() {
       )}
 
       {isLoadingTasks ? (
-        <p className="text-sm text-gray-400 text-center py-12">{tk.loading}</p>
+        <p className="text-sm text-[var(--color-muted-foreground)] text-center py-12">{tk.loading}</p>
       ) : tasks.length === 0 ? (
         <EmptyState title={tk.noTasksYet} description={tk.clickToCreate} />
       ) : filteredTasks.length === 0 ? (
@@ -369,7 +369,7 @@ function ManagerTasksPageContent() {
             setSubmitError(null);
           }}
         >
-          <h2 className="text-lg font-medium text-gray-700 mb-4">
+          <h2 className="text-lg font-medium text-[var(--color-foreground)] mb-4">
             {tk.editTask}
           </h2>
 

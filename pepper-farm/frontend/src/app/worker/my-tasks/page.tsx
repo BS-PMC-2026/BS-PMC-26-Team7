@@ -120,7 +120,7 @@ export default function MyTasksPage() {
       {error && <Alert className="mb-4">{error}</Alert>}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-12">{t.tasks.loading}</p>
+        <p className="text-sm text-[var(--color-muted-foreground)] text-center py-12">{t.tasks.loading}</p>
       ) : tasks.length === 0 ? (
         <EmptyState title={wk.noTasksYet} description={wk.youHaveNoTasks} />
       ) : (

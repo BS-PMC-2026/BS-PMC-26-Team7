@@ -15,7 +15,7 @@ import PageHeader from "@/components/ui/PageHeader";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">
+    <p className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-5">
       {children}
     </p>
   );
@@ -337,7 +337,7 @@ export default function CreatePepperPage() {
         {/* ── Section 4: PAR ── */}
         <Card tinted>
           <SectionLabel>Optimal PAR Range</SectionLabel>
-          <p className="text-xs text-gray-500 -mt-3 mb-5">
+          <p className="text-xs text-[var(--color-muted-foreground)] -mt-3 mb-5">
             PAR (Photosynthetically Active Radiation) is the portion of light that plants use for
             photosynthesis — wavelengths 400–700 nm. Measured in µmol/m²/s. Typical range: 0–2 000.
           </p>
@@ -384,24 +384,24 @@ export default function CreatePepperPage() {
             />
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-[var(--color-foreground)]">
                 Upload Image (optional)
               </label>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg,image/webp"
                 onChange={handleFileChange}
-                className="text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-[#DDE5DC] file:text-xs file:font-medium file:text-[#2F6F4E] file:bg-white hover:file:bg-[#E8F3EC] file:cursor-pointer"
+                className="text-sm text-[var(--color-muted-foreground)] file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-[var(--color-border)] file:text-xs file:font-medium file:text-[var(--color-primary)] file:bg-white hover:file:bg-[var(--color-secondary-light)] file:cursor-pointer"
               />
               {selectedFile && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--color-muted-foreground)]">
                   Selected: {selectedFile.name}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="GeneralDescription" className="text-sm font-medium text-gray-700">
+              <label htmlFor="GeneralDescription" className="text-sm font-medium text-[var(--color-foreground)]">
                 General Description
               </label>
               <textarea
@@ -412,9 +412,9 @@ export default function CreatePepperPage() {
                 value={formData.GeneralDescription}
                 onChange={handleChange}
                 maxLength={1000}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
               />
-              <p className="text-xs text-gray-400 text-right">
+              <p className="text-xs text-[var(--color-muted-foreground)] text-right">
                 {formData.GeneralDescription.length}/1000
               </p>
             </div>
@@ -431,9 +431,9 @@ export default function CreatePepperPage() {
                 type="checkbox"
                 checked={formData.IsActive}
                 onChange={handleChange}
-                className="w-4 h-4 accent-[#2F6F4E] cursor-pointer"
+                className="w-4 h-4 accent-[var(--color-primary)] cursor-pointer"
               />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-[var(--color-foreground)]">
                 Active — visible in the system
               </span>
             </label>

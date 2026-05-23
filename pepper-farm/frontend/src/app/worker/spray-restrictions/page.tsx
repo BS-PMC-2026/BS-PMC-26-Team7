@@ -16,11 +16,11 @@ const STATUS_LABEL: Record<ZoneSprayStatus, string> = {
 };
 
 const STATUS_STYLE: Record<ZoneSprayStatus, string> = {
-  safe:              'bg-green-100 text-green-700 border-green-200',
-  unsafe:            'bg-red-100 text-red-700 border-red-200',
-  requires_approval: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  safe:              'bg-[var(--color-secondary-light)] text-[var(--color-primary)] border-[var(--color-border)]',
+  unsafe:            'bg-[var(--color-error-bg)] text-[var(--color-error)] border-[var(--color-border)]',
+  requires_approval: 'bg-[var(--color-warning-bg)] text-[var(--color-warning)] border-[var(--color-border)]',
   pending:           'bg-indigo-100 text-indigo-700 border-indigo-200',
-  never_sprayed:     'bg-gray-100 text-gray-600 border-gray-200',
+  never_sprayed:     'bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]',
 };
 
 // US33 — Entry permission badge styles (worker view)
@@ -33,11 +33,11 @@ const ENTRY_LABEL: Record<EntryPermissionStatus, string> = {
 };
 
 const ENTRY_STYLE: Record<EntryPermissionStatus, string> = {
-  allowed:         'bg-green-100 text-green-700 border-green-200',
-  restricted:      'bg-red-100 text-red-700 border-red-200',
-  caution:         'bg-yellow-100 text-yellow-700 border-yellow-200',
-  planned_warning: 'bg-blue-100 text-blue-700 border-blue-200',
-  no_data:         'bg-gray-100 text-gray-600 border-gray-200',
+  allowed:         'bg-[var(--color-secondary-light)] text-[var(--color-primary)] border-[var(--color-border)]',
+  restricted:      'bg-[var(--color-error-bg)] text-[var(--color-error)] border-[var(--color-border)]',
+  caution:         'bg-[var(--color-warning-bg)] text-[var(--color-warning)] border-[var(--color-border)]',
+  planned_warning: 'bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-border)]',
+  no_data:         'bg-[var(--color-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]',
 };
 
 function SummaryCard({ label, count, style }: { label: string; count: number; style: string }) {
@@ -81,7 +81,7 @@ export default function WorkerSprayRestrictionsPage() {
   return (
     <div className="min-h-screen" data-testid="spray-restrictions-page">
       {/* Page header */}
-      <div className="border-b border-gray-200/60">
+      <div className="border-b border-[var(--color-border)]">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader
@@ -92,7 +92,7 @@ export default function WorkerSprayRestrictionsPage() {
             <button
               onClick={load}
               disabled={loading}
-              className="flex items-center gap-1.5 mt-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition"
+              className="flex items-center gap-1.5 mt-1 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-white text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-50 transition"
             >
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -105,14 +105,14 @@ export default function WorkerSprayRestrictionsPage() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+          <div className="rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)] px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
         {/* Safety notice banner */}
-        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 text-sm text-amber-800">
-          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-500" />
+        <div className="rounded-xl bg-[var(--color-warning-bg)] border border-[var(--color-warning)] px-4 py-3 flex items-start gap-3 text-sm text-[var(--color-warning)]">
+          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-[var(--color-warning)]" />
           <div>
             <span className="font-semibold">Safety notice: </span>
             Do not enter any zone marked as <strong>Restricted</strong> or <strong>Caution</strong>.
@@ -133,8 +133,8 @@ export default function WorkerSprayRestrictionsPage() {
 
         {/* Restricted zones highlight */}
         {!loading && restrictedZones.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4" data-testid="restricted-zones-banner">
-            <h3 className="text-sm font-semibold text-red-800 mb-3">
+          <div className="bg-[var(--color-error-bg)] border border-[var(--color-border)] rounded-xl p-4" data-testid="restricted-zones-banner">
+            <h3 className="text-sm font-semibold text-[var(--color-error)] mb-3">
               🚫 Restricted zones — do not enter ({restrictedZones.length})
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -153,23 +153,23 @@ export default function WorkerSprayRestrictionsPage() {
 
         {/* Loading skeleton */}
         {loading && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 animate-pulse" data-testid="loading-skeleton">
-            <div className="h-64 bg-gray-100 rounded-lg" />
+          <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6 animate-pulse" data-testid="loading-skeleton">
+            <div className="h-64 bg-[var(--color-muted)] rounded-lg" />
           </div>
         )}
 
         {/* Map */}
         {!loading && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">
                 Farm Zone Safety Overview
-                <span className="ml-2 text-xs font-normal text-gray-400">
+                <span className="ml-2 text-xs font-normal text-[var(--color-muted-foreground)]">
                   — click any zone for details
                 </span>
               </h2>
               {lastFetch && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-[var(--color-muted-foreground)]">
                   Updated {lastFetch.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -180,27 +180,27 @@ export default function WorkerSprayRestrictionsPage() {
 
         {/* Zone status table */}
         {!loading && zones.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" data-testid="zone-table">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-700">Zone Entry Details</h2>
+          <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden" data-testid="zone-table">
+            <div className="px-6 py-4 border-b border-[var(--color-border)]">
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Zone Entry Details</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Entry Permission</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Safe Re-entry</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Pesticide</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Next Planned</th>
+                  <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Zone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Entry Permission</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Safe Re-entry</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Pesticide</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Next Planned</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-[var(--color-muted)]">
                   {zones.map((z) => (
-                    <tr key={z.zoneId} className="hover:bg-gray-50 transition-colors">
+                    <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                       <td className="px-4 py-3">
-                        <span className="font-medium text-gray-800">{z.zoneName}</span>
-                        <span className="block text-xs text-gray-400 font-mono">{z.zoneCode}</span>
+                        <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
+                        <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
                         {/* US33 — primary entry permission badge */}
@@ -215,7 +215,7 @@ export default function WorkerSprayRestrictionsPage() {
                         </span>
                         {z.remainingRestrictionMinutes !== null &&
                           z.remainingRestrictionMinutes !== undefined && (
-                          <span className="block mt-0.5 text-xs text-red-600 font-semibold">
+                          <span className="block mt-0.5 text-xs text-[var(--color-error)] font-semibold">
                             {z.remainingRestrictionMinutes >= 60
                               ? `${Math.floor(z.remainingRestrictionMinutes / 60)}h ${z.remainingRestrictionMinutes % 60}m remaining`
                               : `${z.remainingRestrictionMinutes}m remaining`}
@@ -224,25 +224,25 @@ export default function WorkerSprayRestrictionsPage() {
                       </td>
                       <td className="px-4 py-3">
                         {z.safeToReEnterAtUtc ? (
-                          <span className={new Date(z.safeToReEnterAtUtc) > new Date() ? 'text-red-600 font-medium' : 'text-green-700'}>
+                          <span className={new Date(z.safeToReEnterAtUtc) > new Date() ? 'text-[var(--color-error)] font-medium' : 'text-[var(--color-primary)]'}>
                             {new Date(z.safeToReEnterAtUtc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         ) : z.entryPermissionStatus === 'caution' ? (
-                          <span className="text-yellow-700 text-xs">Consult manager</span>
+                          <span className="text-[var(--color-warning)] text-xs">Consult manager</span>
                         ) : (
-                          <span className="text-green-700 text-xs font-medium">Safe to enter</span>
+                          <span className="text-[var(--color-primary)] text-xs font-medium">Safe to enter</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {z.pesticideName ?? <span className="text-gray-300">—</span>}
+                      <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+                        {z.pesticideName ?? <span className="text-[var(--color-muted-foreground)] opacity-50">—</span>}
                         {z.requiresApproval && (
-                          <span className="ml-1 text-[10px] text-yellow-600 font-medium">⚠ unverified</span>
+                          <span className="ml-1 text-[10px] text-[var(--color-warning)] font-medium">⚠ unverified</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-indigo-600">
                         {z.nextPlannedAtUtc
                           ? new Date(z.nextPlannedAtUtc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                          : <span className="text-gray-300">—</span>}
+                          : <span className="text-[var(--color-muted-foreground)] opacity-50">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -254,7 +254,7 @@ export default function WorkerSprayRestrictionsPage() {
 
         {/* Empty state */}
         {!loading && zones.length === 0 && !error && (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-[var(--color-muted-foreground)]">
             <p className="text-4xl mb-3">🗺️</p>
             <p className="font-medium">No zones found.</p>
             <p className="text-sm mt-1">Make sure farm zones are configured in the database.</p>

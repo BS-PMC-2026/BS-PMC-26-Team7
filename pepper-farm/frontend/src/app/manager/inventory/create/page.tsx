@@ -68,7 +68,7 @@ export default function AddInventoryItemPage() {
   return (
     <main className="mx-auto max-w-2xl p-6">
       <div className="mb-6">
-        <button onClick={() => router.push('/manager/inventory')} className="text-sm text-gray-500 hover:text-gray-800">
+        <button onClick={() => router.push('/manager/inventory')} className="text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
           {inv.backToInventory}
         </button>
         <h1 className="mt-3 text-3xl font-bold">{inv.addItemTitle}</h1>
@@ -76,35 +76,35 @@ export default function AddInventoryItemPage() {
 
       {mode === 'choose' && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
             {inv.chooseTypeDesc}
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             <button
               onClick={() => router.push('/manager/products/create')}
-              className="text-left bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition"
+              className="text-left bg-white border border-[var(--color-border)] rounded-xl p-5 hover:shadow-md transition"
             >
-              <h3 className="font-semibold text-gray-900">{inv.chooseProduct}</h3>
-              <p className="text-sm text-gray-500 mt-1">{inv.chooseProductDesc}</p>
+              <h3 className="font-semibold text-[var(--color-foreground)]">{inv.chooseProduct}</h3>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-1">{inv.chooseProductDesc}</p>
             </button>
             <button
               onClick={() => setMode('warehouse')}
-              className="text-left bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition"
+              className="text-left bg-white border border-[var(--color-border)] rounded-xl p-5 hover:shadow-md transition"
             >
-              <h3 className="font-semibold text-gray-900">{inv.chooseWarehouse}</h3>
-              <p className="text-sm text-gray-500 mt-1">{inv.chooseWarehouseDesc}</p>
+              <h3 className="font-semibold text-[var(--color-foreground)]">{inv.chooseWarehouse}</h3>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-1">{inv.chooseWarehouseDesc}</p>
             </button>
           </div>
         </div>
       )}
 
       {mode === 'warehouse' && (
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-sm">
           {successMessage && (
-            <div className="rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800">{successMessage}</div>
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-4 py-3 text-[var(--color-primary)]">{successMessage}</div>
           )}
           {errorMessage && (
-            <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800">{errorMessage}</div>
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-error-bg)] px-4 py-3 text-[var(--color-error)]">{errorMessage}</div>
           )}
 
           <div>
@@ -112,7 +112,7 @@ export default function AddInventoryItemPage() {
             <input id="ItemName" name="ItemName" value={form.ItemName} onChange={handleChange}
               maxLength={200}
               placeholder={inv.itemNamePlaceholder}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black" />
+              className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]" />
           </div>
 
           <div>
@@ -120,23 +120,23 @@ export default function AddInventoryItemPage() {
             <input id="Location" name="Location" value={form.Location} onChange={handleChange}
               maxLength={200}
               placeholder={inv.warehouseLocationPlaceholder}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black" />
+              className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]" />
           </div>
 
           <div>
             <label htmlFor="WarehouseQuantity" className="mb-1 block text-sm font-medium">{inv.warehouseQty}</label>
             <input id="WarehouseQuantity" name="WarehouseQuantity" type="number" min="0" step="1"
               value={form.WarehouseQuantity} onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black" dir="ltr" />
+              className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]" dir="ltr" />
           </div>
 
           <div className="flex gap-3">
             <button type="submit" disabled={submitting}
-              className="rounded-md bg-black px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+              className="rounded-md bg-[var(--color-primary)] px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? t.common.saving : t.common.create}
             </button>
             <button type="button" onClick={() => setMode('choose')}
-              className="rounded-md border border-gray-300 px-5 py-2 text-gray-700 hover:bg-gray-50">
+              className="rounded-md border border-[var(--color-border)] px-5 py-2 text-[var(--color-foreground)] hover:bg-[var(--color-muted)]">
               {t.common.back}
             </button>
           </div>
