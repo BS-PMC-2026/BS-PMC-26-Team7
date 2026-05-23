@@ -117,6 +117,7 @@ export default function TaskForm({
     { value: 'harvesting',  label: translateEnum('harvesting',  t.enums.taskType) },
     { value: 'planting',    label: translateEnum('planting',    t.enums.taskType) },
     { value: 'fertilizing', label: translateEnum('fertilizing', t.enums.taskType) },
+    { value: 'spray',       label: translateEnum('spray',       t.enums.taskType) },
     { value: 'inspection',  label: translateEnum('inspection',  t.enums.taskType) },
     { value: 'other',       label: translateEnum('other',       t.enums.taskType) },
   ];

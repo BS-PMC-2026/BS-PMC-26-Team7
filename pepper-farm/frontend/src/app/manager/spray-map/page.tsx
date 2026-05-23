@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import SprayZoneMap from '@/components/spray/SprayZoneMap';
+import TaskForm from '@/components/tasks/TaskForm';
 import { assignOverdueSprayTask, getOverdueSprayAlerts, getSprayAlerts, getZoneSprayMap } from '@/services/spray';
+import { createTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { OverdueSprayAlert, ZoneSprayStatusData, ZoneSprayStatus, SprayAlert } from '@/types/spray';
 import { AlertTriangle, CheckCircle, RefreshCw, ShieldAlert, ShieldCheck, UserCheck } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import type { CreateTaskFormData } from '@/types/task';
 
 // ── Status pill helper ────────────────────────────────────────────────────────
 
@@ -84,6 +88,8 @@ function timeAgo(dateStr: string | null | undefined): string {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SprayMapPage() {
+  const { t } = useLanguage();
+  const sp = t.spray;
   const [zones,         setZones]         = useState<ZoneSprayStatusData[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState<string | null>(null);
@@ -105,6 +111,9 @@ export default function SprayMapPage() {
   const [assignLoading,       setAssignLoading]       = useState(false);
   const [assignError,         setAssignError]         = useState<string | null>(null);
   const [assignSuccess,       setAssignSuccess]       = useState<string | null>(null);
+  const [taskCreateLoading,   setTaskCreateLoading]   = useState(false);
+  const [taskCreateError,     setTaskCreateError]     = useState<string | null>(null);
+  const [taskCreateSuccess,   setTaskCreateSuccess]   = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,7 +195,7 @@ export default function SprayMapPage() {
       const task = await assignOverdueSprayTask(assigningAlert.OverdueAlertId, {
         assignedToUserId: Number(selectedWorkerId),
       });
-      setAssignSuccess(`Task assigned to worker (Task #${task.id}).`);
+      setAssignSuccess(sp.taskAssigned.replace('{id}', String(task.id)));
       setOverdueAlerts((prev) =>
         prev.map((a) =>
           a.OverdueAlertId === assigningAlert.OverdueAlertId
@@ -195,11 +204,25 @@ export default function SprayMapPage() {
         ),
       );
     } catch (err) {
-      setAssignError(err instanceof Error ? err.message : 'Failed to assign task.');
+      setAssignError(err instanceof Error ? err.message : sp.failedToAssignTask);
     } finally {
       setAssignLoading(false);
     }
-  }, [assigningAlert, selectedWorkerId]);
+  }, [assigningAlert, selectedWorkerId, sp.failedToAssignTask, sp.taskAssigned]);
+
+  const handleCreateSprayTask = useCallback(async (data: CreateTaskFormData) => {
+    setTaskCreateLoading(true);
+    setTaskCreateError(null);
+    setTaskCreateSuccess(null);
+    try {
+      const task = await createTask({ ...data, taskType: 'spray' });
+      setTaskCreateSuccess(`${sp.sprayTaskCreated} ${sp.taskNumber.replace('{id}', String(task.id))}`);
+    } catch (err) {
+      setTaskCreateError(err instanceof Error ? err.message : sp.sprayTaskCreateFailed);
+    } finally {
+      setTaskCreateLoading(false);
+    }
+  }, [sp.sprayTaskCreateFailed, sp.sprayTaskCreated, sp.taskNumber]);
 
   // Summary counts
   const countByStatus = (status: ZoneSprayStatus) =>
@@ -209,6 +232,21 @@ export default function SprayMapPage() {
   const attentionZones = zones.filter(
     (z) => z.sprayStatus === 'unsafe' || z.sprayStatus === 'requires_approval',
   );
+  const taskZones = zones.map((zone) => ({
+    ZoneId: zone.zoneId,
+    ZoneCode: zone.zoneCode,
+    ZoneName: zone.zoneName,
+  }));
+  const sprayTaskInitial: Partial<CreateTaskFormData> = {
+    title: sp.createSprayTask,
+    taskType: 'spray',
+    priority: 'medium',
+    assignedToUserId: '',
+    dueDate: '',
+    zoneCode: '',
+    description: '',
+    checklistItems: [],
+  };
 
   return (
     <div className="min-h-screen">
@@ -217,9 +255,9 @@ export default function SprayMapPage() {
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader
-              label="Spray Safety"
-              title="Spray Map"
-              subtitle="Real-time spray status and re-entry safety for every greenhouse zone"
+              label={sp.safetyLabel}
+              title={sp.managerTitle}
+              subtitle={sp.managerSubtitle}
             />
             <button
               onClick={handleRefresh}
@@ -227,7 +265,7 @@ export default function SprayMapPage() {
               className="flex items-center gap-1.5 mt-1 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-white text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-50 transition"
             >
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              {sp.refresh}
             </button>
           </div>
         </div>
@@ -299,6 +337,39 @@ export default function SprayMapPage() {
             <SprayZoneMap zones={zones} />
           </div>
         )}
+
+        <section className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6" data-testid="create-spray-task-section">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-[var(--color-foreground)]">{sp.createSprayTask}</h2>
+            <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">{sp.createSprayTaskDesc}</p>
+          </div>
+          {taskCreateError && (
+            <div className="mb-4 rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)] px-4 py-3 text-sm">
+              {taskCreateError}
+            </div>
+          )}
+          {taskCreateSuccess && (
+            <div className="mb-4 rounded-lg bg-[var(--color-secondary-light)] border border-[var(--color-border)] text-[var(--color-primary)] px-4 py-3 text-sm" data-testid="spray-task-success">
+              {taskCreateSuccess}
+            </div>
+          )}
+          {loading ? (
+            <div className="space-y-3 animate-pulse" data-testid="spray-task-form-loading">
+              <div className="h-9 bg-[var(--color-muted)] rounded-lg" />
+              <div className="h-20 bg-[var(--color-muted)] rounded-lg" />
+              <div className="h-9 bg-[var(--color-muted)] rounded-lg" />
+            </div>
+          ) : (
+            <TaskForm
+              onSubmit={handleCreateSprayTask}
+              isLoading={taskCreateLoading}
+              workers={workers}
+              zones={taskZones}
+              initialData={sprayTaskInitial}
+              submitLabel={sp.createSprayTask}
+            />
+          )}
+        </section>
 
         {/* Zone status table */}
         {!loading && zones.length > 0 && (
@@ -446,7 +517,7 @@ export default function SprayMapPage() {
                         <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                           {alert.PesticideName ?? <span className="text-gray-300">—</span>}
                           {alert.RequiresApproval && (
-                            <span className="ml-1 text-[10px] text-yellow-600 font-medium">⚠ unverified</span>
+                            <span className="ml-1 text-[10px] text-yellow-600 font-medium">{sp.unverified}</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-[var(--color-muted-foreground)] capitalize">
@@ -460,10 +531,10 @@ export default function SprayMapPage() {
                         </td>
                         <td className="px-4 py-3">
                           {alert.IsRead ? (
-                            <span className="text-xs text-[var(--color-primary)] font-medium">Read</span>
+                            <span className="text-xs text-[var(--color-primary)] font-medium">{t.common.read}</span>
                           ) : (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-[var(--color-warning)] text-white text-[10px] font-bold">
-                              NEW
+                              {t.common.new}
                             </span>
                           )}
                         </td>
@@ -479,8 +550,8 @@ export default function SprayMapPage() {
           {!alertsLoading && sprayAlerts.length === 0 && !alertsError && (
             <div className="text-center py-12 text-[var(--color-muted-foreground)] bg-white rounded-2xl border border-[var(--color-border)]" data-testid="spray-alerts-empty">
               <p className="text-3xl mb-2">🛡️</p>
-              <p className="font-medium text-sm">No spray alerts yet.</p>
-              <p className="text-xs mt-1">Alerts appear here when workers submit spray reports.</p>
+              <p className="font-medium text-sm">{sp.noSprayAlertsYet}</p>
+              <p className="text-xs mt-1">{sp.sprayAlertsEmptyDesc}</p>
             </div>
           )}
         </section>
@@ -491,15 +562,15 @@ export default function SprayMapPage() {
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)] flex items-center gap-2">
                 <AlertTriangle size={16} className="text-orange-500" />
-                Overdue Spray Alerts
+                {sp.overdueSprayAlerts}
               </h2>
               <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                Zones that have not been sprayed within the required interval (30 days)
+                {sp.overdueSprayAlertsDesc}
               </p>
             </div>
             {!overdueLoading && overdueAlerts.length > 0 && (
               <span className="text-xs text-[var(--color-muted-foreground)]">
-                {overdueAlerts.filter((a) => !a.IsResolved).length} active
+                {sp.activeCount.replace('{count}', String(overdueAlerts.filter((a) => !a.IsResolved).length))}
               </span>
             )}
           </div>
@@ -527,12 +598,12 @@ export default function SprayMapPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-[var(--color-warning-bg)] border-b border-[var(--color-border)]">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Zone</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Severity</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Last Sprayed</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Overdue Since</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">Task</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.zone}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.severity}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.lastSprayed}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.overdueSince}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.status}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">{sp.task}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -552,7 +623,7 @@ export default function SprayMapPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-                          {alert.LastSprayedAtUtc ? fmtDate(alert.LastSprayedAtUtc) : <span className="text-[var(--color-muted-foreground)] italic">Never</span>}
+                          {alert.LastSprayedAtUtc ? fmtDate(alert.LastSprayedAtUtc) : <span className="text-[var(--color-muted-foreground)] italic">{t.common.never}</span>}
                         </td>
                         <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                           {fmtDate(alert.OverdueSinceUtc)}
@@ -561,18 +632,18 @@ export default function SprayMapPage() {
                         <td className="px-4 py-3">
                           {alert.IsResolved ? (
                             <span className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] font-medium">
-                              <CheckCircle size={12} /> Resolved
+                              <CheckCircle size={12} /> {sp.resolved}
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-bold">
-                              ACTIVE
+                              {t.common.active.toUpperCase()}
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {alert.AssignedTaskId ? (
                             <span className="text-xs text-indigo-600 font-medium">
-                              Task #{alert.AssignedTaskId}
+                              {sp.taskNumber.replace('{id}', String(alert.AssignedTaskId))}
                             </span>
                           ) : alert.IsResolved ? (
                             <span className="text-xs text-[var(--color-muted-foreground)]">—</span>
@@ -583,7 +654,7 @@ export default function SprayMapPage() {
                               data-testid="assign-task-button"
                             >
                               <UserCheck size={12} />
-                              Assign Task
+                              {sp.assignTask}
                             </button>
                           )}
                         </td>
@@ -599,8 +670,8 @@ export default function SprayMapPage() {
           {!overdueLoading && overdueAlerts.length === 0 && !overdueError && (
             <div className="text-center py-12 text-[var(--color-muted-foreground)] bg-white rounded-2xl border border-[var(--color-border)]" data-testid="overdue-alerts-empty">
               <p className="text-3xl mb-2">✅</p>
-              <p className="font-medium text-sm">All zones are up to date.</p>
-              <p className="text-xs mt-1">Overdue alerts appear here when zones need spraying.</p>
+              <p className="font-medium text-sm">{sp.allZonesUpToDate}</p>
+              <p className="text-xs mt-1">{sp.overdueAlertsEmptyDesc}</p>
             </div>
           )}
         </section>
@@ -610,10 +681,10 @@ export default function SprayMapPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="assign-modal">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4">
               <h3 className="text-base font-semibold text-[var(--color-foreground)] mb-1">
-                Assign Spray Task
+                {sp.assignSprayTask}
               </h3>
               <p className="text-sm text-[var(--color-muted-foreground)] mb-4">
-                Zone: <span className="font-medium text-[var(--color-foreground)]">{assigningAlert.ZoneName}</span>{' '}
+                {sp.zone}: <span className="font-medium text-[var(--color-foreground)]">{assigningAlert.ZoneName}</span>{' '}
                 <span className="font-mono text-xs text-[var(--color-muted-foreground)]">({assigningAlert.ZoneCode})</span>
               </p>
 
@@ -624,7 +695,7 @@ export default function SprayMapPage() {
               ) : (
                 <>
                   <label className="block text-xs font-medium text-[var(--color-muted-foreground)] mb-1.5">
-                    Select Worker
+                    {sp.selectWorker}
                   </label>
                   <select
                     className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] mb-4"
@@ -632,7 +703,7 @@ export default function SprayMapPage() {
                     onChange={(e) => setSelectedWorkerId(e.target.value === '' ? '' : Number(e.target.value))}
                     data-testid="worker-select"
                   >
-                    <option value="">— select a worker —</option>
+                    <option value="">{sp.selectWorkerPlaceholder}</option>
                     {workers.map((w) => (
                       <option key={w.userId} value={w.userId}>{w.fullName}</option>
                     ))}
@@ -650,7 +721,7 @@ export default function SprayMapPage() {
                     className="w-full py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
                     data-testid="confirm-assign-button"
                   >
-                    {assignLoading ? 'Assigning…' : 'Assign Task'}
+                    {assignLoading ? sp.assigning : sp.assignTask}
                   </button>
                 </>
               )}
@@ -659,7 +730,7 @@ export default function SprayMapPage() {
                 onClick={closeAssignModal}
                 className="mt-3 w-full py-2 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] transition"
               >
-                {assignSuccess ? 'Close' : 'Cancel'}
+                {assignSuccess ? t.common.close : t.common.cancel}
               </button>
             </div>
           </div>

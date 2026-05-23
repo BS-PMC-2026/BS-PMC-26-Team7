@@ -21,13 +21,26 @@ export interface EnumDictionary {
 export interface NavDictionary {
   dashboard:  string;
   sensors:    string;
+  sensorExplorer: string;
   peppers:    string;
   inventory:  string;
+  stock:      string;
+  stockSub:   string;
+  plants:     string;
+  plantsSub:  string;
+  peppersSub: string;
   products:   string;
+  productsSub: string;
   tasks:      string;
   reports:    string;
+  analytics:  string;
+  users:      string;
   anomalies:  string;
   map:        string;
+  addPlant:   string;
+  addPlantSub: string;
+  updateLocation: string;
+  updateLocationSub: string;
 }
 
 export interface CommonDictionary {
@@ -65,6 +78,14 @@ export interface CommonDictionary {
   refresh:          string;
   loadData:         string;
   checkBackLater:   string;
+  viewAll:          string;
+  viewHistory:      string;
+  new:              string;
+  read:             string;
+  unread:           string;
+  updated:          string;
+  never:            string;
+  remaining:        string;
 }
 
 export interface AuthDictionary {
@@ -667,6 +688,8 @@ export interface WorkerDictionary {
   myTasksSubtitle:          string;
   noTasksYet:               string;
   youHaveNoTasks:           string;
+  sprayReport:              string;
+  safetyMap:                string;
 }
 
 export interface VisitorDictionary {
@@ -688,6 +711,7 @@ export interface VisitorDictionary {
   checkBackLater:           string;
   farmMapTitle:             string;
   farmMapSubtitle:          string;
+  safetyMap:                string;
 }
 
 export interface LandingDictionary {
@@ -695,6 +719,7 @@ export interface LandingDictionary {
   navPeppers:           string;
   navExplore:           string;
   navFarmMap:           string;
+  navSafetyMap:         string;
   navProducts:          string;
   navAllVarieties:      string;
   navOurFarm:           string;
@@ -755,6 +780,152 @@ export interface LandingDictionary {
   exploreVariety:       string;
 }
 
+export interface NotificationsDictionary {
+  notifications:         string;
+  activeAlerts:          string;
+  sprayAlerts:           string;
+  overdueSprayAlerts:    string;
+  completedTasks:        string;
+  taskNotifications:     string;
+  newlyAssigned:         string;
+  activeTasks:           string;
+  history:               string;
+  active:                string;
+  noActiveAlerts:        string;
+  noSprayAlerts:         string;
+  noOverdueAlerts:       string;
+  noCompletedTasks:      string;
+  noActiveTasksAssigned: string;
+  noHistory:             string;
+  clearGroup:            string;
+  dismiss:               string;
+  restore:               string;
+  clearHistory:          string;
+  completed:             string;
+  signOut:               string;
+}
+
+export interface SprayDictionary {
+  safetyLabel: string;
+  visitorSafetyLabel: string;
+  sprayReportTitle: string;
+  sprayWorkflowTitle: string;
+  sprayWorkflowSubtitle: string;
+  sprayRestrictionMapTitle: string;
+  sprayRestrictionMapSubtitle: string;
+  visitorRestrictionMapTitle: string;
+  visitorRestrictionMapSubtitle: string;
+  managerTitle: string;
+  managerSubtitle: string;
+  refresh: string;
+  safetyNotice: string;
+  visitorSafetyNotice: string;
+  doNotEnterRestricted: string;
+  consultManager: string;
+  consultStaff: string;
+  summarySafe: string;
+  summaryRestricted: string;
+  summaryCaution: string;
+  summaryPlanned: string;
+  summaryNoRecent: string;
+  safe: string;
+  unsafe: string;
+  needsReview: string;
+  planned: string;
+  neverSprayed: string;
+  restrictedWithinRei: string;
+  cautionUnverified: string;
+  noRecentSpray: string;
+  entryPermitted: string;
+  entryRestricted: string;
+  cautionConsultManager: string;
+  cautionConsultStaff: string;
+  entryPermittedSprayDue: string;
+  restrictedZonesTitle: string;
+  workerRestrictedZonesTitle: string;
+  allZonesOpen: string;
+  farmZoneOverview: string;
+  farmZoneSafetyOverview: string;
+  clickZoneDetails: string;
+  zoneStatusTable: string;
+  zoneEntryDetails: string;
+  zoneEntryStatus: string;
+  zone: string;
+  status: string;
+  entryPermission: string;
+  safeReentry: string;
+  safeReentryTime: string;
+  lastSprayed: string;
+  pesticide: string;
+  nextPlanned: string;
+  noZonesFound: string;
+  configureZones: string;
+  openForEntry: string;
+  safeToEnter: string;
+  consultFarmStaff: string;
+  unverified: string;
+  sprayAlertHistory: string;
+  sprayAlertHistoryDesc: string;
+  noSprayAlertsYet: string;
+  sprayAlertsEmptyDesc: string;
+  unreadOf: string;
+  severity: string;
+  type: string;
+  sprayed: string;
+  created: string;
+  high: string;
+  medium: string;
+  low: string;
+  overdueSprayAlerts: string;
+  overdueSprayAlertsDesc: string;
+  activeCount: string;
+  overdueSince: string;
+  task: string;
+  critical: string;
+  overdue: string;
+  dueSoon: string;
+  resolved: string;
+  assignTask: string;
+  taskNumber: string;
+  allZonesUpToDate: string;
+  overdueAlertsEmptyDesc: string;
+  assignSprayTask: string;
+  createSprayTask: string;
+  createSprayTaskDesc: string;
+  sprayTaskCreated: string;
+  sprayTaskCreateFailed: string;
+  selectWorker: string;
+  selectWorkerPlaceholder: string;
+  assigning: string;
+  taskAssigned: string;
+  failedToAssignTask: string;
+  reportType: string;
+  completedNow: string;
+  plannedForLater: string;
+  chooseZone: string;
+  choosePesticide: string;
+  plannedDateTime: string;
+  notesOptional: string;
+  notesPlaceholder: string;
+  characters: string;
+  submitSprayReport: string;
+  saveSprayPlan: string;
+  submitting: string;
+  loadingFormData: string;
+  selectZoneAndPesticide: string;
+  pickPlannedDate: string;
+  loginRequired: string;
+  failedToLoadFormData: string;
+  sprayReportSubmitted: string;
+  sprayPlanSaved: string;
+  failedToSubmitReport: string;
+  safetyInformation: string;
+  safetyDataVerified: string;
+  safeToHarvest: string;
+  ppeRequired: string;
+  hazardLevel: string;
+}
+
 export interface Dictionary {
   nav:        NavDictionary;
   common:     CommonDictionary;
@@ -774,6 +945,8 @@ export interface Dictionary {
   worker:     WorkerDictionary;
   visitor:    VisitorDictionary;
   landing:    LandingDictionary;
+  notifications: NotificationsDictionary;
+  spray:      SprayDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -782,13 +955,26 @@ const en: Dictionary = {
   nav: {
     dashboard: 'Dashboard',
     sensors:   'Sensors',
+    sensorExplorer: 'Sensor Explorer',
     peppers:   'Peppers',
     inventory: 'Inventory',
+    stock:     'Stock',
+    stockSub:  'Warehouse stock levels',
+    plants:    'Plants',
+    plantsSub: 'Plant tracking',
+    peppersSub: 'Pepper variety catalog',
     products:  'Products',
+    productsSub: 'Product catalog',
     tasks:     'Tasks',
     reports:   'Reports',
+    analytics: 'Analytics',
+    users:     'Users',
     anomalies: 'Anomalies',
     map:       'Farm Map',
+    addPlant:  'Add Plant',
+    addPlantSub: 'Register a new plant',
+    updateLocation: 'Update Location',
+    updateLocationSub: 'Move a plant to a new zone',
   },
 
   common: {
@@ -826,6 +1012,14 @@ const en: Dictionary = {
     refresh:        'Refresh',
     loadData:       'Load Data',
     checkBackLater: 'Check back later.',
+    viewAll:        'View all',
+    viewHistory:    'View history',
+    new:            'NEW',
+    read:           'Read',
+    unread:         'unread',
+    updated:        'Updated',
+    never:          'Never',
+    remaining:      'remaining',
   },
 
   auth: {
@@ -906,6 +1100,11 @@ const en: Dictionary = {
     taskType: {
       inspection: 'Inspection',
       irrigation: 'Irrigation',
+      harvesting: 'Harvesting',
+      planting: 'Planting',
+      fertilizing: 'Fertilizing',
+      spray: 'Spray',
+      other: 'Other',
     },
     stockStatus: {
       'Out of stock': 'Out of stock',
@@ -1463,6 +1662,8 @@ const en: Dictionary = {
     myTasksSubtitle:    'Tasks assigned to you',
     noTasksYet:         'No tasks yet.',
     youHaveNoTasks:     'You have no tasks assigned.',
+    sprayReport:        'Spray Report',
+    safetyMap:          'Safety Map',
   },
 
   visitor: {
@@ -1484,12 +1685,14 @@ const en: Dictionary = {
     checkBackLater:          'Check back later.',
     farmMapTitle:            'Farm Map',
     farmMapSubtitle:         'Interactive layout of the farm facility — click any section to learn more',
+    safetyMap:               'Safety Map',
   },
 
   landing: {
     navPeppers:          'Peppers',
     navExplore:          'Explore',
     navFarmMap:          'Farm Map',
+    navSafetyMap:        'Safety Map',
     navProducts:         'Products',
     navAllVarieties:     'All Varieties',
     navOurFarm:          'Our Farm',
@@ -1540,6 +1743,152 @@ const en: Dictionary = {
     footerCopyright:     '© {year} PepperFarm. Grown with care in Israel.',
     exploreVariety:      'Explore variety',
   },
+
+  notifications: {
+    notifications:         'Notifications',
+    activeAlerts:          'Active Alerts',
+    sprayAlerts:           'Spray Alerts',
+    overdueSprayAlerts:    'Overdue Spray Alerts',
+    completedTasks:        'Completed Tasks',
+    taskNotifications:     'Task notifications',
+    newlyAssigned:         'Newly Assigned',
+    activeTasks:           'Active Tasks',
+    history:               'History',
+    active:                'Active',
+    noActiveAlerts:        'No active alerts',
+    noSprayAlerts:         'No spray alerts',
+    noOverdueAlerts:       'No overdue spray alerts',
+    noCompletedTasks:      'No completed tasks yet',
+    noActiveTasksAssigned: 'No active tasks assigned to you',
+    noHistory:             'No dismissed notifications',
+    clearGroup:            'Clear group',
+    dismiss:               'Dismiss',
+    restore:               'Restore',
+    clearHistory:          'Clear history',
+    completed:             'Completed',
+    signOut:               'Sign out',
+  },
+
+  spray: {
+    safetyLabel: 'Safety',
+    visitorSafetyLabel: 'Visitor Safety',
+    sprayReportTitle: 'Spray Report',
+    sprayWorkflowTitle: 'Spray Report and Safety Map',
+    sprayWorkflowSubtitle: 'Report a completed spray, plan a spray, and review zone entry safety in one workflow',
+    sprayRestrictionMapTitle: 'Spray Restrictions Map',
+    sprayRestrictionMapSubtitle: 'Check which greenhouse areas are currently restricted due to recent spraying',
+    visitorRestrictionMapTitle: 'Spray Restriction Map',
+    visitorRestrictionMapSubtitle: 'View which greenhouse areas are currently restricted due to pesticide spraying',
+    managerTitle: 'Spray Map',
+    managerSubtitle: 'Real-time spray status, reports, alerts, and task actions for every greenhouse zone',
+    refresh: 'Refresh',
+    safetyNotice: 'Safety notice:',
+    visitorSafetyNotice: 'Visitor safety notice:',
+    doNotEnterRestricted: 'Do not enter any zone marked as Restricted or Caution.',
+    consultManager: 'Consult your manager or supervisor if you are unsure.',
+    consultStaff: 'Please ask a staff member before entering any greenhouse.',
+    summarySafe: 'Safe',
+    summaryRestricted: 'Restricted (REI)',
+    summaryCaution: 'Caution',
+    summaryPlanned: 'Spray Planned',
+    summaryNoRecent: 'No Recent Spray',
+    safe: 'Safe',
+    unsafe: 'Unsafe',
+    needsReview: 'Needs Review',
+    planned: 'Planned',
+    neverSprayed: 'Never Sprayed',
+    restrictedWithinRei: 'Restricted (within REI)',
+    cautionUnverified: 'Caution - Unverified',
+    noRecentSpray: 'No Recent Spray',
+    entryPermitted: 'Entry Permitted',
+    entryRestricted: 'Entry Restricted',
+    cautionConsultManager: 'Caution - Consult Manager',
+    cautionConsultStaff: 'Caution - Consult Staff',
+    entryPermittedSprayDue: 'Entry Permitted (Spray Due)',
+    restrictedZonesTitle: 'Areas currently closed to entry',
+    workerRestrictedZonesTitle: 'Restricted zones - do not enter',
+    allZonesOpen: 'All zones are currently open for entry. No active spray restrictions.',
+    farmZoneOverview: 'Farm Zone Overview',
+    farmZoneSafetyOverview: 'Farm Zone Safety Overview',
+    clickZoneDetails: 'click any zone for details',
+    zoneStatusTable: 'Zone Status Table',
+    zoneEntryDetails: 'Zone Entry Details',
+    zoneEntryStatus: 'Zone Entry Status',
+    zone: 'Zone',
+    status: 'Status',
+    entryPermission: 'Entry Permission',
+    safeReentry: 'Safe Re-entry',
+    safeReentryTime: 'Safe Re-entry Time',
+    lastSprayed: 'Last Sprayed',
+    pesticide: 'Pesticide',
+    nextPlanned: 'Next Planned',
+    noZonesFound: 'No zones found.',
+    configureZones: 'Make sure farm zones are configured in the database.',
+    openForEntry: 'Open for entry',
+    safeToEnter: 'Safe to enter',
+    consultFarmStaff: 'Consult farm staff',
+    unverified: 'unverified',
+    sprayAlertHistory: 'Spray Alert History',
+    sprayAlertHistoryDesc: 'Alerts generated automatically when workers submit spray reports',
+    noSprayAlertsYet: 'No spray alerts yet.',
+    sprayAlertsEmptyDesc: 'Alerts appear here when workers submit spray reports.',
+    unreadOf: '{unread} unread of {total}',
+    severity: 'Severity',
+    type: 'Type',
+    sprayed: 'Sprayed',
+    created: 'Created',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+    overdueSprayAlerts: 'Overdue Spray Alerts',
+    overdueSprayAlertsDesc: 'Zones that have not been sprayed within the required interval (30 days)',
+    activeCount: '{count} active',
+    overdueSince: 'Overdue Since',
+    task: 'Task',
+    critical: 'Critical',
+    overdue: 'Overdue',
+    dueSoon: 'Due Soon',
+    resolved: 'Resolved',
+    assignTask: 'Assign Task',
+    taskNumber: 'Task #{id}',
+    allZonesUpToDate: 'All zones are up to date.',
+    overdueAlertsEmptyDesc: 'Overdue alerts appear here when zones need spraying.',
+    assignSprayTask: 'Assign Spray Task',
+    createSprayTask: 'Create Spray Task',
+    createSprayTaskDesc: 'Create and assign spray work directly from the spray map context.',
+    sprayTaskCreated: 'Spray task created.',
+    sprayTaskCreateFailed: 'Failed to create spray task.',
+    selectWorker: 'Select Worker',
+    selectWorkerPlaceholder: '- select a worker -',
+    assigning: 'Assigning...',
+    taskAssigned: 'Task assigned to worker (Task #{id}).',
+    failedToAssignTask: 'Failed to assign task.',
+    reportType: 'Report type',
+    completedNow: 'Completed now',
+    plannedForLater: 'Planned for later',
+    chooseZone: '-- Choose a zone --',
+    choosePesticide: '-- Choose a pesticide --',
+    plannedDateTime: 'Planned date & time',
+    notesOptional: 'Notes (optional)',
+    notesPlaceholder: 'Anything the manager should know about this spray...',
+    characters: 'characters',
+    submitSprayReport: 'Submit spray report',
+    saveSprayPlan: 'Save spray plan',
+    submitting: 'Submitting...',
+    loadingFormData: 'Loading form data...',
+    selectZoneAndPesticide: 'Please select a zone and a pesticide.',
+    pickPlannedDate: 'Please pick a date and time for the planned spray.',
+    loginRequired: 'You must be logged in to submit a spray report.',
+    failedToLoadFormData: 'Failed to load form data.',
+    sprayReportSubmitted: 'Spray report submitted successfully.',
+    sprayPlanSaved: 'Spray plan saved successfully.',
+    failedToSubmitReport: 'Failed to submit report.',
+    safetyInformation: 'Safety information',
+    safetyDataVerified: 'Safety data verified.',
+    safeToHarvest: 'Safe to harvest',
+    ppeRequired: 'PPE required',
+    hazardLevel: 'Hazard level',
+  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -1548,13 +1897,26 @@ const he: Dictionary = {
   nav: {
     dashboard: 'לוח בקרה',
     sensors:   'חיישנים',
+    sensorExplorer: 'סייר חיישנים',
     peppers:   'פלפלים',
     inventory: 'מלאי',
+    stock:     'מלאי מחסן',
+    stockSub:  'רמות מלאי במחסן',
+    plants:    'צמחים',
+    plantsSub: 'מעקב אחר צמחים',
+    peppersSub: 'קטלוג זני פלפל',
     products:  'מוצרים',
+    productsSub: 'קטלוג מוצרים',
     tasks:     'משימות',
     reports:   'דוחות',
+    analytics: 'אנליטיקה',
+    users:     'משתמשים',
     anomalies: 'חריגות',
     map:       'מפת חווה',
+    addPlant:  'הוסף צמח',
+    addPlantSub: 'רישום צמח חדש',
+    updateLocation: 'עדכון מיקום',
+    updateLocationSub: 'העברת צמח לאזור חדש',
   },
 
   common: {
@@ -1592,6 +1954,14 @@ const he: Dictionary = {
     refresh:        'רענון',
     loadData:       'טען נתונים',
     checkBackLater: 'בדוק שוב מאוחר יותר.',
+    viewAll:        'הצג הכל',
+    viewHistory:    'הצג היסטוריה',
+    new:            'חדש',
+    read:           'נקרא',
+    unread:         'לא נקראו',
+    updated:        'עודכן',
+    never:          'מעולם לא',
+    remaining:      'נותרו',
   },
 
   auth: {
@@ -1672,6 +2042,11 @@ const he: Dictionary = {
     taskType: {
       inspection: 'בדיקה',
       irrigation: 'השקיה',
+      harvesting: 'קטיף',
+      planting: 'שתילה',
+      fertilizing: 'דישון',
+      spray: 'ריסוס',
+      other: 'אחר',
     },
     stockStatus: {
       'Out of stock': 'אזל מהמלאי',
@@ -2227,6 +2602,8 @@ const he: Dictionary = {
     myTasksSubtitle:    'משימות שהוקצו לך',
     noTasksYet:         'אין משימות עדיין.',
     youHaveNoTasks:     'אין לך משימות מוקצות.',
+    sprayReport:        'דיווח ריסוס',
+    safetyMap:          'מפת בטיחות',
   },
 
   visitor: {
@@ -2248,12 +2625,14 @@ const he: Dictionary = {
     checkBackLater:          'בדוק שוב מאוחר יותר.',
     farmMapTitle:            'מפת החווה',
     farmMapSubtitle:         'פריסה אינטראקטיבית של מתקן החווה — לחץ על כל קטע לפרטים נוספים',
+    safetyMap:               'מפת בטיחות',
   },
 
   landing: {
     navPeppers:          'פלפלים',
     navExplore:          'סיור',
     navFarmMap:          'מפת חווה',
+    navSafetyMap:        'מפת בטיחות',
     navProducts:         'מוצרים',
     navAllVarieties:     'כל הזנים',
     navOurFarm:          'החווה שלנו',
@@ -2303,6 +2682,152 @@ const he: Dictionary = {
     footerFarmMap:       'מפת חווה',
     footerCopyright:     '© {year} PepperFarm. מגודל באהבה בישראל.',
     exploreVariety:      'גלה את הזן',
+  },
+
+  notifications: {
+    notifications:         'התראות',
+    activeAlerts:          'התראות פעילות',
+    sprayAlerts:           'התראות ריסוס',
+    overdueSprayAlerts:    'התראות ריסוס באיחור',
+    completedTasks:        'משימות שהושלמו',
+    taskNotifications:     'התראות משימות',
+    newlyAssigned:         'הוקצו לאחרונה',
+    activeTasks:           'משימות פעילות',
+    history:               'היסטוריה',
+    active:                'פעיל',
+    noActiveAlerts:        'אין התראות פעילות',
+    noSprayAlerts:         'אין התראות ריסוס',
+    noOverdueAlerts:       'אין התראות ריסוס באיחור',
+    noCompletedTasks:      'אין עדיין משימות שהושלמו',
+    noActiveTasksAssigned: 'אין לך משימות פעילות',
+    noHistory:             'אין התראות שהוסרו',
+    clearGroup:            'נקה קבוצה',
+    dismiss:               'הסר',
+    restore:               'שחזר',
+    clearHistory:          'נקה היסטוריה',
+    completed:             'הושלם',
+    signOut:               'התנתק',
+  },
+
+  spray: {
+    safetyLabel: 'בטיחות',
+    visitorSafetyLabel: 'בטיחות מבקרים',
+    sprayReportTitle: 'דיווח ריסוס',
+    sprayWorkflowTitle: 'דיווח ריסוס ומפת בטיחות',
+    sprayWorkflowSubtitle: 'דווח על ריסוס שבוצע, תכנן ריסוס ובדוק בטיחות כניסה לאזורים במקום אחד',
+    sprayRestrictionMapTitle: 'מפת מגבלות ריסוס',
+    sprayRestrictionMapSubtitle: 'בדוק אילו אזורי חממה מוגבלים כעת בגלל ריסוס אחרון',
+    visitorRestrictionMapTitle: 'מפת מגבלות ריסוס',
+    visitorRestrictionMapSubtitle: 'צפה באילו אזורי חממה מוגבלים כעת בגלל ריסוס',
+    managerTitle: 'מפת ריסוס',
+    managerSubtitle: 'סטטוס ריסוס, דיווחים, התראות ופעולות משימה לכל אזורי החממה',
+    refresh: 'רענן',
+    safetyNotice: 'הודעת בטיחות:',
+    visitorSafetyNotice: 'הודעת בטיחות למבקרים:',
+    doNotEnterRestricted: 'אין להיכנס לאזור המסומן כמוגבל או זהירות.',
+    consultManager: 'פנה למנהל או לאחראי אם אינך בטוח.',
+    consultStaff: 'יש לפנות לאיש צוות לפני כניסה לחממה.',
+    summarySafe: 'בטוח',
+    summaryRestricted: 'מוגבל (REI)',
+    summaryCaution: 'זהירות',
+    summaryPlanned: 'ריסוס מתוכנן',
+    summaryNoRecent: 'אין ריסוס אחרון',
+    safe: 'בטוח',
+    unsafe: 'לא בטוח',
+    needsReview: 'דורש בדיקה',
+    planned: 'מתוכנן',
+    neverSprayed: 'לא רוסס',
+    restrictedWithinRei: 'מוגבל (בתוך חלון REI)',
+    cautionUnverified: 'זהירות - לא מאומת',
+    noRecentSpray: 'אין ריסוס אחרון',
+    entryPermitted: 'כניסה מותרת',
+    entryRestricted: 'כניסה מוגבלת',
+    cautionConsultManager: 'זהירות - פנה למנהל',
+    cautionConsultStaff: 'זהירות - פנה לצוות',
+    entryPermittedSprayDue: 'כניסה מותרת (ריסוס צפוי)',
+    restrictedZonesTitle: 'אזורים סגורים כעת לכניסה',
+    workerRestrictedZonesTitle: 'אזורים מוגבלים - אין להיכנס',
+    allZonesOpen: 'כל האזורים פתוחים כעת לכניסה. אין מגבלות ריסוס פעילות.',
+    farmZoneOverview: 'סקירת אזורי החווה',
+    farmZoneSafetyOverview: 'סקירת בטיחות אזורי החווה',
+    clickZoneDetails: 'לחץ על אזור לפרטים',
+    zoneStatusTable: 'טבלת סטטוס אזורים',
+    zoneEntryDetails: 'פרטי כניסה לאזורים',
+    zoneEntryStatus: 'סטטוס כניסה לאזורים',
+    zone: 'אזור',
+    status: 'סטטוס',
+    entryPermission: 'הרשאת כניסה',
+    safeReentry: 'כניסה מחדש בטוחה',
+    safeReentryTime: 'זמן כניסה בטוח',
+    lastSprayed: 'רוסס לאחרונה',
+    pesticide: 'חומר הדברה',
+    nextPlanned: 'מתוכנן הבא',
+    noZonesFound: 'לא נמצאו אזורים.',
+    configureZones: 'ודא שאזורי החווה מוגדרים במסד הנתונים.',
+    openForEntry: 'פתוח לכניסה',
+    safeToEnter: 'בטוח להיכנס',
+    consultFarmStaff: 'פנה לצוות החווה',
+    unverified: 'לא מאומת',
+    sprayAlertHistory: 'היסטוריית התראות ריסוס',
+    sprayAlertHistoryDesc: 'התראות שנוצרות אוטומטית כאשר עובדים שולחים דיווחי ריסוס',
+    noSprayAlertsYet: 'אין עדיין התראות ריסוס.',
+    sprayAlertsEmptyDesc: 'התראות יופיעו כאן כאשר עובדים שולחים דיווחי ריסוס.',
+    unreadOf: '{unread} לא נקראו מתוך {total}',
+    severity: 'חומרה',
+    type: 'סוג',
+    sprayed: 'רוסס',
+    created: 'נוצר',
+    high: 'גבוהה',
+    medium: 'בינונית',
+    low: 'נמוכה',
+    overdueSprayAlerts: 'התראות ריסוס באיחור',
+    overdueSprayAlertsDesc: 'אזורים שלא רוססו בטווח הנדרש (30 ימים)',
+    activeCount: '{count} פעילות',
+    overdueSince: 'באיחור מאז',
+    task: 'משימה',
+    critical: 'קריטי',
+    overdue: 'באיחור',
+    dueSoon: 'בקרוב',
+    resolved: 'נפתר',
+    assignTask: 'הקצה משימה',
+    taskNumber: 'משימה #{id}',
+    allZonesUpToDate: 'כל האזורים מעודכנים.',
+    overdueAlertsEmptyDesc: 'התראות איחור יופיעו כאן כאשר אזורים צריכים ריסוס.',
+    assignSprayTask: 'הקצה משימת ריסוס',
+    createSprayTask: 'צור משימת ריסוס',
+    createSprayTaskDesc: 'צור והקצה עבודת ריסוס ישירות מתוך מפת הריסוס.',
+    sprayTaskCreated: 'משימת ריסוס נוצרה.',
+    sprayTaskCreateFailed: 'יצירת משימת הריסוס נכשלה.',
+    selectWorker: 'בחר עובד',
+    selectWorkerPlaceholder: '- בחר עובד -',
+    assigning: 'מקצה...',
+    taskAssigned: 'המשימה הוקצתה לעובד (משימה #{id}).',
+    failedToAssignTask: 'הקצאת המשימה נכשלה.',
+    reportType: 'סוג דיווח',
+    completedNow: 'בוצע כעת',
+    plannedForLater: 'מתוכנן למועד מאוחר יותר',
+    chooseZone: '-- בחר אזור --',
+    choosePesticide: '-- בחר חומר הדברה --',
+    plannedDateTime: 'תאריך ושעת תכנון',
+    notesOptional: 'הערות (אופציונלי)',
+    notesPlaceholder: 'כל דבר שהמנהל צריך לדעת על הריסוס...',
+    characters: 'תווים',
+    submitSprayReport: 'שלח דיווח ריסוס',
+    saveSprayPlan: 'שמור תכנון ריסוס',
+    submitting: 'שולח...',
+    loadingFormData: 'טוען נתוני טופס...',
+    selectZoneAndPesticide: 'בחר אזור וחומר הדברה.',
+    pickPlannedDate: 'בחר תאריך ושעה לריסוס המתוכנן.',
+    loginRequired: 'יש להתחבר כדי לשלוח דיווח ריסוס.',
+    failedToLoadFormData: 'טעינת נתוני הטופס נכשלה.',
+    sprayReportSubmitted: 'דיווח הריסוס נשלח בהצלחה.',
+    sprayPlanSaved: 'תכנון הריסוס נשמר בהצלחה.',
+    failedToSubmitReport: 'שליחת הדיווח נכשלה.',
+    safetyInformation: 'מידע בטיחות',
+    safetyDataVerified: 'נתוני הבטיחות אומתו.',
+    safeToHarvest: 'בטוח לקטיף',
+    ppeRequired: 'ציוד מגן נדרש',
+    hazardLevel: 'רמת סיכון',
   },
 };
 

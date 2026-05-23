@@ -5,10 +5,14 @@ import { ZoneSummary, getZones } from '@/services/zones';
 import { getPesticides, createSprayReport } from '@/services/spray';
 import { Pesticide, SafetyWarning } from '@/types/spray';
 import Alert from '@/components/ui/Alert';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ReportType = 'completed' | 'planned';
 
 export default function SprayReportForm() {
+  const { t } = useLanguage();
+  const sp = t.spray;
+
   // Catalog data loaded from the backend.
   const [zones, setZones] = useState<ZoneSummary[]>([]);
   const [pesticides, setPesticides] = useState<Pesticide[]>([]);
@@ -53,12 +57,12 @@ export default function SprayReportForm() {
       setPesticides(pesticidesData);
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : 'Failed to load form data.',
+        err instanceof Error ? err.message : sp.failedToLoadFormData,
       );
     } finally {
       setIsLoadingCatalogs(false);
     }
-  }, []);
+  }, [sp.failedToLoadFormData]);
 
   useEffect(() => {
     loadCatalogs();
@@ -71,18 +75,18 @@ export default function SprayReportForm() {
     setSafetyWarning(null);
 
     if (zoneId === '' || pesticideId === '') {
-      setSubmitError('Please select a zone and a pesticide.');
+      setSubmitError(sp.selectZoneAndPesticide);
       return;
     }
 
     if (reportType === 'planned' && !plannedAtLocal) {
-      setSubmitError('Please pick a date and time for the planned spray.');
+      setSubmitError(sp.pickPlannedDate);
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-      setSubmitError('You must be logged in to submit a spray report.');
+      setSubmitError(sp.loginRequired);
       return;
     }
 
@@ -105,8 +109,8 @@ export default function SprayReportForm() {
 
       setSubmitSuccess(
         reportType === 'completed'
-          ? 'Spray report submitted successfully.'
-          : 'Spray plan saved successfully.',
+          ? sp.sprayReportSubmitted
+          : sp.sprayPlanSaved,
       );
       setSafetyWarning(result.safetyWarning);
 
@@ -118,7 +122,7 @@ export default function SprayReportForm() {
       setNotes('');
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : 'Failed to submit report.',
+        err instanceof Error ? err.message : sp.failedToSubmitReport,
       );
     } finally {
       setIsSubmitting(false);
@@ -138,6 +142,16 @@ export default function SprayReportForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {submitError && <Alert>{submitError}</Alert>}
+      {isLoadingCatalogs && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 animate-pulse" data-testid="spray-report-loading">
+          <p className="text-sm font-medium text-[var(--color-muted-foreground)] mb-3">{sp.loadingFormData}</p>
+          <div className="space-y-3">
+            <div className="h-9 bg-[var(--color-muted)] rounded-lg" />
+            <div className="h-9 bg-[var(--color-muted)] rounded-lg" />
+            <div className="h-20 bg-[var(--color-muted)] rounded-lg" />
+          </div>
+        </div>
+      )}
       {submitSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm">
           {submitSuccess}
@@ -147,7 +161,7 @@ export default function SprayReportForm() {
       {/* Report type toggle */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Report type
+          {sp.reportType}
         </label>
         <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
           <button
@@ -159,7 +173,7 @@ export default function SprayReportForm() {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Completed now
+            {sp.completedNow}
           </button>
           <button
             type="button"
@@ -170,7 +184,7 @@ export default function SprayReportForm() {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Planned for later
+            {sp.plannedForLater}
           </button>
         </div>
       </div>
@@ -178,7 +192,7 @@ export default function SprayReportForm() {
       {/* Zone */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Zone <span className="text-red-500">*</span>
+          {sp.zone} <span className="text-red-500">*</span>
         </label>
         <select
           value={zoneId}
@@ -189,7 +203,7 @@ export default function SprayReportForm() {
           disabled={isLoadingCatalogs}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         >
-          <option value="">-- Choose a zone --</option>
+          <option value="">{sp.chooseZone}</option>
           {zones.map((z) => (
             <option key={z.ZoneId} value={z.ZoneId}>
               {z.ZoneCode} — {z.ZoneName}
@@ -201,7 +215,7 @@ export default function SprayReportForm() {
       {/* Pesticide */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Pesticide <span className="text-red-500">*</span>
+          {sp.pesticide} <span className="text-red-500">*</span>
         </label>
         <select
           value={pesticideId}
@@ -212,7 +226,7 @@ export default function SprayReportForm() {
           disabled={isLoadingCatalogs}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         >
-          <option value="">-- Choose a pesticide --</option>
+          <option value="">{sp.choosePesticide}</option>
           {pesticides.map((p) => (
             <option key={p.PesticideId} value={p.PesticideId}>
               {p.Name}
@@ -226,7 +240,7 @@ export default function SprayReportForm() {
       {reportType === 'planned' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Planned date &amp; time <span className="text-red-500">*</span>
+            {sp.plannedDateTime} <span className="text-red-500">*</span>
           </label>
           <input
             type="datetime-local"
@@ -241,18 +255,18 @@ export default function SprayReportForm() {
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notes (optional)
+          {sp.notesOptional}
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           maxLength={1000}
-          placeholder="Anything the manager should know about this spray..."
+          placeholder={sp.notesPlaceholder}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
         <p className="text-xs text-gray-400 mt-1">
-          {notes.length} / 1000 characters
+          {notes.length} / 1000 {sp.characters}
         </p>
       </div>
 
@@ -262,10 +276,10 @@ export default function SprayReportForm() {
         className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
       >
         {isSubmitting
-          ? 'Submitting...'
+          ? sp.submitting
           : reportType === 'completed'
-            ? 'Submit spray report'
-            : 'Save spray plan'}
+            ? sp.submitSprayReport
+            : sp.saveSprayPlan}
       </button>
 
       {/* Safety information block - shown after a successful submission */}
@@ -278,27 +292,27 @@ export default function SprayReportForm() {
           }`}
         >
           <h3 className="text-sm font-semibold text-gray-900 mb-2">
-            Safety information — {safetyWarning.pesticideName}
+            {sp.safetyInformation} - {safetyWarning.pesticideName}
           </h3>
           <p className="text-sm text-gray-700 mb-3">{safetyWarning.message}</p>
 
           {safetyWarning.verificationStatus === 'verified' && (
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
               <div>
-                <dt className="text-gray-500">Safe to re-enter</dt>
+                <dt className="text-gray-500">{sp.safeReentry}</dt>
                 <dd className="font-medium text-gray-900">
                   {formatDate(safetyWarning.safeToReEnterAtUtc)}
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-500">Safe to harvest</dt>
+                <dt className="text-gray-500">{sp.safeToHarvest}</dt>
                 <dd className="font-medium text-gray-900">
                   {formatDate(safetyWarning.safeToHarvestAtUtc)}
                 </dd>
               </div>
               {safetyWarning.ppeRequired && (
                 <div className="sm:col-span-2">
-                  <dt className="text-gray-500">PPE required</dt>
+                  <dt className="text-gray-500">{sp.ppeRequired}</dt>
                   <dd className="font-medium text-gray-900">
                     {safetyWarning.ppeRequired}
                   </dd>
@@ -306,7 +320,7 @@ export default function SprayReportForm() {
               )}
               {safetyWarning.hazardLevel && (
                 <div>
-                  <dt className="text-gray-500">Hazard level</dt>
+                  <dt className="text-gray-500">{sp.hazardLevel}</dt>
                   <dd className="font-medium text-gray-900 capitalize">
                     {safetyWarning.hazardLevel}
                   </dd>

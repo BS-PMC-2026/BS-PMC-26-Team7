@@ -70,10 +70,10 @@ export default function AnomalyTrendChart({ data }: Props) {
         </defs>
 
         {/* Horizontal grid */}
-        {yTicks.map((tick) => {
+        {yTicks.map((tick, index) => {
           const y = PAD.top + innerH - (maxCount === 0 ? 0 : (tick / maxCount) * innerH);
           return (
-            <g key={tick}>
+            <g key={`${tick}-${index}`}>
               <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="#f1f5f9" strokeWidth={1.5} />
               <text x={PAD.left - 8} y={y + 4} fontSize={10} fill="#94a3b8" textAnchor="end">
                 {tick}

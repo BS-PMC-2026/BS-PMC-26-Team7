@@ -10,6 +10,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
+import { Map, ShieldAlert } from 'lucide-react';
 
 export default function VisitorPage() {
   const router = useRouter();
@@ -67,9 +68,10 @@ export default function VisitorPage() {
               {/* Always visible — public safety information, no login required */}
               <Link
                 href="/visitor/spray-restrictions"
-                className="border border-[var(--color-warning)] text-[var(--color-warning)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-warning-bg)] transition"
+                className="inline-flex items-center gap-1.5 border border-[var(--color-warning)] text-[var(--color-warning)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-warning-bg)] transition"
               >
-                🛡️ Safety Map
+                <ShieldAlert size={14} />
+                {vi.safetyMap}
               </Link>
 
               {isLoggedIn ? (
@@ -82,9 +84,10 @@ export default function VisitorPage() {
                   </Link>
                   <Link
                     href="/visitor/map"
-                    className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
+                    className="inline-flex items-center gap-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
                   >
-                    🗺️ {vi.map}
+                    <Map size={14} />
+                    {vi.map}
                   </Link>
                   <button
                     onClick={handleLogout}
