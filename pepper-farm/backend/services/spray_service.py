@@ -3,14 +3,19 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
-from models.spray import Pesticide, SprayAlert, SprayReport
+from models.spray import OverdueSprayAlert, Pesticide, SprayAlert, SprayReport
 from models.farm_zone import FarmZone
+from models.task import Task
+from models.user import User
 from schemas.spray import (
+    AssignOverdueAlertRequest,
     CreateSprayReportRequest,
+    OverdueSprayAlertResponse,
     SafetyWarningResponse,
     SprayAlertResponse,
     ZoneSprayStatusResponse,
 )
+from schemas.task import CreateTaskRequest
 
 
 # -----------------------------------------------------------------------------
@@ -172,6 +177,13 @@ def create_spray_report(
         _generate_spray_alert(db, report, pesticide, zone, safety_warning)
     except Exception:
         pass
+
+    # US32: if this is a completed report, resolve any active overdue alert for this zone.
+    if report.Status == "completed":
+        try:
+            _resolve_overdue_alerts_for_zone(db, zone.ZoneId)
+        except Exception:
+            pass
 
     return (report, safety_warning), None
 
@@ -386,3 +398,144 @@ def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
         )
 
     return results
+
+
+# -----------------------------------------------------------------------------
+# Overdue spray alert helpers (US32)
+# -----------------------------------------------------------------------------
+
+def _resolve_overdue_alerts_for_zone(db: Session, zone_id: int) -> None:
+    """Mark all active overdue alerts for this zone as resolved.
+
+    Called inside create_spray_report() when a completed report is submitted,
+    so the overdue condition is cleared immediately (best-effort, wrapped in
+    try/except by the caller so a missing table does not break the report).
+    """
+    now = datetime.utcnow()
+    alerts = (
+        db.query(OverdueSprayAlert)
+        .filter(
+            OverdueSprayAlert.ZoneId == zone_id,
+            OverdueSprayAlert.IsResolved == False,  # noqa: E712
+        )
+        .all()
+    )
+    for alert in alerts:
+        alert.IsResolved = True
+        alert.ResolvedAtUtc = now
+    if alerts:
+        db.commit()
+
+
+# -----------------------------------------------------------------------------
+# Overdue spray alert queries (US32)
+# -----------------------------------------------------------------------------
+
+def get_overdue_spray_alerts(db: Session) -> list[OverdueSprayAlert]:
+    """Return all overdue spray alerts (active + resolved), newest first."""
+    return (
+        db.query(OverdueSprayAlert)
+        .order_by(OverdueSprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_active_overdue_spray_alerts(db: Session) -> list[OverdueSprayAlert]:
+    """Return only unresolved overdue spray alerts, newest first."""
+    return (
+        db.query(OverdueSprayAlert)
+        .filter(OverdueSprayAlert.IsResolved == False)  # noqa: E712
+        .order_by(OverdueSprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_overdue_spray_alert_by_id(
+    db: Session, alert_id: int
+) -> OverdueSprayAlert | None:
+    return (
+        db.query(OverdueSprayAlert)
+        .filter(OverdueSprayAlert.OverdueAlertId == alert_id)
+        .first()
+    )
+
+
+def mark_overdue_spray_alert_read(
+    db: Session, alert_id: int
+) -> OverdueSprayAlert | None:
+    alert = get_overdue_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None
+    if not alert.IsRead:
+        alert.IsRead = True
+        db.commit()
+        db.refresh(alert)
+    return alert
+
+
+# -----------------------------------------------------------------------------
+# Task assignment from overdue alert (US32)
+# -----------------------------------------------------------------------------
+
+def assign_overdue_spray_task(
+    db: Session,
+    alert_id: int,
+    manager_user_id: int,
+    data: AssignOverdueAlertRequest,
+) -> tuple[Task | None, str | None]:
+    """Create a spray task linked to an overdue alert and assign it to a worker.
+
+    Idempotent: if a task is already assigned returns the existing task without
+    creating a duplicate.
+    """
+    alert = get_overdue_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None, "Overdue spray alert not found."
+    if alert.IsResolved:
+        return None, "Overdue spray alert is already resolved."
+
+    # Idempotency: task already assigned — return existing task.
+    if alert.AssignedTaskId is not None:
+        existing = db.query(Task).filter(Task.Id == alert.AssignedTaskId).first()
+        if existing:
+            return existing, None
+
+    # Validate worker exists and has Worker role.
+    worker = db.query(User).filter(User.UserId == data.assignedToUserId).first()
+    if worker is None:
+        return None, "Assigned user not found."
+    if worker.role.RoleName != "Worker":
+        return None, "Tasks can only be assigned to Workers."
+
+    now = datetime.utcnow()
+    days_overdue = max(0, (now - alert.OverdueSinceUtc).days)
+    description = (
+        f"Zone {alert.ZoneCode} has not been sprayed for over "
+        f"{alert.SprayIntervalDays} days (overdue by {days_overdue} day(s)). "
+        "Please perform a preventive spray treatment."
+    )
+
+    from services.task_service import create_task as _create_task
+
+    task_request = CreateTaskRequest(
+        title=f"Spray {alert.ZoneName}",
+        taskType="spray",
+        description=description,
+        priority="high",
+        assignedToUserId=data.assignedToUserId,
+        zoneId=alert.ZoneId,
+        dueDate=data.dueDate,
+        checklistItems=[],
+    )
+    task_resp, error = _create_task(db, manager_user_id, task_request)
+    if error:
+        return None, error
+
+    # Fetch the ORM Task object to return (create_task returns a schema response).
+    task = db.query(Task).filter(Task.Id == task_resp.id).first()
+
+    # Link task to overdue alert.
+    alert.AssignedTaskId = task.Id
+    db.commit()
+
+    return task, None

@@ -99,7 +99,7 @@ BS-PMC-26-Team7/
 | `/worker/plants` | `src/app/worker/plants/page.tsx` | View plants | `/api/plants/*` | Plant list |
 | `/worker/products` | `src/app/worker/products/page.tsx` | View products | `/api/products/*` | Product list |
 | `/manager/spray-alerts` | `src/app/manager/spray-alerts/page.tsx` | **US30** Redirect only — immediately sends to `/manager/spray-map#spray-alerts` (keeps old bookmarks working) | — | — |
-| `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30** Spray safety map (zones) + Spray Alert History section (`id="spray-alerts"`) | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts` | SprayZoneMap, spray-alerts table |
+| `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30 + US32** Spray safety map (zones) + Spray Alert History + Overdue Spray Alerts section (`id="overdue-spray-alerts"`) with assign-task modal | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts`, `GET /api/spray-reports/overdue-alerts`, `POST /api/spray-reports/overdue-alerts/{id}/assign` | SprayZoneMap, spray-alerts table, overdue-alerts table, AssignModal |
 | `/worker/spray-restrictions` | `src/app/worker/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map for workers — shows which zones are currently restricted due to spraying | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, zone table |
 | `/visitor/spray-restrictions` | `src/app/visitor/spray-restrictions/page.tsx` | **US31** Read-only spray restriction map — **publicly accessible, no login required**. Public safety information: which zones are restricted after spraying | `GET /api/spray-reports/public-restricted-zones` _(no auth)_ | SprayZoneMap, restriction banner, zone table |
 
@@ -177,6 +177,10 @@ BS-PMC-26-Team7/
 | GET | `/api/spray-reports/alerts` | `pepper-farm/backend/routers/spray.py` | **US30** List all spray alerts (FarmManager only) |
 | PATCH | `/api/spray-reports/alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` | **US30** Mark a spray alert as read (FarmManager only) |
 | GET | `/api/spray-reports/alerts/{alert_id}` | `pepper-farm/backend/routers/spray.py` | **US30** Get a single spray alert by ID (FarmManager only) |
+| GET | `/api/spray-reports/overdue-alerts` | `pepper-farm/backend/routers/spray.py` | **US32** List overdue spray alerts (FarmManager only); `?active_only=true` filters resolved |
+| PATCH | `/api/spray-reports/overdue-alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` | **US32** Mark an overdue alert as read (FarmManager only) |
+| POST | `/api/spray-reports/overdue-alerts/{alert_id}/assign` | `pepper-farm/backend/routers/spray.py` | **US32** Assign spray task to worker from overdue alert (FarmManager only) |
+| POST | `/api/spray-reports/overdue-check/run` | `pepper-farm/backend/routers/spray.py` | **US32** Manually trigger overdue zone check (FarmManager only) |
 | GET | `/api/spray-reports/pesticides` | `pepper-farm/backend/routers/spray.py` |  |
 | GET | `/api/spray-reports/public-restricted-zones` | `pepper-farm/backend/routers/spray.py` | **US31** Public (unauthenticated) spray restriction map — visitor safety, no JWT required |
 | GET | `/api/spray-reports/restricted-zones` | `pepper-farm/backend/routers/spray.py` | **US31** Authenticated restricted zone map (FarmManager, Worker, Visitor) — used by `/worker/spray-restrictions` |
@@ -222,6 +226,7 @@ BS-PMC-26-Team7/
 | `Pesticide` | `Pesticides` | `pepper-farm/backend/models/spray.py` |  |  |
 | `SprayReport` | `SprayReports` | `pepper-farm/backend/models/spray.py` |  |  |
 | `SprayAlert` | `SprayAlerts` | `pepper-farm/backend/models/spray.py` | SprayAlertId, SprayReportId, ZoneId, Severity (`high\|medium\|low`), IsRead, CreatedAt | FK → SprayReports, FarmZones, Users |
+| `OverdueSprayAlert` | `OverdueSprayAlerts` | `pepper-farm/backend/models/spray.py` | OverdueAlertId, ZoneId, ZoneCode, ZoneName, LastSprayedAtUtc, OverdueSinceUtc, SprayIntervalDays, Severity (`high\|medium\|low`), IsRead, IsResolved, ResolvedAtUtc, AssignedTaskId | FK → FarmZones, Tasks |
 | `Task` | `Tasks` | `pepper-farm/backend/models/task.py` |  |  |
 | `TaskChecklistItem` | `TaskChecklistItems` | `pepper-farm/backend/models/task.py` |  |  |
 | `User` | `Users` | `pepper-farm/backend/models/user.py` |  |  |
@@ -331,6 +336,24 @@ BS-PMC-26-Team7/
 20. **US31: The visitor spray restriction map is public — no login required.**  
     Two endpoints exist for US31: `GET /api/spray-reports/public-restricted-zones` (no auth — used by `/visitor/spray-restrictions`) and `GET /api/spray-reports/restricted-zones` (JWT required — used by `/worker/spray-restrictions` and accessible to FarmManager/Worker/Visitor roles). Both call `get_zone_spray_map()`. The US28 manager-only `GET /api/spray-reports/zone-map` remains FarmManager-only. The Safety Map button on `/visitor` is always visible regardless of login state. The `SprayZoneMap` component is shared; neither page exposes spray-alert management UI. The legend uses "Caution — Safety unverified" (not "Requires approval") to avoid implying a US33 entry-approval workflow.
 
+21. **US32: Overdue spray alerts are separate from US30 SprayAlerts.**  
+    `OverdueSprayAlert` (table `OverdueSprayAlerts`) is a distinct model from `SprayAlert` (US30). US30 alerts are tied to a specific `SprayReport`; US32 overdue alerts exist precisely when there is NO recent spray report. DDL: `pepper-farm/database/schema/OverdueSprayAlerts.sql`. Run this script in production before deploying US32 backend.
+
+22. **US32: Overdue check threshold is `DEFAULT_SPRAY_INTERVAL_DAYS = 30`.**  
+    Defined in `services/overdue_spray_check_service.py`. A zone is overdue if its most-recent `SprayReport.CompletedAtUtc` is older than 30 days, or if never sprayed and created more than 30 days ago. Only sprayable zones (GH-*, GERM-*, NURSERY) are checked — matching the spray map filter (rule 14).
+
+23. **US32: Duplicate overdue alerts are prevented at the application level.**  
+    `check_overdue_spray_zones()` queries for existing active (unresolved) overdue alerts per zone and skips creating a new one if one already exists. The scheduler runs every 6 hours (`OVERDUE_CHECK_INTERVAL_HOURS`); it adds a job to the same `BackgroundScheduler` used by sensor auto-sync — no competing schedulers.
+
+24. **US32: Completing a spray report auto-resolves overdue alerts for that zone.**  
+    `create_spray_report()` calls `_resolve_overdue_alerts_for_zone()` (best-effort, wrapped in try/except) when a completed report is submitted. Planned reports do NOT resolve overdue alerts. Overdue alerts expose a `GET /api/spray-reports/overdue-alerts?active_only=true` filter to show only unresolved alerts.
+
+25. **US32: Task assignment from overdue alert is idempotent.**  
+    `POST /api/spray-reports/overdue-alerts/{id}/assign` returns the existing task if `AssignedTaskId` is already set, without creating a duplicate. The created task uses `taskType="spray"` and `priority="high"` via the existing `create_task()` service.
+
+26. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
+    `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
+
 ---
 
 ## 11. Testing Map
@@ -345,6 +368,7 @@ BS-PMC-26-Team7/
 | Backend — inventory | Unit/API | `tests/test_inventory_service.py`, `test_inventory_schema.py`, `test_inventory_report.py` | same |
 | Backend — spray | Unit/API | `tests/test_spray_api.py`, `test_spray_service.py` | same |
 | Backend — spray alerts | Unit/API | `tests/test_spray_alerts_api.py` (21 tests — list, get, mark-read, role enforcement, graceful failure when table missing) | same |
+| Backend — overdue spray alerts | Unit/API | `tests/test_overdue_spray_alerts_api.py` (27 tests — overdue check logic, duplicate prevention, CRUD, task assignment idempotency, spray report resolution, manual trigger, US28/US30 regression) | same |
 | Backend — users | Unit/API | `tests/test_users_api.py`, `test_user_service.py` | same |
 | Backend — products | Unit/API | `tests/test_create_product_item.py`, `test_product_authorization.py` | same |
 | Backend — plants | Unit | `tests/test_plant_service.py` | same |
@@ -357,7 +381,8 @@ BS-PMC-26-Team7/
 | Backend — spray map | Unit/API | `tests/test_spray_map_api.py` (12 tests) | same |
 | Backend — spray restrictions | Unit/API | `tests/test_spray_restrictions_api.py` (27 tests — role access for Manager/Worker/Visitor, public endpoint returns 200 with no auth, US28 zone-map still 403 for Worker/Visitor, REI logic, sanitisation, insertion-order robustness, sensitive fields not exposed on public endpoint) | same |
 | Frontend — spray alerts redirect | Jest | `tests/SprayAlertsPage.test.tsx` (2 tests — verifies redirect to spray-map#spray-alerts) | `npm --prefix pepper-farm/frontend run test` |
-| Frontend — spray map page (US28 + US30) | Jest | `tests/SprayMapPage.test.tsx` (8 tests — zone map title, alerts section loading/empty/list/error) | same |
+| Frontend — spray map page (US28 + US30 + US32) | Jest | `tests/SprayMapPage.test.tsx` (8 tests — zone map title, alerts section loading/empty/list/error) | same |
+| Frontend — overdue spray alerts section (US32) | Jest | `tests/OverdueSprayAlertsSection.test.tsx` (14 tests — section renders, loading/empty/list, severity badge, resolved/active status, assign button, modal, success/error) | same |
 | Frontend — spray restrictions page (US31, worker) | Jest | `tests/SprayRestrictionsPage.test.tsx` (13 tests — title, loading, map renders, safety notice, summary cards, restricted banner, zone table, status labels, error state, no manager alerts) | same |
 | Frontend — visitor spray restrictions page (US31, public) | Jest | `tests/VisitorSprayRestrictionsPage.test.tsx` (11 tests — renders without login, calls `getPublicRestrictedZones` not `getRestrictedZones`, visitor safety notice, restricted-areas banner, all-clear banner, zone table, error state, no manager controls, no US33 controls) | same |
 | Frontend — manager navbar (US30 additions) | Jest | `tests/ManagerNavbar.test.tsx` (updated — spray map nav link, bell panel spray section, anchor hrefs, badge count) | same |
@@ -428,6 +453,6 @@ Files a new agent should read first when starting work:
 
 ## 14. Last Updated
 
-- **Generated:** 2026-05-23 (US31 added + public access correction: visitor map requires no login)
+- **Generated:** 2026-05-23 (US32 added — periodic overdue spray alerts, task assignment from alert, scheduler integration)
 - **Method:** Manual initial creation based on full codebase scan; AUTO-GENERATED sections can be refreshed by running `python scripts/generate_project_context.py` from the repo root.
 - **To update:** Run `npm run context:update` or `python scripts/generate_project_context.py`. The script rewrites only content between `<!-- AUTO-GENERATED-START:* -->` and `<!-- AUTO-GENERATED-END:* -->` markers. All other sections are left untouched.
