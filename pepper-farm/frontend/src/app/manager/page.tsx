@@ -66,12 +66,12 @@ function isInventoryAlert(item: InventoryResponse): boolean {
 function inventoryStatus(item: InventoryResponse, labels: { inStock: string; lowStock: string; outOfStock: string }) {
   const isProduct = item.ProductId !== null;
   if (item.WarehouseQuantity <= 0 || (isProduct && item.AllocatedQuantity <= 0)) {
-    return { label: labels.outOfStock, className: 'bg-red-50 text-red-700 border-red-200' };
+    return { label: labels.outOfStock, className: 'bg-[var(--color-error-bg)] text-[var(--color-error)] border-[var(--color-border)]' };
   }
   if (isInventoryAlert(item)) {
-    return { label: labels.lowStock, className: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { label: labels.lowStock, className: 'bg-[var(--color-warning-bg)] text-[var(--color-warning)] border-[var(--color-border)]' };
   }
-  return { label: labels.inStock, className: 'bg-green-50 text-green-700 border-green-200' };
+  return { label: labels.inStock, className: 'bg-[var(--color-secondary-light)] text-[var(--color-primary)] border-[var(--color-border)]' };
 }
 
 function metricValue(value: number | null, unit: string): string {
@@ -165,17 +165,17 @@ export default function ManagerPage() {
 
   return (
     <main className="min-h-screen bg-[#F6F8F4]" dir={dir}>
-      <div className="border-b border-green-100 bg-white/85">
+      <div className="border-b border-[var(--color-border)] bg-white/85">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-green-700">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">
               PepperFarm
             </p>
-            <h1 className="text-3xl font-semibold text-gray-950">{d.title}</h1>
+            <h1 className="text-3xl font-semibold text-[var(--color-foreground)]">{d.title}</h1>
           </div>
 
           {managerName && (
-            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-2 text-sm text-green-800">
+            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-3 py-2 text-sm text-[var(--color-primary)]">
               <UserCircle className="h-4 w-4" />
               <span>{d.managerUser}</span>
               <span className="font-semibold" dir="auto">{managerName}</span>
@@ -190,7 +190,7 @@ export default function ManagerPage() {
         {loading ? (
           <div className="grid gap-5 lg:grid-cols-[minmax(260px,0.65fr)_minmax(760px,2.4fr)_minmax(260px,0.75fr)]">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-80 animate-pulse rounded-xl border border-gray-200 bg-white" />
+              <div key={item} className="h-80 animate-pulse rounded-xl border border-[var(--color-border)] bg-white" />
             ))}
           </div>
         ) : (
@@ -210,7 +210,7 @@ export default function ManagerPage() {
                     {/* Count + toggle */}
                     <div className="mb-2 flex items-center justify-between gap-2">
                       {openTaskCount > 0 && (
-                        <p className="text-xs font-medium text-gray-500">
+                        <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
                           {d.openTasksCount.replace('{count}', String(openTaskCount))}
                         </p>
                       )}
@@ -221,8 +221,8 @@ export default function ManagerPage() {
                           onClick={() => setShowCompleted((c) => !c)}
                           className={`ms-auto rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
                             showCompleted
-                              ? 'border-green-200 bg-green-50 text-green-700'
-                              : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                              ? 'border-[var(--color-border)] bg-[var(--color-secondary-light)] text-[var(--color-primary)]'
+                              : 'border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)] hover:border-[var(--color-border)]'
                           }`}
                         >
                           {showCompleted ? d.hideCompleted : d.showCompleted}
@@ -237,7 +237,7 @@ export default function ManagerPage() {
                       {/* Group 1: Overdue */}
                       {overdueTasks.length > 0 && (
                         <div>
-                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-red-600" data-testid="group-label-overdue">
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-[var(--color-error)]" data-testid="group-label-overdue">
                             {d.overdue}
                           </p>
                           {overdueTasks.map((task) => (
@@ -256,7 +256,7 @@ export default function ManagerPage() {
                       {/* Group 2: Due soon */}
                       {dueSoonTasks.length > 0 && (
                         <div>
-                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-amber-600" data-testid="group-label-due-soon">
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-[var(--color-warning)]" data-testid="group-label-due-soon">
                             {d.dueSoon}
                           </p>
                           {dueSoonTasks.map((task) => (
@@ -286,8 +286,8 @@ export default function ManagerPage() {
 
                       {/* Group 4: Recently completed (toggle) */}
                       {showCompleted && recentlyCompleted.length > 0 && (
-                        <div className="mt-2 border-t border-green-100 pt-3">
-                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-green-700" data-testid="group-label-completed">
+                        <div className="mt-2 border-t border-[var(--color-border)] pt-3">
+                          <p className="mb-1.5 px-0.5 text-xs font-semibold text-[var(--color-primary)]" data-testid="group-label-completed">
                             {d.recentlyCompleted}
                           </p>
                           {recentlyCompleted.map((task) => (
@@ -318,8 +318,8 @@ export default function ManagerPage() {
                       onClick={() => setActiveFilter((current) => (current === filter.id ? null : filter.id))}
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         activeFilter === filter.id
-                          ? 'border-green-700 bg-green-700 text-white'
-                          : 'border-green-100 bg-green-50 text-green-700 hover:border-green-300'
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                          : 'border-[var(--color-border)] bg-[var(--color-secondary-light)] text-[var(--color-primary)] hover:border-[var(--color-primary)]'
                       }`}
                     >
                       {filter.label}
@@ -330,13 +330,13 @@ export default function ManagerPage() {
                       type="button"
                       data-testid="filter-clear"
                       onClick={() => setActiveFilter(null)}
-                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
+                      className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] transition hover:border-[var(--color-border)] hover:text-[var(--color-foreground)]"
                     >
                       {t.common.clear}
                     </button>
                   )}
                 </div>
-                <div className="overflow-hidden rounded-lg border border-green-100 bg-[#FAFBF8] p-3" dir="ltr">
+                <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[#FAFBF8] p-3" dir="ltr">
                   <FarmMap
                     plants={data?.plants ?? []}
                     activeFilter={activeFilter}
@@ -364,12 +364,12 @@ export default function ManagerPage() {
               </DashboardCard>
             </section>
 
-            <section className="mt-5 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <section className="mt-5 rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-700">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-secondary-light)] text-[var(--color-primary)]">
                   <Boxes className="h-4 w-4" />
                 </span>
-                <h2 className="text-base font-semibold text-gray-900">{d.inventoryAlerts}</h2>
+                <h2 className="text-base font-semibold text-[var(--color-foreground)]">{d.inventoryAlerts}</h2>
               </div>
 
               {inventoryAlerts.length === 0 ? (
@@ -377,7 +377,7 @@ export default function ManagerPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] text-sm">
-                    <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+                    <thead className="border-b border-[var(--color-border)] bg-[var(--color-muted)] text-xs uppercase text-[var(--color-muted-foreground)]">
                       <tr className={dir === 'rtl' ? 'text-right' : 'text-left'}>
                         <th className="px-3 py-3">{t.common.item}</th>
                         <th className="px-3 py-3">{d.currentStock}</th>
@@ -391,16 +391,16 @@ export default function ManagerPage() {
                       {inventoryAlerts.map((item) => {
                         const status = inventoryStatus(item, d);
                         return (
-                          <tr key={item.InventoryId} className="border-b border-gray-100 last:border-0">
-                            <td className="px-3 py-3 font-medium text-gray-900" dir="auto">
+                          <tr key={item.InventoryId} className="border-b border-[var(--color-border)] last:border-0">
+                            <td className="px-3 py-3 font-medium text-[var(--color-foreground)]" dir="auto">
                               {item.DisplayName ?? item.ProductName ?? item.ItemName ?? `Inventory #${item.InventoryId}`}
                             </td>
-                            <td className="px-3 py-3 text-gray-700" dir="ltr">
+                            <td className="px-3 py-3 text-[var(--color-foreground)]" dir="ltr">
                               {item.ProductId === null ? item.WarehouseQuantity : item.AllocatedQuantity}
                             </td>
-                            <td className="px-3 py-3 text-gray-700" dir="ltr">{item.WarehouseQuantity}</td>
-                            <td className="px-3 py-3 text-gray-700" dir="ltr">{item.ProductId === null ? 'N/A' : item.AllocatedQuantity}</td>
-                            <td className="px-3 py-3 text-gray-400" dir="ltr">N/A</td>
+                            <td className="px-3 py-3 text-[var(--color-foreground)]" dir="ltr">{item.WarehouseQuantity}</td>
+                            <td className="px-3 py-3 text-[var(--color-foreground)]" dir="ltr">{item.ProductId === null ? 'N/A' : item.AllocatedQuantity}</td>
+                            <td className="px-3 py-3 text-[var(--color-muted-foreground)]" dir="ltr">N/A</td>
                             <td className="px-3 py-3">
                               <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${status.className}`}>
                                 {status.label}
@@ -426,10 +426,10 @@ export default function ManagerPage() {
 type UrgencyLevel = 'overdue' | 'due-soon' | 'normal' | 'completed';
 
 const URGENCY_STYLES: Record<UrgencyLevel, string> = {
-  overdue:   'border-s-4 border-s-red-400    border border-red-100    bg-red-50/50',
-  'due-soon':'border-s-4 border-s-amber-400  border border-amber-100  bg-amber-50/50',
-  normal:    'border border-gray-100 bg-gray-50/70',
-  completed: 'border-s-4 border-s-green-400  border border-green-100  bg-green-50/50',
+  overdue:   'border-s-4 border-s-red-400    border border-[var(--color-border)]    bg-[var(--color-error-bg)]/50',
+  'due-soon':'border-s-4 border-s-amber-400  border border-[var(--color-border)]  bg-[var(--color-warning-bg)]/50',
+  normal:    'border border-[var(--color-border)] bg-[var(--color-muted)]/70',
+  completed: 'border-s-4 border-s-green-400  border border-[var(--color-border)]  bg-[var(--color-secondary-light)]/50',
 };
 
 const URGENCY_TEST_IDS: Record<UrgencyLevel, string> = {
@@ -457,8 +457,8 @@ function TaskCard({
       data-testid={URGENCY_TEST_IDS[urgency]}
       className={`mb-2 rounded-lg p-3 ${URGENCY_STYLES[urgency]}`}
     >
-      <h3 className="text-sm font-semibold text-gray-900" dir="auto">{task.title}</h3>
-      <dl className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-gray-500">
+      <h3 className="text-sm font-semibold text-[var(--color-foreground)]" dir="auto">{task.title}</h3>
+      <dl className="mt-2 grid grid-cols-1 gap-1.5 text-xs text-[var(--color-muted-foreground)]">
         <InfoRow label={d.dueDate} value={displayDate(task.dueDate, locale, d.noDueDate)} />
         {urgency === 'completed' && task.completedAt && (
           <InfoRow label={d.completedAt} value={displayDate(task.completedAt, locale, '')} />
@@ -491,10 +491,10 @@ function DashboardCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm ${className}`} dir={direction}>
+    <section className={`rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm ${className}`} dir={direction}>
       <div className="mb-4 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-700">{icon}</span>
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-secondary-light)] text-[var(--color-primary)]">{icon}</span>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{title}</h2>
       </div>
       {children}
     </section>
@@ -503,7 +503,7 @@ function DashboardCard({
 
 function EmptyMessage({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400">
+    <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">
       {text}
     </div>
   );
@@ -515,7 +515,7 @@ function DashboardMapLegend({
   items: Array<{ label: string; color: string; border: string }>;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2" data-testid="dashboard-legend">
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2" data-testid="dashboard-legend">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-1.5">
           <span
@@ -525,7 +525,7 @@ function DashboardMapLegend({
               border: `2px solid ${item.border}`,
             }}
           />
-          <span className="text-xs text-gray-600">{item.label}</span>
+          <span className="text-xs text-[var(--color-muted-foreground)]">{item.label}</span>
         </div>
       ))}
     </div>
@@ -536,7 +536,7 @@ function InfoRow({ label, value, valueDir = 'auto' }: { label: string; value: st
   return (
     <div className="flex items-center justify-between gap-3">
       <dt>{label}</dt>
-      <dd className="font-medium text-gray-800" dir={valueDir}>{value}</dd>
+      <dd className="font-medium text-[var(--color-foreground)]" dir={valueDir}>{value}</dd>
     </div>
   );
 }
@@ -553,11 +553,11 @@ function StatTile({
   tone: 'red' | 'amber' | 'green' | 'blue' | 'gray';
 }) {
   const tones = {
-    red:   'bg-red-50 text-red-700 border-red-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    green: 'bg-green-50 text-green-700 border-green-100',
-    blue:  'bg-blue-50 text-blue-700 border-blue-100',
-    gray:  'bg-gray-50 text-gray-700 border-gray-100',
+    red:   'bg-[var(--color-error-bg)] text-[var(--color-error)] border-[var(--color-border)]',
+    amber: 'bg-[var(--color-warning-bg)] text-[var(--color-warning)] border-[var(--color-border)]',
+    green: 'bg-[var(--color-secondary-light)] text-[var(--color-primary)] border-[var(--color-border)]',
+    blue:  'bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-border)]',
+    gray:  'bg-[var(--color-muted)] text-[var(--color-foreground)] border-[var(--color-border)]',
   };
 
   return (

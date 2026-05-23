@@ -35,8 +35,8 @@ export default function VisitorProductsPage() {
   }, [loadProducts]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-[var(--color-muted)]">
+      <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-start justify-between">
             <PageHeader
@@ -47,13 +47,13 @@ export default function VisitorProductsPage() {
             <div className="flex gap-3 mt-1">
               <Link
                 href="/login"
-                className="border border-green-600 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
               >
                 {vi.login}
               </Link>
               <Link
                 href="/register"
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition"
               >
                 {vi.register}
               </Link>
@@ -74,14 +74,14 @@ export default function VisitorProductsPage() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse"
+                className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden animate-pulse"
               >
-                <div className="w-full h-48 bg-gray-100" />
+                <div className="w-full h-48 bg-[var(--color-muted)]" />
                 <div className="p-4 flex flex-col gap-2">
-                  <div className="h-3.5 bg-gray-100 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
-                  <div className="h-3 bg-gray-100 rounded w-full mt-1" />
-                  <div className="h-3 bg-gray-100 rounded w-5/6" />
+                  <div className="h-3.5 bg-[var(--color-muted)] rounded w-3/4" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-1/2" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-full mt-1" />
+                  <div className="h-3 bg-[var(--color-muted)] rounded w-5/6" />
                 </div>
               </div>
             ))}
@@ -94,7 +94,7 @@ export default function VisitorProductsPage() {
           />
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-4" dir="ltr">
+            <p className="text-xs text-[var(--color-muted-foreground)] mb-4" dir="ltr">
               {products.length} {products.length === 1 ? t.common.product : t.common.products}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

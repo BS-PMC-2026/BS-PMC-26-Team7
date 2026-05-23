@@ -7,6 +7,8 @@ import TaskFilters from '@/components/tasks/TaskFilters';
 import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 import { ChecklistItem, Task, TaskStatus } from '@/types/task';
 import { getMyTasks, updateChecklistItem, updateTask } from '@/services/tasks';
 import { getAllPlants, PlantData, createPlant } from '@/services/plants';
@@ -169,29 +171,30 @@ export default function WorkerPage() {
             ))}
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-            <span className="text-green-500 font-bold text-base">✓</span>
-            <span className="text-sm text-green-700">{mp.noOpenTasksInZone}</span>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-secondary-light)] border border-[var(--color-border)]">
+            <span className="text-[var(--color-primary)] font-bold text-base">✓</span>
+            <span className="text-sm text-[var(--color-primary)]">{mp.noOpenTasksInZone}</span>
           </div>
         )}
 
         {/* Assign pepper */}
-        <div className="border-t border-gray-100 pt-2">
-          <button
+        <div className="border-t border-[var(--color-border)] pt-2">
+          <Button
+            variant="primary"
             onClick={() => handleAssignToZone(section)}
             disabled={!selectedPepper || saving}
-            className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
+            className="w-full py-2"
           >
             {saving ? mp.planting : selectedPepper ? mp.plantHere : mp.selectPepperFirst}
-          </button>
+          </Button>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-[var(--color-muted)]">
+      <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <PageHeader
             label={wk.label}
@@ -205,18 +208,18 @@ export default function WorkerPage() {
         {error && <Alert>{error}</Alert>}
 
         {/* Map */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-base font-semibold text-gray-700 mb-4">{wk.farmMap}</h2>
+        <Card>
+          <h2 className="text-base font-semibold text-[var(--color-foreground)] mb-4">{wk.farmMap}</h2>
 
           {/* Pepper selector */}
           <div className="flex items-center gap-4 mb-4 flex-wrap">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            <label className="text-sm font-medium text-[var(--color-foreground)] whitespace-nowrap">
               {mp.selectPepper}
             </label>
             <select
               value={selectedPepper}
               onChange={e => setSelectedPepper(e.target.value === "" ? "" : Number(e.target.value))}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-64"
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] w-64"
             >
               <option value="">{mp.choosePepper}</option>
               {peppers.map(p => (
@@ -226,7 +229,7 @@ export default function WorkerPage() {
               ))}
             </select>
             {selectedPepper && (
-              <span className="text-sm text-green-600 font-medium">
+              <span className="text-sm text-[var(--color-primary)] font-medium">
                 ✅ {mp.clickZoneHint}
               </span>
             )}
@@ -235,15 +238,15 @@ export default function WorkerPage() {
           {mapMessage && (
             <div className={`rounded-lg px-4 py-2 text-sm mb-4 ${
               mapMessage.ok
-                ? "bg-green-50 border border-green-200 text-green-700"
-                : "bg-red-50 border border-red-200 text-red-600"
+                ? "bg-[var(--color-secondary-light)] border border-[var(--color-border)] text-[var(--color-primary)]"
+                : "bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)]"
             }`}>
               {mapMessage.text}
             </div>
           )}
 
           {isLoading ? (
-            <p className="text-sm text-gray-400 py-8 text-center">{wk.loadingMap}</p>
+            <p className="text-sm text-[var(--color-muted-foreground)] py-8 text-center">{wk.loadingMap}</p>
           ) : (
             <FarmMap
               sectionColors={sectionColors}
@@ -251,11 +254,11 @@ export default function WorkerPage() {
               plants={plants}
             />
           )}
-        </div>
+        </Card>
 
         {/* Task list */}
         <div>
-          <h2 className="text-base font-semibold text-gray-700 mb-4">{wk.myTasks}</h2>
+          <h2 className="text-base font-semibold text-[var(--color-foreground)] mb-4">{wk.myTasks}</h2>
           {!isLoading && tasks.length > 0 && (
             <TaskFilters
               className="mb-4"
@@ -269,11 +272,11 @@ export default function WorkerPage() {
             />
           )}
           {isLoading ? (
-            <p className="text-sm text-gray-400 text-center py-8">{wk.loadingTasks}</p>
+            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-8">{wk.loadingTasks}</p>
           ) : tasks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">{wk.noTasksAssigned}</p>
+            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-8">{wk.noTasksAssigned}</p>
           ) : filteredTasks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">{wk.noTasksMatchFilter}</p>
+            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-8">{wk.noTasksMatchFilter}</p>
           ) : (
             <TaskList tasks={filteredTasks} onStatusChange={handleStatusChange} onToggleChecklistItem={handleToggleChecklistItem} />
           )}
@@ -293,31 +296,31 @@ export default function WorkerPage() {
           >
             <button
               onClick={() => setActiveTaskDetail(null)}
-              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 text-lg"
+              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-muted)] transition-colors text-[var(--color-muted-foreground)] text-lg"
               aria-label="Close"
             >
               ×
             </button>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 pr-8">{activeTaskDetail.title}</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-foreground)] mb-4 pr-8">{activeTaskDetail.title}</h3>
             <div className="flex flex-col gap-3 text-sm">
               {activeTaskDetail.description && (
-                <p className="text-gray-600">{activeTaskDetail.description}</p>
+                <p className="text-[var(--color-muted-foreground)]">{activeTaskDetail.description}</p>
               )}
               <div className="flex flex-wrap gap-2">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_BADGE_STYLES[activeTaskDetail.priority] ?? 'bg-gray-100 text-gray-600'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_BADGE_STYLES[activeTaskDetail.priority] ?? 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]'}`}>
                   {translateEnum(activeTaskDetail.priority, t.enums.priority)}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
                   {translateEnum(activeTaskDetail.status, t.enums.taskStatus)}
                 </span>
               </div>
-              <div className="flex flex-col gap-1 text-xs text-gray-500">
-                <span>{t.tasks.typeLabel}: <span className="text-gray-700 font-medium">{translateEnum(activeTaskDetail.taskType, t.enums.taskType)}</span></span>
+              <div className="flex flex-col gap-1 text-xs text-[var(--color-muted-foreground)]">
+                <span>{t.tasks.typeLabel}: <span className="text-[var(--color-foreground)] font-medium">{translateEnum(activeTaskDetail.taskType, t.enums.taskType)}</span></span>
                 {activeTaskDetail.dueDate && (
-                  <span>{t.tasks.due}: <span className="text-gray-700 font-medium" dir="ltr">{new Date(activeTaskDetail.dueDate).toLocaleDateString()}</span></span>
+                  <span>{t.tasks.due}: <span className="text-[var(--color-foreground)] font-medium" dir="ltr">{new Date(activeTaskDetail.dueDate).toLocaleDateString()}</span></span>
                 )}
                 {activeTaskDetail.zoneCode && (
-                  <span>{t.tasks.zone}: <span className="text-gray-700 font-medium" dir="ltr">{activeTaskDetail.zoneCode}</span></span>
+                  <span>{t.tasks.zone}: <span className="text-[var(--color-foreground)] font-medium" dir="ltr">{activeTaskDetail.zoneCode}</span></span>
                 )}
               </div>
             </div>

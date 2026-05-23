@@ -96,7 +96,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
               href="/login"
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 cursor-pointer border ${
                 scrolled
-                  ? 'text-green-700 border-green-200 hover:bg-green-50'
+                  ? 'text-[var(--color-primary)] border-[var(--color-border)] hover:bg-[var(--color-secondary-light)]'
                   : 'text-white border-white/30 hover:bg-white/10'
               }`}
             >
@@ -118,7 +118,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           whileTap={{ scale: 0.9 }}
           className={`md:hidden p-2 rounded-lg transition-colors cursor-pointer ${
             scrolled
-              ? 'text-green-800 hover:bg-green-100'
+              ? 'text-green-800 hover:bg-[var(--color-muted)]'
               : 'text-white hover:bg-white/10'
           }`}
           onClick={() => setMobileOpen((v) => !v)}
@@ -172,7 +172,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   <Link
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block py-2.5 px-3 text-sm font-medium text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
+                    className="block py-2.5 px-3 text-sm font-medium text-green-800 hover:bg-[var(--color-secondary-light)] rounded-lg transition-colors cursor-pointer"
                   >
                     {item.label}
                   </Link>
@@ -185,7 +185,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                 <div className="flex gap-2">
                   <Link
                     href="/login"
-                    className="flex-1 text-center py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer"
+                    className="flex-1 text-center py-2 text-sm font-medium text-[var(--color-primary)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-secondary-light)] cursor-pointer"
                   >
                     {la.signIn}
                   </Link>

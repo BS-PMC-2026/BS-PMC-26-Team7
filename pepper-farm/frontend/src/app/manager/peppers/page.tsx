@@ -131,13 +131,13 @@ export default function ManagerPeppersPage() {
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     placeholder={pe.searchPlaceholder}
-    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
   />
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
   <select
     value={selectedPepperName}
     onChange={(e) => setSelectedPepperName(e.target.value)}
-    className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
   >
     <option value="">{pe.allPepperTypes}</option>
     {pepperNames.map((name) => (
@@ -150,7 +150,7 @@ export default function ManagerPeppersPage() {
   <select
     value={selectedHeatLevel}
     onChange={(e) => setSelectedHeatLevel(e.target.value)}
-    className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
   >
     <option value="">{pe.allHeatLevels}</option>
     <option value="Mild">{pe.mild}</option>
@@ -162,7 +162,7 @@ export default function ManagerPeppersPage() {
   <select
     value={selectedZone}
     onChange={(e) => setSelectedZone(e.target.value)}
-    className="rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
   >
     <option value="">{pe.allGrowingZones}</option>
     {zones.map((zone) => (
@@ -177,13 +177,13 @@ export default function ManagerPeppersPage() {
 
       {error && <Alert className="mb-4">{error}</Alert>}
       {successMessage && (
-  <div className="mb-4 rounded-xl border border-green-500 bg-green-50 px-4 py-3 text-green-700">
+  <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-4 py-3 text-[var(--color-primary)]">
     {successMessage}
   </div>
 )}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-12">{pe.loading}</p>
+        <p className="text-sm text-[var(--color-muted-foreground)] text-center py-12">{pe.loading}</p>
       ) : filteredPeppers.length === 0 ? (
         <EmptyState
           title={pe.noPeppersYet}

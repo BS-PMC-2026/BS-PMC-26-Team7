@@ -65,27 +65,27 @@ export default function EditInventoryPage() {
   return (
     <main className="mx-auto max-w-3xl p-6">
       <div className="mb-6">
-        <button onClick={() => router.push('/manager/inventory')} className="text-sm text-gray-500 hover:text-gray-800">
+        <button onClick={() => router.push('/manager/inventory')} className="text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
           {inv.backToInventory}
         </button>
         <h1 className="mt-3 text-3xl font-bold">{inv.updateTitle}</h1>
         {inventory && (
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
             {inventory.DisplayName}
             {inventory.ProductId === null && (
-              <span className="ml-2 rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs">{inv.typeWarehouseOnly}</span>
+              <span className="ml-2 rounded-full bg-[var(--color-muted)] text-[var(--color-muted-foreground)] px-2 py-0.5 text-xs">{inv.typeWarehouseOnly}</span>
             )}
           </p>
         )}
       </div>
 
-      {successMessage && <div className="mb-4 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800">{successMessage}</div>}
-      {errorMessage && <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800">{errorMessage}</div>}
+      {successMessage && <div className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-4 py-3 text-[var(--color-primary)]">{successMessage}</div>}
+      {errorMessage && <div className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--color-error-bg)] px-4 py-3 text-[var(--color-error)]">{errorMessage}</div>}
 
       {loading ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 animate-pulse">
-          <div className="h-4 w-1/3 bg-gray-100 rounded mb-3" />
-          <div className="h-4 w-1/2 bg-gray-100 rounded" />
+        <div className="rounded-lg border border-[var(--color-border)] bg-white p-6 animate-pulse">
+          <div className="h-4 w-1/3 bg-[var(--color-muted)] rounded mb-3" />
+          <div className="h-4 w-1/2 bg-[var(--color-muted)] rounded" />
         </div>
       ) : inventory ? (
         <QuantityUpdateForm inventory={inventory} onSubmit={handleSubmit} submitting={submitting} />

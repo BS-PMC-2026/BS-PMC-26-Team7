@@ -5,9 +5,9 @@ interface AlertProps {
 }
 
 const VARIANT_STYLES = {
-  error: 'text-red-600 bg-red-50 border-red-200',
-  success: 'text-green-700 bg-green-50 border-green-200',
-  info: 'text-gray-600 bg-white border-gray-200',
+  error:   'text-[var(--color-error)] bg-[var(--color-error-bg)] border-[var(--color-border)]',
+  success: 'text-[var(--color-primary)] bg-[var(--color-secondary-light)] border-[var(--color-border)]',
+  info:    'text-[var(--color-muted-foreground)] bg-white border-[var(--color-border)]',
 };
 
 export default function Alert({ children, variant = 'error', className = '' }: AlertProps) {

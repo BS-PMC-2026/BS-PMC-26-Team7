@@ -157,9 +157,9 @@ export default function ManagerNavbar() {
   };
 
   const linkColor = scrolled ? 'text-green-800' : 'text-white';
-  const activeLinkColor = scrolled ? 'text-green-700' : 'text-white';
-  const activeBg = scrolled ? 'bg-green-50' : 'bg-white/10';
-  const hoverBg = scrolled ? 'hover:bg-green-50 hover:text-green-800' : 'hover:bg-white/10 hover:text-white';
+  const activeLinkColor = scrolled ? 'text-[var(--color-primary)]' : 'text-white';
+  const activeBg = scrolled ? 'bg-[var(--color-secondary-light)]' : 'bg-white/10';
+  const hoverBg = scrolled ? 'hover:bg-[var(--color-secondary-light)] hover:text-green-800' : 'hover:bg-white/10 hover:text-white';
 
   return (
     <motion.header
@@ -167,7 +167,7 @@ export default function ManagerNavbar() {
       dir="ltr"
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
-          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-green-100'
+          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
           : 'bg-black/30 backdrop-blur-sm border-b border-white/10'
       }`}
       initial={{ y: -64, opacity: 0 }}
@@ -196,7 +196,7 @@ export default function ManagerNavbar() {
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
               scrolled
-                ? 'text-green-600 bg-green-50 border-green-200'
+                ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)] border-[var(--color-border)]'
                 : 'text-white/50 bg-white/10 border-white/20'
             }`}
           >
@@ -261,7 +261,7 @@ export default function ManagerNavbar() {
                     transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                     onMouseEnter={cancelClose}
                     onMouseLeave={scheduleClose}
-                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-green-100 bg-white shadow-xl overflow-hidden z-[100]"
+                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white shadow-xl overflow-hidden z-[100]"
                     style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
                   >
                     <div className="p-1.5">
@@ -274,18 +274,18 @@ export default function ManagerNavbar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
-                              itemActive ? 'bg-green-50' : 'hover:bg-gray-50'
+                              itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
                             }`}
                           >
-                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-green-600' : 'text-gray-400'}`}>
+                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
                               {item.icon}
                             </span>
                             <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-green-700' : 'text-gray-700'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
+                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
                                 {item.label}
                               </span>
                               {item.description && (
-                                <span className="block text-[11px] text-gray-400 mt-0.5 leading-snug">
+                                <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">
                                   {item.description}
                                 </span>
                               )}
@@ -324,10 +324,10 @@ export default function ManagerNavbar() {
             aria-expanded={bellOpen}
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
-                ? scrolled ? 'bg-green-50 text-green-700' : 'bg-white/15 text-white'
+                ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
                 : badgeCount > 0
-                  ? scrolled ? 'text-red-500 hover:bg-red-50' : 'text-red-300 hover:bg-white/10'
-                  : scrolled ? 'text-gray-400 hover:bg-gray-100 hover:text-gray-600' : 'text-white/50 hover:bg-white/10 hover:text-white'
+                  ? scrolled ? 'text-red-500 hover:bg-[var(--color-error-bg)]' : 'text-red-300 hover:bg-white/10'
+                  : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
             }`}
           >
             <motion.span
@@ -362,17 +362,17 @@ export default function ManagerNavbar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.96 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute top-[calc(100%+10px)] right-0 w-[360px] rounded-xl border border-gray-100 bg-white overflow-hidden z-[100]"
+                className="absolute top-[calc(100%+10px)] right-0 w-[360px] rounded-xl border border-[var(--color-border)] bg-white overflow-hidden z-[100]"
                 style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
               >
                 {/* Panel header */}
-                <div className="flex items-center justify-between px-3.5 py-3 border-b border-gray-100">
-                  <span className="text-sm font-semibold text-gray-800" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
                     Notifications
                   </span>
                   <button
                     onClick={() => setBellOpen(false)}
-                    className="flex p-0.5 rounded border-none bg-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors"
+                    className="flex p-0.5 rounded border-none bg-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] cursor-pointer transition-colors"
                   >
                     <X size={13} />
                   </button>
@@ -381,20 +381,20 @@ export default function ManagerNavbar() {
                 {/* Active Sensor Alerts section */}
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
                       Active Alerts
                     </span>
                     <Link
                       href="/manager/sensors?tab=anomalies"
                       onClick={() => setBellOpen(false)}
-                      className="flex items-center gap-0.5 text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
+                      className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
                       View all <ExternalLink size={9} />
                     </Link>
                   </div>
 
                   {activeAlerts.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1.5 italic">No active alerts</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No active alerts</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {activeAlerts.map((alert) => (
@@ -402,22 +402,22 @@ export default function ManagerNavbar() {
                           key={alert.alertId}
                           href={`/manager/sensors?tab=anomalies&openAlertId=${alert.alertId}`}
                           onClick={() => setBellOpen(false)}
-                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors"
+                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
                           <span className={`mt-0.5 shrink-0 ${alert.severity === 'High' ? 'text-red-500' : 'text-amber-500'}`}>
                             <AlertTriangle size={13} />
                           </span>
                           <span className="flex-1 min-w-0">
-                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
+                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">
                               {alert.metricName}: {alert.actualValue}
                             </span>
                             {(alert.zoneName || alert.pepperName) && (
-                              <span className="block text-[10px] text-gray-400 mt-0.5">
+                              <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                                 {[alert.zoneName, alert.pepperName].filter(Boolean).join(' · ')}
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
+                          <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(alert.createdAtUtc)}
                           </span>
                         </Link>
@@ -427,25 +427,25 @@ export default function ManagerNavbar() {
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-gray-100 my-1" />
+                <div className="h-px bg-[var(--color-border)] my-1" />
 
                 {/* US30 — Spray Alerts section */}
                 <div className="px-3.5 pt-2 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
                       Spray Alerts
                     </span>
                     <Link
                       href="/manager/spray-map#spray-alerts"
                       onClick={() => setBellOpen(false)}
-                      className="flex items-center gap-0.5 text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
+                      className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
                       View all <ExternalLink size={9} />
                     </Link>
                   </div>
 
                   {recentSprayAlerts.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1.5 italic">No spray alerts</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No spray alerts</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {recentSprayAlerts.map((alert) => (
@@ -456,7 +456,7 @@ export default function ManagerNavbar() {
                             setBellOpen(false);
                             if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
                           }}
-                          className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors ${!alert.IsRead ? 'bg-amber-50/50' : ''}`}
+                          className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}
                           data-testid="spray-alert-item"
                         >
                           <span className={`mt-0.5 shrink-0 ${
@@ -467,15 +467,15 @@ export default function ManagerNavbar() {
                             <ShieldAlert size={13} />
                           </span>
                           <span className="flex-1 min-w-0">
-                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
+                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">
                               {alert.ZoneName}
                               {alert.PesticideName ? ` — ${alert.PesticideName}` : ''}
                             </span>
-                            <span className="block text-[10px] text-gray-400 mt-0.5 capitalize">
+                            <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5 capitalize">
                               {alert.ReportStatus} · {alert.Severity}
                             </span>
                           </span>
-                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
+                          <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(alert.CreatedAt)}
                           </span>
                         </Link>
@@ -485,25 +485,25 @@ export default function ManagerNavbar() {
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-gray-100 my-1" />
+                <div className="h-px bg-[var(--color-border)] my-1" />
 
                 {/* Completed Tasks section */}
                 <div className="px-3.5 pt-2 pb-3">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
                       Completed Tasks
                     </span>
                     <Link
                       href="/manager/tasks?tab=history"
                       onClick={() => setBellOpen(false)}
-                      className="flex items-center gap-0.5 text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
+                      className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
                       View history <ExternalLink size={9} />
                     </Link>
                   </div>
 
                   {recentCompleted.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1.5 italic">No completed tasks yet</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No completed tasks yet</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {recentCompleted.map((task) => (
@@ -511,22 +511,22 @@ export default function ManagerNavbar() {
                           key={task.id}
                           href="/manager/tasks?tab=history"
                           onClick={() => setBellOpen(false)}
-                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors"
+                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
                           <span className="mt-0.5 shrink-0 text-green-500">
                             <CheckCircle2 size={13} />
                           </span>
                           <span className="flex-1 min-w-0">
-                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
+                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">
                               {task.title}
                             </span>
                             {task.taskType && (
-                              <span className="block text-[10px] text-gray-400 mt-0.5">
+                              <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                                 {task.taskType}
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
+                          <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(task.completedAt)}
                           </span>
                         </Link>
@@ -543,7 +543,7 @@ export default function ManagerNavbar() {
         <LanguageSwitcher />
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-gray-200' : 'bg-white/20'}`} />
+        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
@@ -552,7 +552,7 @@ export default function ManagerNavbar() {
           aria-label="Sign out"
           className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
             scrolled
-              ? 'text-gray-400 hover:bg-red-50 hover:text-red-500'
+              ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
           }`}
         >
@@ -587,10 +587,10 @@ function NavLinkDirect({
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg no-underline text-sm font-medium transition-colors duration-150 whitespace-nowrap ${
           active
             ? scrolled
-              ? 'text-green-700 bg-green-50'
+              ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]'
               : 'text-white bg-white/10'
             : scrolled
-              ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-green-50 hover:text-green-800'
+              ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800'
               : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
         style={{ fontFamily: 'Raleway, sans-serif' }}

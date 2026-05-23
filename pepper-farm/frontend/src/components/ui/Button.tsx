@@ -25,7 +25,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+    'inline-flex items-center justify-center font-medium rounded-[var(--radius-md)] transition-colors duration-[var(--transition-fast)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const sizes = {
     sm: 'px-3 py-1.5 text-xs',
@@ -34,11 +34,11 @@ export default function Button({
   };
 
   const variants = {
-    primary:   'bg-[#2F6F4E] text-white hover:bg-[#245C3F]',
-    secondary: 'bg-[#6FA36F] text-white hover:bg-[#5C8F5C]',
-    danger:    'bg-[#D64545] text-white hover:bg-[#B83939]',
-    outline:   'bg-transparent text-[#2F6F4E] border border-[#2F6F4E] hover:bg-[#D6EBE0]',
-    ghost:     'bg-transparent text-[#2F6F4E] hover:bg-[#EEF0EC]',
+    primary:   'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]',
+    secondary: 'bg-[var(--color-secondary)] text-white hover:bg-[var(--color-secondary-hover)]',
+    danger:    'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]',
+    outline:   'bg-transparent text-[var(--color-primary)] border border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]',
+    ghost:     'bg-transparent text-[var(--color-primary)] hover:bg-[var(--color-muted)]',
   };
 
   return (

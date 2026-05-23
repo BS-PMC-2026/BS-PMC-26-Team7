@@ -75,7 +75,7 @@ const PRIORITY_COLOR: Record<string, string> = {
   critical: 'text-red-500',
   high:     'text-amber-500',
   medium:   'text-blue-500',
-  low:      'text-gray-300',
+  low:      'text-[var(--color-muted-foreground)]',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -146,7 +146,7 @@ export default function WorkerNavbar() {
       dir="ltr"
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
-          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-green-100'
+          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
           : 'bg-black/30 backdrop-blur-sm border-b border-white/10'
       }`}
       initial={{ y: -64, opacity: 0 }}
@@ -175,7 +175,7 @@ export default function WorkerNavbar() {
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
               scrolled
-                ? 'text-green-600 bg-green-50 border-green-200'
+                ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)] border-[var(--color-border)]'
                 : 'text-white/50 bg-white/10 border-white/20'
             }`}
           >
@@ -205,8 +205,8 @@ export default function WorkerNavbar() {
                 onClick={() => { setOpenGroup(open ? null : group.id); setBellOpen(false); }}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
                   active || open
-                    ? scrolled ? 'text-green-700 bg-green-50' : 'text-white bg-white/10'
-                    : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-green-50' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10'
+                    ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
+                    : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)]' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10'
                 }`}
                 style={{ fontFamily: 'Raleway, sans-serif' }}
               >
@@ -228,7 +228,7 @@ export default function WorkerNavbar() {
                     transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                     onMouseEnter={cancelClose}
                     onMouseLeave={scheduleClose}
-                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-gray-100 bg-white overflow-hidden z-[100]"
+                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white overflow-hidden z-[100]"
                     style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
                   >
                     <div className="p-1.5">
@@ -237,16 +237,16 @@ export default function WorkerNavbar() {
                         return (
                           <Link key={item.href} href={item.href}
                             className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
-                              itemActive ? 'bg-green-50' : 'hover:bg-gray-50'
+                              itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
                             }`}
                           >
-                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-green-600' : 'text-gray-400'}`}>{item.icon}</span>
+                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>{item.icon}</span>
                             <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-green-700' : 'text-gray-700'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
+                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
                                 {item.label}
                               </span>
                               {item.description && (
-                                <span className="block text-[11px] text-gray-400 mt-0.5 leading-snug">{item.description}</span>
+                                <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">{item.description}</span>
                               )}
                             </span>
                             {itemActive && <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />}
@@ -272,10 +272,10 @@ export default function WorkerNavbar() {
             aria-expanded={bellOpen}
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
-                ? scrolled ? 'bg-green-50 text-green-700' : 'bg-white/15 text-white'
+                ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
                 : unreadCount > 0
-                  ? scrolled ? 'text-red-500 hover:bg-red-50' : 'text-red-300 hover:bg-white/10'
-                  : scrolled ? 'text-gray-400 hover:bg-gray-100 hover:text-gray-600' : 'text-white/50 hover:bg-white/10 hover:text-white'
+                  ? scrolled ? 'text-red-500 hover:bg-[var(--color-error-bg)]' : 'text-red-300 hover:bg-white/10'
+                  : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
             }`}
           >
             <motion.span
@@ -310,12 +310,12 @@ export default function WorkerNavbar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.96 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute top-[calc(100%+10px)] right-0 w-[320px] rounded-xl border border-gray-100 bg-white overflow-hidden z-[100]"
+                className="absolute top-[calc(100%+10px)] right-0 w-[320px] rounded-xl border border-[var(--color-border)] bg-white overflow-hidden z-[100]"
                 style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-3.5 py-3 border-b border-gray-100">
-                  <span className="text-sm font-semibold text-gray-800" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
                     My Tasks
                     {unreadCount > 0 && (
                       <span className="ml-1.5 text-[10px] font-bold text-red-400">
@@ -325,7 +325,7 @@ export default function WorkerNavbar() {
                   </span>
                   <button
                     onClick={() => setBellOpen(false)}
-                    className="flex p-0.5 rounded border-none bg-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors"
+                    className="flex p-0.5 rounded border-none bg-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] cursor-pointer transition-colors"
                   >
                     <X size={13} />
                   </button>
@@ -334,20 +334,20 @@ export default function WorkerNavbar() {
                 {/* Section */}
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
                       {newTasks.length > 0 ? 'Newly Assigned' : 'Active Tasks'}
                     </span>
                     <Link
                       href="/worker/my-tasks"
                       onClick={() => setBellOpen(false)}
-                      className="text-[10px] text-green-600 no-underline hover:text-green-700 opacity-80"
+                      className="text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
                       View all
                     </Link>
                   </div>
 
                   {popupTasks.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1.5 pb-3 italic">No active tasks assigned to you</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 pb-3 italic">No active tasks assigned to you</p>
                   ) : (
                     <div className="flex flex-col gap-0.5 pb-2">
                       {popupTasks.map((task) => (
@@ -355,20 +355,20 @@ export default function WorkerNavbar() {
                           key={task.id}
                           href="/worker/my-tasks"
                           onClick={() => setBellOpen(false)}
-                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-gray-50 transition-colors"
+                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
-                          <span className={`mt-0.5 shrink-0 ${PRIORITY_COLOR[task.priority] ?? 'text-gray-300'}`}>
+                          <span className={`mt-0.5 shrink-0 ${PRIORITY_COLOR[task.priority] ?? 'text-[var(--color-muted-foreground)]'}`}>
                             <ClipboardCheck size={13} />
                           </span>
                           <span className="flex-1 min-w-0">
-                            <span className="block text-xs font-medium text-gray-700 leading-snug truncate">
+                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">
                               {task.title}
                             </span>
-                            <span className="block text-[10px] text-gray-400 mt-0.5">
+                            <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                               {[task.taskType, task.zoneCode].filter(Boolean).join(' · ')}
                             </span>
                           </span>
-                          <span className="shrink-0 text-[10px] text-gray-300 mt-0.5">
+                          <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(task.createdAt)}
                           </span>
                         </Link>
@@ -385,7 +385,7 @@ export default function WorkerNavbar() {
         <LanguageSwitcher />
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-gray-200' : 'bg-white/20'}`} />
+        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
@@ -394,7 +394,7 @@ export default function WorkerNavbar() {
           aria-label="Sign out"
           className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
             scrolled
-              ? 'text-gray-400 hover:bg-red-50 hover:text-red-500'
+              ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
           }`}
         >
@@ -416,8 +416,8 @@ function NavLinkDirect({ href, label, icon, active, scrolled }: { href: string; 
         href={href}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg no-underline text-sm font-medium transition-colors duration-150 whitespace-nowrap ${
           active
-            ? scrolled ? 'text-green-700 bg-green-50' : 'text-white bg-white/10'
-            : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-green-50 hover:text-green-800' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
+            ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
+            : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
         style={{ fontFamily: 'Raleway, sans-serif' }}
       >
