@@ -119,7 +119,11 @@ class SprayAlertResponse(BaseModel):
 # computed safety state so the manager can see the farm at a glance.
 # -----------------------------------------------------------------------------
 class ZoneSprayStatusResponse(BaseModel):
-    """Per-zone spray status returned by GET /api/spray-reports/zone-map."""
+    """Per-zone spray status returned by GET /api/spray-reports/zone-map.
+
+    US33 adds explicit entry permission fields derived from the spray status so
+    consumers do not need to re-implement the REI/safety logic themselves.
+    """
     zoneId: int
     zoneCode: str
     zoneName: str
@@ -133,6 +137,13 @@ class ZoneSprayStatusResponse(BaseModel):
     hazardLevel: Optional[str] = None
     ppeRequired: Optional[str] = None
     nextPlannedAtUtc: Optional[datetime] = None
+
+    # US33 — entry permission status (derived from sprayStatus + REI window)
+    # allowed | restricted | caution | planned_warning | no_data
+    entryPermissionStatus: str = "no_data"
+    entryAllowed: bool = True
+    entryMessage: str = "No recent spray restriction. Entry is permitted."
+    remainingRestrictionMinutes: Optional[int] = None
 
 
 # -----------------------------------------------------------------------------

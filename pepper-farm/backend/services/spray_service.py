@@ -272,6 +272,63 @@ def mark_spray_alert_read(db: Session, alert_id: int) -> SprayAlert | None:
 
 
 # -----------------------------------------------------------------------------
+# US33 — Entry permission computation
+# -----------------------------------------------------------------------------
+def _compute_entry_permission(
+    spray_status: str,
+    safe_re_enter: datetime | None,
+    now: datetime,
+) -> tuple[str, bool, str, int | None]:
+    """Return (entryPermissionStatus, entryAllowed, entryMessage, remainingRestrictionMinutes).
+
+    Maps the internal sprayStatus + REI window to explicit entry permission fields
+    so consumers (public map, worker map) can display a clear human-readable
+    verdict without re-implementing the REI logic.
+    """
+    if spray_status == "unsafe":
+        remaining = None
+        if safe_re_enter is not None:
+            delta = safe_re_enter - now
+            remaining = max(0, int(delta.total_seconds() / 60))
+        return (
+            "restricted",
+            False,
+            "Entry is restricted. Do not enter — the re-entry interval (REI) has not passed yet.",
+            remaining,
+        )
+    if spray_status == "requires_approval":
+        return (
+            "caution",
+            False,
+            "Entry status unknown — pesticide safety data is unverified. "
+            "Consult a staff member or manager before entering.",
+            None,
+        )
+    if spray_status == "pending":
+        return (
+            "planned_warning",
+            True,
+            "A spray is planned for this zone. Entry is currently permitted — "
+            "check with staff before the planned spray date.",
+            None,
+        )
+    if spray_status == "safe":
+        return (
+            "allowed",
+            True,
+            "Entry is permitted. The re-entry interval (REI) for the last spray has passed.",
+            None,
+        )
+    # never_sprayed
+    return (
+        "no_data",
+        True,
+        "No recent spray restriction. Entry is permitted.",
+        None,
+    )
+
+
+# -----------------------------------------------------------------------------
 # Spray map data (BSPMT7-234 US28)
 # -----------------------------------------------------------------------------
 def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
@@ -346,6 +403,9 @@ def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
 
         if zid not in completed_by_zone:
             status = "pending" if planned_at else "never_sprayed"
+            ep_status, ep_allowed, ep_message, ep_remaining = _compute_entry_permission(
+                status, None, now
+            )
             results.append(
                 ZoneSprayStatusResponse(
                     zoneId=zid,
@@ -353,6 +413,10 @@ def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
                     zoneName=zone.ZoneName,
                     sprayStatus=status,
                     nextPlannedAtUtc=planned_at,
+                    entryPermissionStatus=ep_status,
+                    entryAllowed=ep_allowed,
+                    entryMessage=ep_message,
+                    remainingRestrictionMinutes=ep_remaining,
                 )
             )
             continue
@@ -380,6 +444,9 @@ def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
             else:
                 status = "safe"
 
+        ep_status, ep_allowed, ep_message, ep_remaining = _compute_entry_permission(
+            status, safe_re_enter, now
+        )
         results.append(
             ZoneSprayStatusResponse(
                 zoneId=zid,
@@ -394,6 +461,10 @@ def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
                 hazardLevel=pesticide.HazardLevel,
                 ppeRequired=pesticide.PpeRequired,
                 nextPlannedAtUtc=planned_at,
+                entryPermissionStatus=ep_status,
+                entryAllowed=ep_allowed,
+                entryMessage=ep_message,
+                remainingRestrictionMinutes=ep_remaining,
             )
         )
 

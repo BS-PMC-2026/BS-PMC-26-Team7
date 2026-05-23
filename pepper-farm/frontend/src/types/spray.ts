@@ -89,6 +89,14 @@ export type ZoneSprayStatus =
   | 'pending'
   | 'never_sprayed';
 
+// US33 entry permission status — derived by the backend from sprayStatus + REI.
+export type EntryPermissionStatus =
+  | 'allowed'
+  | 'restricted'
+  | 'caution'
+  | 'planned_warning'
+  | 'no_data';
+
 export interface ZoneSprayStatusData {
   zoneId: number;
   zoneCode: string;
@@ -102,6 +110,11 @@ export interface ZoneSprayStatusData {
   hazardLevel: string | null;
   ppeRequired: string | null;
   nextPlannedAtUtc: string | null;
+  // US33 — explicit entry permission fields
+  entryPermissionStatus: EntryPermissionStatus;
+  entryAllowed: boolean;
+  entryMessage: string;
+  remainingRestrictionMinutes: number | null;
 }
 
 // US32: Manager overdue spray alert — created by periodic scheduler when a zone
