@@ -80,3 +80,28 @@ class SprayAlert(Base):
 
     IsRead = Column(Boolean, nullable=False, default=False)
     CreatedAt = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
+
+
+class OverdueSprayAlert(Base):
+    """US32: Periodic overdue spray alert — created by the scheduler when a zone
+    has not been sprayed within the configured interval (DEFAULT_SPRAY_INTERVAL_DAYS).
+
+    Separate from SprayAlert (US30) which is tied to a specific SprayReport.
+    Severity: 'high' (2x+ overdue), 'medium' (1.5x+ overdue), 'low' (just crossed threshold).
+    """
+    __tablename__ = "OverdueSprayAlerts"
+
+    OverdueAlertId    = Column(Integer, primary_key=True, autoincrement=True)
+    ZoneId            = Column(Integer, ForeignKey("FarmZones.ZoneId"), nullable=False)
+    ZoneCode          = Column(String(50), nullable=False)   # snapshot
+    ZoneName          = Column(String(100), nullable=False)  # snapshot
+    LastSprayedAtUtc  = Column(DateTime, nullable=True)      # null = never sprayed
+    OverdueSinceUtc   = Column(DateTime, nullable=False)     # when zone became overdue
+    SprayIntervalDays = Column(Integer, nullable=False)      # threshold used at creation
+    Severity          = Column(String(20), nullable=False, default="low")
+    Message           = Column(String(500), nullable=False)
+    IsRead            = Column(Boolean, nullable=False, default=False)
+    IsResolved        = Column(Boolean, nullable=False, default=False)
+    ResolvedAtUtc     = Column(DateTime, nullable=True)
+    AssignedTaskId    = Column(Integer, ForeignKey("Tasks.Id"), nullable=True)
+    CreatedAt         = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())

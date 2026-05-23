@@ -12,20 +12,36 @@ import models.plant  # noqa: F401
 import models.product    # noqa: F401
 import models.inventory  # noqa: F401
 import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, SensorReading, SensorSyncState, SensorAlert
-import models.spray  # noqa: F401  — registers Pesticide, SprayReport
+import models.spray  # noqa: F401  — registers Pesticide, SprayReport, SprayAlert, OverdueSprayAlert
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from services.sensor_auto_sync_service import (
-    start_sensor_scheduler,
-    stop_sensor_scheduler,
+import services.sensor_auto_sync_service as _sensor_sync
+from services.sensor_auto_sync_service import start_sensor_scheduler, stop_sensor_scheduler
+from services.overdue_spray_check_service import (
+    OVERDUE_CHECK_INTERVAL_HOURS,
+    run_overdue_check_once,
 )
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_sensor_scheduler()
+    # US32: add overdue spray check job to the existing scheduler.
+    # Access _sensor_sync.scheduler at runtime (after start_sensor_scheduler() has
+    # assigned it) rather than at import time, when it is still None.
+    if _sensor_sync.scheduler is not None:
+        _sensor_sync.scheduler.add_job(
+            run_overdue_check_once,
+            trigger="interval",
+            hours=OVERDUE_CHECK_INTERVAL_HOURS,
+            id="overdue_spray_check_job",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        print(f"[Overdue Spray Check] Job scheduled every {OVERDUE_CHECK_INTERVAL_HOURS} hours.")
     yield
     stop_sensor_scheduler()
 

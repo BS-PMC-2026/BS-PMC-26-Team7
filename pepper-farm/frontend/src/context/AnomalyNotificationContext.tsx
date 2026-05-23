@@ -11,15 +11,16 @@ import {
 } from 'react';
 import { getRecentAlerts } from '@/services/anomalies';
 import { getCompletedTasks } from '@/services/tasks';
-import { getSprayAlerts, markSprayAlertRead } from '@/services/spray';
+import { getOverdueSprayAlerts, getSprayAlerts, markOverdueAlertRead, markSprayAlertRead } from '@/services/spray';
 import type { RecentAlert } from '@/types/anomaly';
 import type { Task } from '@/types/task';
-import type { SprayAlert } from '@/types/spray';
+import type { OverdueSprayAlert, SprayAlert } from '@/types/spray';
 import { useToast } from '@/context/ToastContext';
 
-const FALLBACK_INTERVAL_MS  = 30_000;
-const TASK_POLL_INTERVAL_MS  = 30_000;
-const SPRAY_POLL_INTERVAL_MS = 30_000;
+const FALLBACK_INTERVAL_MS        = 30_000;
+const TASK_POLL_INTERVAL_MS        = 30_000;
+const SPRAY_POLL_INTERVAL_MS       = 30_000;
+const OVERDUE_SPRAY_POLL_INTERVAL_MS = 60_000;
 
 interface AnomalyNotificationContextValue {
   unreadCount: number;
@@ -34,6 +35,12 @@ interface AnomalyNotificationContextValue {
   sprayUnreadCount: number;
   /** US30: Mark a spray alert read locally and via API */
   acknowledgeSprayAlert: (alertId: number) => void;
+  /** US32: Overdue spray alerts for manager — polled every 60 s */
+  overdueAlerts: OverdueSprayAlert[];
+  /** US32: Count of unread overdue spray alerts */
+  overdueUnreadCount: number;
+  /** US32: Mark an overdue alert read locally and via API */
+  acknowledgeOverdueAlert: (alertId: number) => void;
 }
 
 const AnomalyNotificationContext = createContext<AnomalyNotificationContextValue | null>(null);
@@ -56,21 +63,25 @@ function buildSprayBody(alert: SprayAlert): string {
 
 export function AnomalyNotificationProvider({ children }: { children: ReactNode }) {
   const { show } = useToast();
-  const seenAlertIds  = useRef<Set<number>>(new Set());
-  const seenTaskIds   = useRef<Set<number>>(new Set());
-  const seenSprayIds  = useRef<Set<number>>(new Set());
-  const maxAlertId    = useRef<number>(0);
-  const lastSeenTime  = useRef<string | undefined>(undefined);
-  const esRef         = useRef<EventSource | null>(null);
-  const fallbackRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const taskPollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sprayPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const seenAlertIds   = useRef<Set<number>>(new Set());
+  const seenTaskIds    = useRef<Set<number>>(new Set());
+  const seenSprayIds   = useRef<Set<number>>(new Set());
+  const seenOverdueIds = useRef<Set<number>>(new Set());
+  const maxAlertId     = useRef<number>(0);
+  const lastSeenTime   = useRef<string | undefined>(undefined);
+  const esRef          = useRef<EventSource | null>(null);
+  const fallbackRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const taskPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sprayPollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const overduePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [unreadCount,      setUnreadCount]      = useState(0);
-  const [liveAlerts,       setLiveAlerts]       = useState<RecentAlert[]>([]);
-  const [completedTasks,   setCompletedTasks]   = useState<Task[]>([]);
-  const [sprayAlerts,      setSprayAlerts]      = useState<SprayAlert[]>([]);
-  const [sprayUnreadCount, setSprayUnreadCount] = useState(0);
+  const [unreadCount,       setUnreadCount]       = useState(0);
+  const [liveAlerts,        setLiveAlerts]        = useState<RecentAlert[]>([]);
+  const [completedTasks,    setCompletedTasks]    = useState<Task[]>([]);
+  const [sprayAlerts,       setSprayAlerts]       = useState<SprayAlert[]>([]);
+  const [sprayUnreadCount,  setSprayUnreadCount]  = useState(0);
+  const [overdueAlerts,     setOverdueAlerts]     = useState<OverdueSprayAlert[]>([]);
+  const [overdueUnreadCount, setOverdueUnreadCount] = useState(0);
 
   // ------------------------------------------------------------------
   // Process a new incoming sensor alert (from SSE or fallback)
@@ -139,6 +150,41 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
       prev.map((a) => a.SprayAlertId === alertId ? { ...a, IsRead: true } : a),
     );
     setSprayUnreadCount((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  // ------------------------------------------------------------------
+  // US32: Process a new overdue spray alert (from polling)
+  // ------------------------------------------------------------------
+  const handleNewOverdueAlert = useCallback((alert: OverdueSprayAlert) => {
+    if (seenOverdueIds.current.has(alert.OverdueAlertId)) return;
+    seenOverdueIds.current.add(alert.OverdueAlertId);
+    setOverdueAlerts((prev) => {
+      const exists = prev.some((a) => a.OverdueAlertId === alert.OverdueAlertId);
+      return exists ? prev : [alert, ...prev];
+    });
+    if (!alert.IsRead && !alert.IsResolved) {
+      const severityLabel =
+        alert.Severity === 'high'   ? '🔴 Overdue Spray — Urgent' :
+        alert.Severity === 'medium' ? '🟡 Overdue Spray — Action Needed' :
+        '🟢 Overdue Spray Alert';
+      show({
+        title: severityLabel,
+        body: `${alert.ZoneName} (${alert.ZoneCode}) has not been sprayed.`,
+        severity: alert.Severity === 'high' ? 'High' : 'Medium',
+      });
+      setOverdueUnreadCount((prev) => prev + 1);
+    }
+  }, [show]);
+
+  // ------------------------------------------------------------------
+  // US32: Acknowledge an overdue alert locally + via API
+  // ------------------------------------------------------------------
+  const acknowledgeOverdueAlert = useCallback((alertId: number) => {
+    markOverdueAlertRead(alertId).catch(() => {/* silent */});
+    setOverdueAlerts((prev) =>
+      prev.map((a) => a.OverdueAlertId === alertId ? { ...a, IsRead: true } : a),
+    );
+    setOverdueUnreadCount((prev) => Math.max(0, prev - 1));
   }, []);
 
   // ------------------------------------------------------------------
@@ -253,6 +299,22 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
         console.error('[SprayAlerts] Failed to load spray alerts:', err);
       }
 
+      // US32: Load overdue spray alerts (seed silently — no toast on initial load)
+      try {
+        const raw = await getOverdueSprayAlerts();
+        if (cancelled) return;
+        const alerts = Array.isArray(raw) ? raw : [];
+        setOverdueAlerts(alerts);
+        let unread = 0;
+        alerts.forEach((a) => {
+          seenOverdueIds.current.add(a.OverdueAlertId);
+          if (!a.IsRead && !a.IsResolved) unread++;
+        });
+        setOverdueUnreadCount(unread);
+      } catch {
+        // silent — OverdueSprayAlerts table may not exist yet in prod
+      }
+
       if (!cancelled) {
         openSSE();
 
@@ -275,6 +337,16 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
             // silent
           }
         }, SPRAY_POLL_INTERVAL_MS);
+
+        // US32: Poll for new overdue spray alerts every 60 s
+        overduePollRef.current = setInterval(async () => {
+          try {
+            const alerts = await getOverdueSprayAlerts();
+            alerts.forEach(handleNewOverdueAlert);
+          } catch {
+            // silent
+          }
+        }, OVERDUE_SPRAY_POLL_INTERVAL_MS);
       }
     }
 
@@ -301,9 +373,13 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
         clearInterval(sprayPollRef.current);
         sprayPollRef.current = null;
       }
+      if (overduePollRef.current) {
+        clearInterval(overduePollRef.current);
+        overduePollRef.current = null;
+      }
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [openSSE, startFallback, stopFallback, handleNewTask, handleNewSprayAlert]);
+  }, [openSSE, startFallback, stopFallback, handleNewTask, handleNewSprayAlert, handleNewOverdueAlert]);
 
   const clearUnread = useCallback(() => setUnreadCount(0), []);
 
@@ -316,6 +392,9 @@ export function AnomalyNotificationProvider({ children }: { children: ReactNode 
       sprayAlerts,
       sprayUnreadCount,
       acknowledgeSprayAlert,
+      overdueAlerts,
+      overdueUnreadCount,
+      acknowledgeOverdueAlert,
     }}>
       {children}
     </AnomalyNotificationContext.Provider>

@@ -19,7 +19,7 @@ jest.mock('next/link', () => {
 });
 
 jest.mock('lucide-react', () => {
-  const icons = ['RefreshCw', 'ShieldAlert', 'ShieldCheck'];
+  const icons = ['RefreshCw', 'ShieldAlert', 'ShieldCheck', 'AlertTriangle', 'CheckCircle', 'UserCheck'];
   const mocks: Record<string, React.FC<{ size?: number; className?: string }>> = {};
   icons.forEach((name) => {
     mocks[name] = ({ size, className }: { size?: number; className?: string }) =>
@@ -39,12 +39,21 @@ jest.mock('@/components/spray/SprayZoneMap', () =>
 );
 
 // Mock spray service
-const mockGetZoneSprayMap = jest.fn();
-const mockGetSprayAlerts  = jest.fn();
+const mockGetZoneSprayMap      = jest.fn();
+const mockGetSprayAlerts       = jest.fn();
+const mockGetOverdueSprayAlerts = jest.fn();
+const mockAssignOverdueSprayTask = jest.fn();
 
 jest.mock('@/services/spray', () => ({
-  getZoneSprayMap:   (...args: unknown[]) => mockGetZoneSprayMap(...args),
-  getSprayAlerts:    (...args: unknown[]) => mockGetSprayAlerts(...args),
+  getZoneSprayMap:          (...args: unknown[]) => mockGetZoneSprayMap(...args),
+  getSprayAlerts:           (...args: unknown[]) => mockGetSprayAlerts(...args),
+  getOverdueSprayAlerts:    (...args: unknown[]) => mockGetOverdueSprayAlerts(...args),
+  assignOverdueSprayTask:   (...args: unknown[]) => mockAssignOverdueSprayTask(...args),
+}));
+
+// Mock users service (for worker dropdown in assign modal)
+jest.mock('@/services/users', () => ({
+  getAllUsers: jest.fn().mockResolvedValue([]),
 }));
 
 /* ── Fixtures ────────────────────────────────────────────────────────────────── */
@@ -87,11 +96,13 @@ const renderPage = () => render(React.createElement(SprayMapPage));
 describe('SprayMapPage — spray alerts section', () => {
   beforeEach(() => {
     mockGetZoneSprayMap.mockResolvedValue([makeZone()]);
+    mockGetOverdueSprayAlerts.mockResolvedValue([]);
   });
 
   afterEach(() => {
     mockGetZoneSprayMap.mockReset();
     mockGetSprayAlerts.mockReset();
+    mockGetOverdueSprayAlerts.mockReset();
   });
 
   it('renders the spray alerts section anchor (id=spray-alerts)', async () => {
@@ -161,6 +172,7 @@ describe('SprayMapPage — page title', () => {
   beforeEach(() => {
     mockGetZoneSprayMap.mockResolvedValue([]);
     mockGetSprayAlerts.mockResolvedValue([]);
+    mockGetOverdueSprayAlerts.mockResolvedValue([]);
   });
 
   it('renders Spray Map title', async () => {

@@ -133,3 +133,34 @@ class ZoneSprayStatusResponse(BaseModel):
     hazardLevel: Optional[str] = None
     ppeRequired: Optional[str] = None
     nextPlannedAtUtc: Optional[datetime] = None
+
+
+# -----------------------------------------------------------------------------
+# Overdue spray alert (US32)
+# Created by periodic scheduler when a zone is overdue for spraying.
+# Separate from SprayAlert (US30) which is triggered by a SprayReport.
+# -----------------------------------------------------------------------------
+class OverdueSprayAlertResponse(BaseModel):
+    OverdueAlertId:    int
+    ZoneId:            int
+    ZoneCode:          str
+    ZoneName:          str
+    LastSprayedAtUtc:  Optional[datetime] = None
+    OverdueSinceUtc:   datetime
+    SprayIntervalDays: int
+    Severity:          str
+    Message:           str
+    IsRead:            bool
+    IsResolved:        bool
+    ResolvedAtUtc:     Optional[datetime] = None
+    AssignedTaskId:    Optional[int] = None
+    CreatedAt:         datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AssignOverdueAlertRequest(BaseModel):
+    """Body for POST /api/spray-reports/overdue-alerts/{alert_id}/assign."""
+    assignedToUserId: int
+    dueDate: Optional[datetime] = None

@@ -103,3 +103,29 @@ export interface ZoneSprayStatusData {
   ppeRequired: string | null;
   nextPlannedAtUtc: string | null;
 }
+
+// US32: Manager overdue spray alert — created by periodic scheduler when a zone
+// has not been sprayed within DEFAULT_SPRAY_INTERVAL_DAYS (30 days).
+// Separate from SprayAlert (US30) which is tied to a specific SprayReport.
+export interface OverdueSprayAlert {
+  OverdueAlertId:    number;
+  ZoneId:            number;
+  ZoneCode:          string;
+  ZoneName:          string;
+  LastSprayedAtUtc:  string | null;
+  OverdueSinceUtc:   string;
+  SprayIntervalDays: number;
+  Severity:          'high' | 'medium' | 'low';
+  Message:           string;
+  IsRead:            boolean;
+  IsResolved:        boolean;
+  ResolvedAtUtc:     string | null;
+  AssignedTaskId:    number | null;
+  CreatedAt:         string;
+}
+
+// Body for POST /api/spray-reports/overdue-alerts/{id}/assign
+export interface AssignOverdueAlertRequest {
+  assignedToUserId: number;
+  dueDate?: string;
+}

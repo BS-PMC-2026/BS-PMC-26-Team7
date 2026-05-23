@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import SprayZoneMap from '@/components/spray/SprayZoneMap';
-import { getZoneSprayMap, getSprayAlerts } from '@/services/spray';
-import { ZoneSprayStatusData, ZoneSprayStatus, SprayAlert } from '@/types/spray';
-import { RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { assignOverdueSprayTask, getOverdueSprayAlerts, getSprayAlerts, getZoneSprayMap } from '@/services/spray';
+import { getAllUsers, UserData } from '@/services/users';
+import { OverdueSprayAlert, ZoneSprayStatusData, ZoneSprayStatus, SprayAlert } from '@/types/spray';
+import { AlertTriangle, CheckCircle, RefreshCw, ShieldAlert, ShieldCheck, UserCheck } from 'lucide-react';
 
 // ── Status pill helper ────────────────────────────────────────────────────────
 
@@ -35,6 +36,18 @@ const SEVERITY_LABEL: Record<SprayAlert['Severity'], string> = {
   high:   'High',
   medium: 'Medium',
   low:    'Low',
+};
+
+const OVERDUE_SEVERITY_STYLE: Record<OverdueSprayAlert['Severity'], string> = {
+  high:   'bg-red-100 text-red-700 border-red-200',
+  medium: 'bg-orange-100 text-orange-700 border-orange-200',
+  low:    'bg-yellow-100 text-yellow-700 border-yellow-200',
+};
+
+const OVERDUE_SEVERITY_LABEL: Record<OverdueSprayAlert['Severity'], string> = {
+  high:   'Critical',
+  medium: 'Overdue',
+  low:    'Due Soon',
 };
 
 // ── Summary card ──────────────────────────────────────────────────────────────
@@ -80,6 +93,19 @@ export default function SprayMapPage() {
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [alertsError,   setAlertsError]   = useState<string | null>(null);
 
+  // US32: overdue spray alerts
+  const [overdueAlerts,       setOverdueAlerts]       = useState<OverdueSprayAlert[]>([]);
+  const [overdueLoading,      setOverdueLoading]      = useState(true);
+  const [overdueError,        setOverdueError]        = useState<string | null>(null);
+
+  // US32: assign task modal state
+  const [assigningAlert,      setAssigningAlert]      = useState<OverdueSprayAlert | null>(null);
+  const [workers,             setWorkers]             = useState<UserData[]>([]);
+  const [selectedWorkerId,    setSelectedWorkerId]    = useState<number | ''>('');
+  const [assignLoading,       setAssignLoading]       = useState(false);
+  const [assignError,         setAssignError]         = useState<string | null>(null);
+  const [assignSuccess,       setAssignSuccess]       = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -107,10 +133,73 @@ export default function SprayMapPage() {
     }
   }, []);
 
+  const loadOverdueAlerts = useCallback(async () => {
+    setOverdueLoading(true);
+    setOverdueError(null);
+    try {
+      const data = await getOverdueSprayAlerts();
+      setOverdueAlerts(data);
+    } catch (err) {
+      setOverdueError(err instanceof Error ? err.message : 'Failed to load overdue alerts.');
+    } finally {
+      setOverdueLoading(false);
+    }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadAlerts(); }, [loadAlerts]);
+  useEffect(() => { loadOverdueAlerts(); }, [loadOverdueAlerts]);
 
-  const handleRefresh = useCallback(() => { load(); loadAlerts(); }, [load, loadAlerts]);
+  // Load workers list once for assign modal
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+    getAllUsers(token)
+      .then((users) => setWorkers(users.filter((u) => u.roleName === 'Worker' && u.isActive)))
+      .catch(() => {/* silent — workers will be empty if fails */});
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    load();
+    loadAlerts();
+    loadOverdueAlerts();
+  }, [load, loadAlerts, loadOverdueAlerts]);
+
+  const openAssignModal = useCallback((alert: OverdueSprayAlert) => {
+    setAssigningAlert(alert);
+    setSelectedWorkerId('');
+    setAssignError(null);
+    setAssignSuccess(null);
+  }, []);
+
+  const closeAssignModal = useCallback(() => {
+    setAssigningAlert(null);
+    setAssignError(null);
+    setAssignSuccess(null);
+  }, []);
+
+  const handleAssignTask = useCallback(async () => {
+    if (!assigningAlert || selectedWorkerId === '') return;
+    setAssignLoading(true);
+    setAssignError(null);
+    setAssignSuccess(null);
+    try {
+      const task = await assignOverdueSprayTask(assigningAlert.OverdueAlertId, {
+        assignedToUserId: Number(selectedWorkerId),
+      });
+      setAssignSuccess(`Task assigned to worker (Task #${task.id}).`);
+      setOverdueAlerts((prev) =>
+        prev.map((a) =>
+          a.OverdueAlertId === assigningAlert.OverdueAlertId
+            ? { ...a, AssignedTaskId: task.id }
+            : a,
+        ),
+      );
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'Failed to assign task.');
+    } finally {
+      setAssignLoading(false);
+    }
+  }, [assigningAlert, selectedWorkerId]);
 
   // Summary counts
   const countByStatus = (status: ZoneSprayStatus) =>
@@ -395,6 +484,186 @@ export default function SprayMapPage() {
             </div>
           )}
         </section>
+
+        {/* ── US32: Overdue Spray Alerts ────────────────────────────────────── */}
+        <section id="overdue-spray-alerts" className="scroll-mt-20" data-testid="overdue-spray-alerts-section">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-orange-500" />
+                Overdue Spray Alerts
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Zones that have not been sprayed within the required interval (30 days)
+              </p>
+            </div>
+            {!overdueLoading && overdueAlerts.length > 0 && (
+              <span className="text-xs text-gray-400">
+                {overdueAlerts.filter((a) => !a.IsResolved).length} active
+              </span>
+            )}
+          </div>
+
+          {/* Loading skeleton */}
+          {overdueLoading && (
+            <div className="space-y-2 animate-pulse" data-testid="overdue-alerts-loading">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-16 rounded-xl bg-gray-100 border border-gray-200" />
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {overdueError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm" data-testid="overdue-alerts-error">
+              {overdueError}
+            </div>
+          )}
+
+          {/* Overdue alerts table */}
+          {!overdueLoading && overdueAlerts.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" data-testid="overdue-alerts-list">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-orange-50 border-b border-orange-100">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Zone</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Severity</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Sprayed</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Overdue Since</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Task</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {overdueAlerts.map((alert) => (
+                      <tr
+                        key={alert.OverdueAlertId}
+                        className={`hover:bg-gray-50 transition-colors ${!alert.IsResolved && !alert.IsRead ? 'bg-orange-50/40' : ''}`}
+                        data-testid="overdue-alert-row"
+                      >
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-gray-800">{alert.ZoneName}</span>
+                          <span className="block text-xs text-gray-400 font-mono">{alert.ZoneCode}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${OVERDUE_SEVERITY_STYLE[alert.Severity]}`}>
+                            {OVERDUE_SEVERITY_LABEL[alert.Severity]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {alert.LastSprayedAtUtc ? fmtDate(alert.LastSprayedAtUtc) : <span className="text-gray-300 italic">Never</span>}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {fmtDate(alert.OverdueSinceUtc)}
+                          <span className="block text-xs text-gray-400">{timeAgo(alert.OverdueSinceUtc)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {alert.IsResolved ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                              <CheckCircle size={12} /> Resolved
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-bold">
+                              ACTIVE
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {alert.AssignedTaskId ? (
+                            <span className="text-xs text-indigo-600 font-medium">
+                              Task #{alert.AssignedTaskId}
+                            </span>
+                          ) : alert.IsResolved ? (
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : (
+                            <button
+                              onClick={() => openAssignModal(alert)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                              data-testid="assign-task-button"
+                            >
+                              <UserCheck size={12} />
+                              Assign Task
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!overdueLoading && overdueAlerts.length === 0 && !overdueError && (
+            <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-200" data-testid="overdue-alerts-empty">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="font-medium text-sm">All zones are up to date.</p>
+              <p className="text-xs mt-1">Overdue alerts appear here when zones need spraying.</p>
+            </div>
+          )}
+        </section>
+
+        {/* ── US32: Assign Task Modal ───────────────────────────────────────── */}
+        {assigningAlert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="assign-modal">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4">
+              <h3 className="text-base font-semibold text-gray-800 mb-1">
+                Assign Spray Task
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Zone: <span className="font-medium text-gray-700">{assigningAlert.ZoneName}</span>{' '}
+                <span className="font-mono text-xs text-gray-400">({assigningAlert.ZoneCode})</span>
+              </p>
+
+              {assignSuccess ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm mb-4" data-testid="assign-success">
+                  {assignSuccess}
+                </div>
+              ) : (
+                <>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                    Select Worker
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-4"
+                    value={selectedWorkerId}
+                    onChange={(e) => setSelectedWorkerId(e.target.value === '' ? '' : Number(e.target.value))}
+                    data-testid="worker-select"
+                  >
+                    <option value="">— select a worker —</option>
+                    {workers.map((w) => (
+                      <option key={w.userId} value={w.userId}>{w.fullName}</option>
+                    ))}
+                  </select>
+
+                  {assignError && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-xs mb-3" data-testid="assign-error">
+                      {assignError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleAssignTask}
+                    disabled={selectedWorkerId === '' || assignLoading}
+                    className="w-full py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+                    data-testid="confirm-assign-button"
+                  >
+                    {assignLoading ? 'Assigning…' : 'Assign Task'}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={closeAssignModal}
+                className="mt-3 w-full py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                {assignSuccess ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

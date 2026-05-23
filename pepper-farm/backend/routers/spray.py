@@ -3,19 +3,27 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from schemas.spray import (
+    AssignOverdueAlertRequest,
     CreateSprayReportRequest,
+    OverdueSprayAlertResponse,
     PesticideResponse,
     SprayAlertResponse,
     SprayReportResponse,
     SprayReportSubmissionResponse,
     ZoneSprayStatusResponse,
 )
+from schemas.task import TaskResponse
 from services.spray_service import (
+    assign_overdue_spray_task,
     create_spray_report,
     get_active_pesticides,
+    get_active_overdue_spray_alerts,
+    get_overdue_spray_alert_by_id,
+    get_overdue_spray_alerts,
     get_spray_alert_by_id,
     get_spray_alerts,
     get_zone_spray_map,
+    mark_overdue_spray_alert_read,
     mark_spray_alert_read,
 )
 from utils.jwt import get_current_user, require_any_role, require_role
@@ -124,3 +132,82 @@ def create_spray_report_endpoint(
         report=SprayReportResponse.model_validate(report),
         safetyWarning=safety_warning,
     )
+
+
+# ---------------------------------------------------------------------------
+# US32 — Overdue spray alert endpoints (FarmManager only)
+# ---------------------------------------------------------------------------
+
+@router.get("/overdue-alerts", response_model=list[OverdueSprayAlertResponse])
+def list_overdue_spray_alerts_endpoint(
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US32: Return overdue spray alerts for the manager.
+
+    Pass ?active_only=true to get only unresolved alerts.
+    Default returns all alerts (active + resolved), newest first.
+    """
+    if active_only:
+        return get_active_overdue_spray_alerts(db)
+    return get_overdue_spray_alerts(db)
+
+
+@router.patch(
+    "/overdue-alerts/{alert_id}/read",
+    response_model=OverdueSprayAlertResponse,
+)
+def mark_overdue_alert_read_endpoint(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US32: Mark an overdue spray alert as read/acknowledged."""
+    alert = mark_overdue_spray_alert_read(db, alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Overdue spray alert not found.")
+    return alert
+
+
+@router.post(
+    "/overdue-alerts/{alert_id}/assign",
+    response_model=TaskResponse,
+    status_code=201,
+)
+def assign_overdue_alert_task_endpoint(
+    alert_id: int,
+    data: AssignOverdueAlertRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US32: Create a spray task assigned to a worker from an overdue alert.
+
+    Idempotent: returns the existing task if one was already assigned.
+    """
+    from schemas.task import TaskResponse as _TaskResponse
+    from services.task_service import _to_response
+
+    task, error = assign_overdue_spray_task(
+        db, alert_id, current_user["user_id"], data
+    )
+    if error:
+        status_code = 404 if "not found" in error.lower() else 400
+        raise HTTPException(status_code=status_code, detail=error)
+
+    return _to_response(task)
+
+
+@router.post("/overdue-check/run", status_code=200)
+def run_overdue_check_endpoint(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """US32: Manually trigger the overdue spray zone check (manager only).
+
+    Useful for testing and immediate checks between scheduled runs.
+    """
+    from services.overdue_spray_check_service import check_overdue_spray_zones
+
+    created = check_overdue_spray_zones(db)
+    return {"alertsCreated": created}
