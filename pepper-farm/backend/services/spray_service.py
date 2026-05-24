@@ -1,13 +1,21 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
-from models.spray import Pesticide, SprayReport
+from models.spray import OverdueSprayAlert, Pesticide, SprayAlert, SprayReport
 from models.farm_zone import FarmZone
+from models.task import Task
+from models.user import User
 from schemas.spray import (
+    AssignOverdueAlertRequest,
     CreateSprayReportRequest,
+    OverdueSprayAlertResponse,
     SafetyWarningResponse,
+    SprayAlertResponse,
+    ZoneSprayStatusResponse,
 )
+from schemas.task import CreateTaskRequest
 
 
 # -----------------------------------------------------------------------------
@@ -161,4 +169,444 @@ def create_spray_report(
     db.refresh(report)
 
     safety_warning = _build_safety_warning(pesticide, warning_reference_time)
+
+    # US30: generate a manager spray alert for every submitted report.
+    # Best-effort: if SprayAlerts table is missing in production (DDL not yet run)
+    # the spray report is already committed above and must still be returned to the worker.
+    try:
+        _generate_spray_alert(db, report, pesticide, zone, safety_warning)
+    except Exception:
+        pass
+
+    # US32: if this is a completed report, resolve any active overdue alert for this zone.
+    if report.Status == "completed":
+        try:
+            _resolve_overdue_alerts_for_zone(db, zone.ZoneId)
+        except Exception:
+            pass
+
     return (report, safety_warning), None
+
+
+# -----------------------------------------------------------------------------
+# Spray alert generation (US30)
+# -----------------------------------------------------------------------------
+def _compute_severity(
+    pesticide: Pesticide,
+    report: SprayReport,
+) -> str:
+    """Return alert severity based on US29 safety rules.
+
+    'high'   — pesticide is unverified (unknown REI/PHI, requires approval)
+    'medium' — completed spray, within the active REI window
+    'low'    — planned report or completed spray whose REI has passed
+    """
+    if pesticide.VerificationStatus == "unverified":
+        return "high"
+    if report.Status == "completed" and report.CompletedAtUtc and pesticide.ReEntryIntervalHours:
+        rei_end = report.CompletedAtUtc + timedelta(hours=pesticide.ReEntryIntervalHours)
+        if datetime.utcnow() < rei_end:
+            return "medium"
+    return "low"
+
+
+def _generate_spray_alert(
+    db: Session,
+    report: SprayReport,
+    pesticide: Pesticide,
+    zone: FarmZone,
+    safety_warning: SafetyWarningResponse,
+) -> SprayAlert:
+    """Persist a SprayAlert row after every spray report submission (US30)."""
+    severity = _compute_severity(pesticide, report)
+    alert = SprayAlert(
+        SprayReportId=report.SprayReportId,
+        ZoneId=zone.ZoneId,
+        ZoneCode=zone.ZoneCode,
+        ZoneName=zone.ZoneName,
+        PesticideName=pesticide.Name,
+        ReportedByUserId=report.ReportedByUserId,
+        ReportStatus=report.Status,
+        Severity=severity,
+        SafetyMessage=safety_warning.message,
+        RequiresApproval=safety_warning.requiresApproval,
+        ReEntryIntervalHours=pesticide.ReEntryIntervalHours,
+        SafeToReEnterAtUtc=safety_warning.safeToReEnterAtUtc,
+        SafeToHarvestAtUtc=safety_warning.safeToHarvestAtUtc,
+        HazardLevel=pesticide.HazardLevel,
+        PpeRequired=pesticide.PpeRequired,
+        SprayedAtUtc=report.CompletedAtUtc or report.PlannedAtUtc,
+        IsRead=False,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+# -----------------------------------------------------------------------------
+# Spray alert queries (US30)
+# -----------------------------------------------------------------------------
+def get_spray_alerts(db: Session) -> list[SprayAlert]:
+    """Return all spray alerts, newest first (manager-only)."""
+    return (
+        db.query(SprayAlert)
+        .order_by(SprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_spray_alert_by_id(db: Session, alert_id: int) -> SprayAlert | None:
+    return db.query(SprayAlert).filter(SprayAlert.SprayAlertId == alert_id).first()
+
+
+def mark_spray_alert_read(db: Session, alert_id: int) -> SprayAlert | None:
+    alert = get_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None
+    if not alert.IsRead:
+        alert.IsRead = True
+        db.commit()
+        db.refresh(alert)
+    return alert
+
+
+# -----------------------------------------------------------------------------
+# US33 — Entry permission computation
+# -----------------------------------------------------------------------------
+def _compute_entry_permission(
+    spray_status: str,
+    safe_re_enter: datetime | None,
+    now: datetime,
+) -> tuple[str, bool, str, int | None]:
+    """Return (entryPermissionStatus, entryAllowed, entryMessage, remainingRestrictionMinutes).
+
+    Maps the internal sprayStatus + REI window to explicit entry permission fields
+    so consumers (public map, worker map) can display a clear human-readable
+    verdict without re-implementing the REI logic.
+    """
+    if spray_status == "unsafe":
+        remaining = None
+        if safe_re_enter is not None:
+            delta = safe_re_enter - now
+            remaining = max(0, int(delta.total_seconds() / 60))
+        return (
+            "restricted",
+            False,
+            "Entry is restricted. Do not enter — the re-entry interval (REI) has not passed yet.",
+            remaining,
+        )
+    if spray_status == "requires_approval":
+        return (
+            "caution",
+            False,
+            "Entry status unknown — pesticide safety data is unverified. "
+            "Consult a staff member or manager before entering.",
+            None,
+        )
+    if spray_status == "pending":
+        return (
+            "planned_warning",
+            True,
+            "A spray is planned for this zone. Entry is currently permitted — "
+            "check with staff before the planned spray date.",
+            None,
+        )
+    if spray_status == "safe":
+        return (
+            "allowed",
+            True,
+            "Entry is permitted. The re-entry interval (REI) for the last spray has passed.",
+            None,
+        )
+    # never_sprayed
+    return (
+        "no_data",
+        True,
+        "No recent spray restriction. Entry is permitted.",
+        None,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Spray map data (BSPMT7-234 US28)
+# -----------------------------------------------------------------------------
+def get_zone_spray_map(db: Session) -> list[ZoneSprayStatusResponse]:
+    """Return one ZoneSprayStatusResponse per active zone.
+
+    Status semantics:
+      never_sprayed     – no completed spray report exists for this zone
+      pending           – no completed report, but a future planned one exists
+      requires_approval – most-recent completed used an unverified pesticide
+      unsafe            – within the re-entry interval (REI) of the last spray
+      safe              – REI has passed since the last completed spray
+    """
+    now = datetime.utcnow()
+
+    # 1. All active zones.
+    zones = (
+        db.query(FarmZone)
+        .filter(FarmZone.IsActive == True)  # noqa: E712
+        .order_by(FarmZone.ZoneCode)
+        .all()
+    )
+
+    # 2. Latest completed SprayReport per zone (by max CompletedAtUtc).
+    latest_completed_sub = (
+        db.query(
+            SprayReport.ZoneId,
+            func.max(SprayReport.CompletedAtUtc).label("max_completed"),
+        )
+        .filter(SprayReport.Status == "completed")
+        .group_by(SprayReport.ZoneId)
+        .subquery()
+    )
+    completed_rows = (
+        db.query(SprayReport, Pesticide)
+        .join(
+            latest_completed_sub,
+            and_(
+                SprayReport.ZoneId == latest_completed_sub.c.ZoneId,
+                SprayReport.CompletedAtUtc == latest_completed_sub.c.max_completed,
+            ),
+        )
+        .join(Pesticide, SprayReport.PesticideId == Pesticide.PesticideId)
+        .all()
+    )
+    completed_by_zone: dict[int, tuple[SprayReport, Pesticide]] = {
+        report.ZoneId: (report, pesticide) for report, pesticide in completed_rows
+    }
+
+    # 3. Earliest future planned SprayReport per zone.
+    earliest_planned_sub = (
+        db.query(
+            SprayReport.ZoneId,
+            func.min(SprayReport.PlannedAtUtc).label("min_planned"),
+        )
+        .filter(
+            SprayReport.Status == "planned",
+            SprayReport.PlannedAtUtc > now,
+        )
+        .group_by(SprayReport.ZoneId)
+        .subquery()
+    )
+    planned_rows = db.query(earliest_planned_sub).all()
+    planned_by_zone: dict[int, datetime] = {
+        row.ZoneId: row.min_planned for row in planned_rows
+    }
+
+    # 4. Build per-zone response.
+    results: list[ZoneSprayStatusResponse] = []
+    for zone in zones:
+        zid = zone.ZoneId
+        planned_at = planned_by_zone.get(zid)
+
+        if zid not in completed_by_zone:
+            status = "pending" if planned_at else "never_sprayed"
+            ep_status, ep_allowed, ep_message, ep_remaining = _compute_entry_permission(
+                status, None, now
+            )
+            results.append(
+                ZoneSprayStatusResponse(
+                    zoneId=zid,
+                    zoneCode=zone.ZoneCode,
+                    zoneName=zone.ZoneName,
+                    sprayStatus=status,
+                    nextPlannedAtUtc=planned_at,
+                    entryPermissionStatus=ep_status,
+                    entryAllowed=ep_allowed,
+                    entryMessage=ep_message,
+                    remainingRestrictionMinutes=ep_remaining,
+                )
+            )
+            continue
+
+        report, pesticide = completed_by_zone[zid]
+        requires_approval = pesticide.VerificationStatus != "verified"
+
+        if requires_approval:
+            status = "requires_approval"
+            safe_re_enter = None
+            safe_harvest = None
+        else:
+            safe_re_enter = (
+                report.CompletedAtUtc + timedelta(hours=pesticide.ReEntryIntervalHours)
+                if pesticide.ReEntryIntervalHours is not None
+                else None
+            )
+            safe_harvest = (
+                report.CompletedAtUtc + timedelta(days=pesticide.PreHarvestIntervalDays)
+                if pesticide.PreHarvestIntervalDays is not None
+                else None
+            )
+            if safe_re_enter is not None and now < safe_re_enter:
+                status = "unsafe"
+            else:
+                status = "safe"
+
+        ep_status, ep_allowed, ep_message, ep_remaining = _compute_entry_permission(
+            status, safe_re_enter, now
+        )
+        results.append(
+            ZoneSprayStatusResponse(
+                zoneId=zid,
+                zoneCode=zone.ZoneCode,
+                zoneName=zone.ZoneName,
+                sprayStatus=status,
+                lastCompletedAtUtc=report.CompletedAtUtc,
+                pesticideName=pesticide.Name,
+                safeToReEnterAtUtc=safe_re_enter,
+                safeToHarvestAtUtc=safe_harvest,
+                requiresApproval=requires_approval,
+                hazardLevel=pesticide.HazardLevel,
+                ppeRequired=pesticide.PpeRequired,
+                nextPlannedAtUtc=planned_at,
+                entryPermissionStatus=ep_status,
+                entryAllowed=ep_allowed,
+                entryMessage=ep_message,
+                remainingRestrictionMinutes=ep_remaining,
+            )
+        )
+
+    return results
+
+
+# -----------------------------------------------------------------------------
+# Overdue spray alert helpers (US32)
+# -----------------------------------------------------------------------------
+
+def _resolve_overdue_alerts_for_zone(db: Session, zone_id: int) -> None:
+    """Mark all active overdue alerts for this zone as resolved.
+
+    Called inside create_spray_report() when a completed report is submitted,
+    so the overdue condition is cleared immediately (best-effort, wrapped in
+    try/except by the caller so a missing table does not break the report).
+    """
+    now = datetime.utcnow()
+    alerts = (
+        db.query(OverdueSprayAlert)
+        .filter(
+            OverdueSprayAlert.ZoneId == zone_id,
+            OverdueSprayAlert.IsResolved == False,  # noqa: E712
+        )
+        .all()
+    )
+    for alert in alerts:
+        alert.IsResolved = True
+        alert.ResolvedAtUtc = now
+    if alerts:
+        db.commit()
+
+
+# -----------------------------------------------------------------------------
+# Overdue spray alert queries (US32)
+# -----------------------------------------------------------------------------
+
+def get_overdue_spray_alerts(db: Session) -> list[OverdueSprayAlert]:
+    """Return all overdue spray alerts (active + resolved), newest first."""
+    return (
+        db.query(OverdueSprayAlert)
+        .order_by(OverdueSprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_active_overdue_spray_alerts(db: Session) -> list[OverdueSprayAlert]:
+    """Return only unresolved overdue spray alerts, newest first."""
+    return (
+        db.query(OverdueSprayAlert)
+        .filter(OverdueSprayAlert.IsResolved == False)  # noqa: E712
+        .order_by(OverdueSprayAlert.CreatedAt.desc())
+        .all()
+    )
+
+
+def get_overdue_spray_alert_by_id(
+    db: Session, alert_id: int
+) -> OverdueSprayAlert | None:
+    return (
+        db.query(OverdueSprayAlert)
+        .filter(OverdueSprayAlert.OverdueAlertId == alert_id)
+        .first()
+    )
+
+
+def mark_overdue_spray_alert_read(
+    db: Session, alert_id: int
+) -> OverdueSprayAlert | None:
+    alert = get_overdue_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None
+    if not alert.IsRead:
+        alert.IsRead = True
+        db.commit()
+        db.refresh(alert)
+    return alert
+
+
+# -----------------------------------------------------------------------------
+# Task assignment from overdue alert (US32)
+# -----------------------------------------------------------------------------
+
+def assign_overdue_spray_task(
+    db: Session,
+    alert_id: int,
+    manager_user_id: int,
+    data: AssignOverdueAlertRequest,
+) -> tuple[Task | None, str | None]:
+    """Create a spray task linked to an overdue alert and assign it to a worker.
+
+    Idempotent: if a task is already assigned returns the existing task without
+    creating a duplicate.
+    """
+    alert = get_overdue_spray_alert_by_id(db, alert_id)
+    if alert is None:
+        return None, "Overdue spray alert not found."
+    if alert.IsResolved:
+        return None, "Overdue spray alert is already resolved."
+
+    # Idempotency: task already assigned — return existing task.
+    if alert.AssignedTaskId is not None:
+        existing = db.query(Task).filter(Task.Id == alert.AssignedTaskId).first()
+        if existing:
+            return existing, None
+
+    # Validate worker exists and has Worker role.
+    worker = db.query(User).filter(User.UserId == data.assignedToUserId).first()
+    if worker is None:
+        return None, "Assigned user not found."
+    if worker.role.RoleName != "Worker":
+        return None, "Tasks can only be assigned to Workers."
+
+    now = datetime.utcnow()
+    days_overdue = max(0, (now - alert.OverdueSinceUtc).days)
+    description = (
+        f"Zone {alert.ZoneCode} has not been sprayed for over "
+        f"{alert.SprayIntervalDays} days (overdue by {days_overdue} day(s)). "
+        "Please perform a preventive spray treatment."
+    )
+
+    from services.task_service import create_task as _create_task
+
+    task_request = CreateTaskRequest(
+        title=f"Spray {alert.ZoneName}",
+        taskType="spray",
+        description=description,
+        priority="high",
+        assignedToUserId=data.assignedToUserId,
+        zoneId=alert.ZoneId,
+        dueDate=data.dueDate,
+        checklistItems=[],
+    )
+    task_resp, error = _create_task(db, manager_user_id, task_request)
+    if error:
+        return None, error
+
+    # Fetch the ORM Task object to return (create_task returns a schema response).
+    task = db.query(Task).filter(Task.Id == task_resp.id).first()
+
+    # Link task to overdue alert.
+    alert.AssignedTaskId = task.Id
+    db.commit()
+
+    return task, None

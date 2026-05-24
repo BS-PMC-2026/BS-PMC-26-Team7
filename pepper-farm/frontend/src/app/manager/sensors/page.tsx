@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown, ChevronUp, ChevronsUpDown, Download, MapPin, RefreshCw } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, ChevronDown, ChevronUp, ChevronsUpDown, Download, MapPin, Radio, AlertTriangle, RefreshCw } from 'lucide-react';
+import AnomalyDashboardEmbed from '@/components/anomalies/AnomalyDashboardEmbed';
 import {
   CartesianGrid,
   Legend,
@@ -16,6 +17,7 @@ import {
 import Alert from '@/components/ui/Alert';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import DelayedPageLoader from '@/components/ui/DelayedPageLoader';
 import ExportModal, { ExportOptions } from '@/components/sensors/ExportModal';
 import {
   getLatestSensorReading,
@@ -25,13 +27,10 @@ import {
   refreshSensorLive,
 } from '@/services/sensors';
 import { SensorAlert, SensorInfo, SensorLiveResponse, SensorReading } from '@/types/sensor';
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://hadinerim.azurewebsites.net";
-  
-function sensorLabel(s: SensorInfo): string {
+import { useLanguage } from '@/context/LanguageContext';
+function sensorLabel(s: SensorInfo, inactiveText: string): string {
   const name = s.DeviceName || s.MacAddress;
-  return s.IsActive ? name : `${name} (inactive)`;
+  return s.IsActive ? name : `${name} ${inactiveText}`;
 }
 
 const METRIC_CONFIG = [
@@ -73,29 +72,34 @@ function mapsUrl(lat?: number | null, lng?: number | null): string | null {
   return `https://maps.google.com/?q=${lat},${lng}`;
 }
 
-function getStatusLabel(status?: string): string {
+function getStatusLabel(status: string | undefined, se: { statusLive: string; statusRecent: string; statusStale: string; statusNoData: string; statusUnknown: string }): string {
   switch (status) {
-    case 'live':    return 'Live';
-    case 'recent':  return 'Recent';
-    case 'stale':   return 'Stale';
-    case 'no_data': return 'No Data';
-    default:        return 'Unknown';
+    case 'live':    return se.statusLive;
+    case 'recent':  return se.statusRecent;
+    case 'stale':   return se.statusStale;
+    case 'no_data': return se.statusNoData;
+    default:        return se.statusUnknown;
   }
 }
 
 function getStatusStyle(status?: string) {
   switch (status) {
-    case 'live':   return { bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-700',  dot: 'bg-green-500'  };
-    case 'recent': return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', dot: 'bg-yellow-500' };
-    case 'stale':  return { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    dot: 'bg-red-500'    };
-    default:       return { bg: 'bg-gray-50',   border: 'border-gray-200',   text: 'text-gray-700',   dot: 'bg-gray-400'   };
+    case 'live':   return { bg: 'bg-[var(--color-secondary-light)]',  border: 'border-[var(--color-border)]',  text: 'text-[var(--color-primary)]',  dot: 'bg-green-500'  };
+    case 'recent': return { bg: 'bg-[var(--color-warning-bg)]', border: 'border-[var(--color-border)]', text: 'text-[var(--color-warning)]', dot: 'bg-yellow-500' };
+    case 'stale':  return { bg: 'bg-[var(--color-error-bg)]',    border: 'border-[var(--color-border)]',    text: 'text-[var(--color-error)]',    dot: 'bg-red-500'    };
+    default:       return { bg: 'bg-[var(--color-muted)]',   border: 'border-[var(--color-border)]',   text: 'text-[var(--color-foreground)]',   dot: 'bg-gray-400'   };
   }
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export default function SensorDashboardPage() {
+function SensorDashboardPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const se = t.sensors;
+
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") === "anomalies" ? "anomalies" : "live";
 
   // sensor list state
   const [sensors,          setSensors]          = useState<SensorInfo[]>([]);
@@ -152,7 +156,7 @@ export default function SensorDashboardPage() {
           setLiveData(live);
         } catch (err) {
           setSyncError(
-            err instanceof Error ? err.message : 'Failed to sync from Atomation.'
+            err instanceof Error ? err.message : se.failedToSync
           );
         }
       } else {
@@ -167,12 +171,12 @@ export default function SensorDashboardPage() {
 
         let status: SensorLiveResponse['status'] = 'stale';
         let isStale = true;
-        let message = 'Sensor data is stale.';
+        let message = se.msgStale;
 
         if (staleMinutes <= 30) {
-          status = 'live';   isStale = false; message = 'Sensor data is up to date.';
+          status = 'live';   isStale = false; message = se.msgUpToDate;
         } else if (staleMinutes <= 360) {
-          status = 'recent'; isStale = false; message = 'Sensor data is recent, but not fully live.';
+          status = 'recent'; isStale = false; message = se.msgRecent;
         }
 
         setLiveData({ sensorId, macAddress: latest.MacAddress, sync: null,
@@ -180,10 +184,10 @@ export default function SensorDashboardPage() {
       } else {
         setLiveData({ sensorId, macAddress: '', sync: null, latestReading: null,
           status: 'no_data', isStale: true, staleMinutes: null,
-          message: 'No readings found for this sensor.' });
+          message: se.msgNoData });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sensor dashboard.');
+      setError(err instanceof Error ? err.message : se.failedToLoadDashboard);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -195,7 +199,7 @@ export default function SensorDashboardPage() {
   async function loadExplorerData() {
     if (!startDate || !endDate) return;
     if (startDate > endDate) {
-      setExplorerError('"From" date must be before "To" date.');
+      setExplorerError(se.fromDateError);
       return;
     }
     setExplorerLoading(true);
@@ -217,7 +221,7 @@ export default function SensorDashboardPage() {
       setExplorerAlerts(alerts);
       setExplorerLoaded(true);
     } catch (err) {
-      setExplorerError(err instanceof Error ? err.message : 'Failed to load readings.');
+      setExplorerError(err instanceof Error ? err.message : se.failedToLoadReadings);
     } finally {
       setExplorerLoading(false);
     }
@@ -237,7 +241,7 @@ export default function SensorDashboardPage() {
           setLoading(false);
         }
       } catch {
-        setError('Failed to load sensors list.');
+        setError(se.failedToLoadSensorsList);
         setLoading(false);
       } finally {
         setSensorsLoading(false);
@@ -370,7 +374,7 @@ export default function SensorDashboardPage() {
 
       // Send email
       if (opts.delivery === 'email') {
-        const res = await fetch(`${API_BASE}/api/sensors/export/email`, {
+        const res = await fetch(`/api/sensors/export/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to: opts.email, attachments }),
@@ -379,15 +383,15 @@ export default function SensorDashboardPage() {
           const data = await res.json().catch(() => ({}));
           throw new Error((data as { detail?: string }).detail ?? 'Failed to send email.');
         }
-        setExportSuccess(`Export sent to ${opts.email} successfully.`);
+        setExportSuccess(se.exportSentSuccess.replace('{email}', opts.email));
       } else {
-        setExportSuccess('Export downloaded successfully.');
+        setExportSuccess(se.exportDownloadSuccess);
       }
 
       setShowExportModal(false);
       setTimeout(() => setExportSuccess(null), 5000);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Export failed.');
+      setExportError(err instanceof Error ? err.message : se.exportFailed);
     } finally {
       setIsExporting(false);
     }
@@ -444,9 +448,9 @@ export default function SensorDashboardPage() {
 
       return (
         <div className="bg-white border border-[#DDE5DC] rounded-xl p-3 shadow-lg text-xs min-w-[180px]">
-          <p className="font-semibold text-gray-600 mb-1">{label}</p>
+          <p className="font-semibold text-[var(--color-muted-foreground)] mb-1">{label}</p>
           {readingId !== undefined && (
-            <p className="text-gray-400 text-[11px] mb-2">Reading #{readingId}</p>
+            <p className="text-[var(--color-muted-foreground)] text-[11px] mb-2" dir="ltr">{se.readingNumPrefix}{readingId}</p>
           )}
           <div className="space-y-1">
             {payload.map(p => {
@@ -454,7 +458,7 @@ export default function SensorDashboardPage() {
               return (
                 <div key={p.dataKey} className="flex items-center justify-between gap-4">
                   <span style={{ color: p.color }} className="font-medium">{p.name}</span>
-                  <span className={hasAlert ? 'text-red-600 font-bold' : 'text-gray-800'}>
+                  <span className={hasAlert ? 'text-[var(--color-error)] font-bold' : 'text-[var(--color-foreground)]'}>
                     {p.value != null ? p.value : '—'}{hasAlert && ' ⚠'}
                   </span>
                 </div>
@@ -462,7 +466,7 @@ export default function SensorDashboardPage() {
             })}
           </div>
           {alerts.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+            <div className="mt-2 pt-2 border-t border-[var(--color-border)] space-y-1">
               {alerts.map(a => (
                 <p key={a.AlertId} className="text-red-500 text-[11px]">
                   {a.Severity === 'critical' ? '🔴' : '🟡'} {a.Message}
@@ -508,17 +512,13 @@ export default function SensorDashboardPage() {
   // ── loading skeleton ────────────────────────────────────────────────────────
 
   if (sensorsLoading || (loading && sensors.length === 0)) {
-    return (
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <p className="text-gray-500 text-sm">Loading sensor dashboard…</p>
-      </main>
-    );
+    return <DelayedPageLoader />;
   }
 
   if (!sensorsLoading && sensors.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <Alert variant="info">No sensors found in the system.</Alert>
+        <Alert variant="info">{se.noSensorsFound}</Alert>
       </main>
     );
   }
@@ -543,7 +543,7 @@ export default function SensorDashboardPage() {
       <th
         onClick={() => toggleSort(colKey)}
         className="px-3 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap
-          cursor-pointer select-none hover:bg-gray-100 transition-colors"
+          cursor-pointer select-none hover:bg-[var(--color-muted)] transition-colors"
         style={{ color: active ? (color ?? '#374151') : (color ?? '#6B7280') }}
       >
         <span className="inline-flex items-center gap-1">
@@ -554,30 +554,63 @@ export default function SensorDashboardPage() {
     );
   };
 
-  return (
-    <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
-
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/manager')}
+  const SensorTabBar = () => (
+    <div className="border-b border-[var(--color-border)] bg-white sticky top-[52px] z-40">
+      <div className="max-w-7xl mx-auto px-6 flex">
+        {[
+          { id: 'live', label: 'Live Sensors', icon: <Radio size={14} /> },
+          { id: 'anomalies', label: 'Anomalies', icon: <AlertTriangle size={14} /> },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => router.replace(`/manager/sensors?tab=${tab.id}`)}
+            className={`flex items-center gap-1.5 px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border)]'
+            }`}
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-          <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-0.5">
-              Manager
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">Sensor Dashboard</h1>
-            {liveData?.macAddress && (
-              <p className="text-sm text-gray-400 mt-0.5">Device: {liveData.macAddress}</p>
-            )}
-          </div>
+  if (activeTab === "anomalies") {
+    return (
+      <>
+        <SensorTabBar />
+        <AnomalyDashboardEmbed />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SensorTabBar />
+
+      <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-widest mb-0.5">
+                {se.managerLabel}
+              </p>
+
+              <h1 className="text-2xl font-semibold text-[var(--color-foreground)]">
+                {se.dashboardTitle}
+              </h1>
+
+              {liveData?.macAddress && (
+                <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
+                  {se.deviceLabel}:{" "}
+                  <span dir="ltr">{liveData.macAddress}</span>
+                </p>
+              )}
+            </div>
         </div>
 
         {/* ── Sensor selector ── */}
@@ -585,22 +618,22 @@ export default function SensorDashboardPage() {
           <div className="flex items-center gap-2">
             <label
               htmlFor="sensor-select"
-              className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap"
+              className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest whitespace-nowrap"
             >
-              Sensor
+              {se.sensorLabel}
             </label>
             <select
               id="sensor-select"
               value={selectedSensorId ?? ''}
               onChange={e => handleSensorChange(Number(e.target.value))}
               disabled={sensorsLoading || loading}
-              className="rounded-lg border border-[#DDE5DC] px-3 py-2 text-sm text-gray-700
-                bg-white focus:outline-none focus:ring-2 focus:ring-[#2F6F4E]/30
+              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-foreground)]
+                bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30
                 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sensors.map(s => (
                 <option key={s.SensorId} value={s.SensorId}>
-                  {sensorLabel(s)}
+                  {sensorLabel(s, se.inactive)}
                 </option>
               ))}
             </select>
@@ -613,7 +646,7 @@ export default function SensorDashboardPage() {
             onClick={() => { setExportError(null); setShowExportModal(true); }}
           >
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {se.export}
           </Button>
 
           <Button
@@ -621,7 +654,7 @@ export default function SensorDashboardPage() {
             disabled={refreshing || !selectedSensorId}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Syncing…' : 'Sync from Atomation'}
+            {refreshing ? se.syncing : se.syncFromAtomation}
           </Button>
         </div>
       </div>
@@ -629,7 +662,7 @@ export default function SensorDashboardPage() {
       {error       && <Alert variant="error">{error}</Alert>}
       {syncError   && (
         <Alert variant="info">
-          Atomation sync failed — showing latest data from DB. Details: {syncError}
+          {se.atomationSyncFailed} {syncError}
         </Alert>
       )}
       {exportSuccess && <Alert variant="success">{exportSuccess}</Alert>}
@@ -641,14 +674,14 @@ export default function SensorDashboardPage() {
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusStyle.dot}`} />
               <span className={`font-semibold ${statusStyle.text}`}>
-                Status: {getStatusLabel(liveData.status)}
+                {se.statusLabel} {getStatusLabel(liveData.status, se)}
               </span>
             </div>
             <p className={`text-sm ${statusStyle.text}`}>{liveData.message}</p>
             {liveData.staleMinutes !== null && (
               <p className={`text-sm ${statusStyle.text}`}>
-                Last update:{' '}
-                <span className="font-semibold">{liveData.staleMinutes} min ago</span>
+                {se.lastUpdate}{' '}
+                <span className="font-semibold" dir="ltr">{liveData.staleMinutes} {se.minAgo}</span>
               </p>
             )}
           </div>
@@ -656,7 +689,7 @@ export default function SensorDashboardPage() {
       )}
 
       {!latest ? (
-        <Alert variant="info">No readings found for this sensor.</Alert>
+        <Alert variant="info">{se.noReadings}</Alert>
       ) : (
         <>
           {/* ── Live metric cards ── */}
@@ -666,15 +699,15 @@ export default function SensorDashboardPage() {
               return (
                 <Card key={key}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">
                       {label}
                     </p>
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-[var(--color-foreground)]">
                     {formatNumber(val, digits)}
                     {unit && (
-                      <span className="text-base font-normal text-gray-400 ml-1">{unit}</span>
+                      <span className="text-base font-normal text-[var(--color-muted-foreground)] ml-1">{unit}</span>
                     )}
                   </p>
                 </Card>
@@ -684,26 +717,26 @@ export default function SensorDashboardPage() {
 
           {/* ── Latest reading details ── */}
           <Card>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
-              Latest Reading Details
+            <p className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-4">
+              {se.latestReadingDetails}
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { label: 'Reading ID',        value: String(latest.ReadingId) },
-                { label: 'Type',              value: latest.ReadingType ?? '—' },
-                { label: 'Sample Time',       value: formatDateTime(latest.SampleTimeUtc) },
-                { label: 'Gateway Read',      value: formatDateTime(latest.GatewayReadTimeUtc) },
-                { label: 'Atomation Created', value: formatDateTime(latest.AtomationCreatedAtUtc) },
+                { label: se.readingId,        value: String(latest.ReadingId) },
+                { label: se.type,             value: latest.ReadingType ?? '—' },
+                { label: se.sampleTime,       value: formatDateTime(latest.SampleTimeUtc) },
+                { label: se.gatewayRead,      value: formatDateTime(latest.GatewayReadTimeUtc) },
+                { label: se.atomationCreated, value: formatDateTime(latest.AtomationCreatedAtUtc) },
               ].map(({ label, value }) => (
-                <div key={label} className="rounded-lg bg-gray-50 px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-sm font-medium text-gray-800">{value}</p>
+                <div key={label} className="rounded-lg bg-[var(--color-muted)] px-4 py-3">
+                  <p className="text-xs text-[var(--color-muted-foreground)] mb-0.5">{label}</p>
+                  <p className="text-sm font-medium text-[var(--color-foreground)]" dir="ltr">{value}</p>
                 </div>
               ))}
 
               {/* Location tile with Google Maps link */}
-              <div className="rounded-lg bg-gray-50 px-4 py-3">
-                <p className="text-xs text-gray-400 mb-0.5">Location</p>
+              <div className="rounded-lg bg-[var(--color-muted)] px-4 py-3">
+                <p className="text-xs text-[var(--color-muted-foreground)] mb-0.5">{se.location}</p>
                 {mapsUrl(latest.Latitude, latest.Longitude) ? (
                   <a
                     href={mapsUrl(latest.Latitude, latest.Longitude)!}
@@ -715,7 +748,7 @@ export default function SensorDashboardPage() {
                     {formatNumber(latest.Latitude, 5)}, {formatNumber(latest.Longitude, 5)}
                   </a>
                 ) : (
-                  <p className="text-sm font-medium text-gray-800">—</p>
+                  <p className="text-sm font-medium text-[var(--color-foreground)]">—</p>
                 )}
               </div>
             </div>
@@ -725,8 +758,8 @@ export default function SensorDashboardPage() {
 
       {/* ── Data Explorer ── */}
       <Card>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">
-          Data Explorer
+        <p className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-5">
+          {se.dataExplorer}
         </p>
 
         {/* Controls */}
@@ -735,27 +768,27 @@ export default function SensorDashboardPage() {
           {/* Date range */}
           <div className="flex items-end gap-2">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">From</label>
+              <label className="block text-xs text-[var(--color-muted-foreground)] mb-1">{se.from}</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="rounded-lg border border-[#DDE5DC] px-3 py-2 text-sm text-gray-700
-                  focus:outline-none focus:ring-2 focus:ring-[#2F6F4E]/30"
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-foreground)]
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">To</label>
+              <label className="block text-xs text-[var(--color-muted-foreground)] mb-1">{se.to}</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="rounded-lg border border-[#DDE5DC] px-3 py-2 text-sm text-gray-700
-                  focus:outline-none focus:ring-2 focus:ring-[#2F6F4E]/30"
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-foreground)]
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
               />
             </div>
             <Button size="sm" onClick={loadExplorerData} disabled={explorerLoading}>
-              {explorerLoading ? 'Loading…' : 'Load Data'}
+              {explorerLoading ? se.loading : se.loadData}
             </Button>
           </div>
 
@@ -770,24 +803,24 @@ export default function SensorDashboardPage() {
                   className="w-4 h-4 rounded accent-[#2F6F4E]"
                 />
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm text-gray-600">{label}</span>
+                <span className="text-sm text-[var(--color-muted-foreground)]">{label}</span>
               </label>
             ))}
           </div>
 
           {/* View toggle */}
-          <div className="flex rounded-lg border border-[#DDE5DC] overflow-hidden shrink-0">
-            {(['table', 'graph'] as const).map(mode => (
+          <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden shrink-0">
+            {([['table', se.tableView], ['graph', se.graphView]] as const).map(([mode, label]) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
                   viewMode === mode
-                    ? 'bg-[#2F6F4E] text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'bg-white text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]'
                 }`}
               >
-                {mode}
+                {label}
               </button>
             ))}
           </div>
@@ -797,22 +830,22 @@ export default function SensorDashboardPage() {
 
         {/* Results */}
         {!explorerLoaded ? (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            Select a date range and click &quot;Load Data&quot; to view readings.
+          <div className="py-12 text-center text-[var(--color-muted-foreground)] text-sm">
+            {se.selectDateRange}
           </div>
         ) : explorerReadings.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            No readings found for the selected date range.
+          <div className="py-12 text-center text-[var(--color-muted-foreground)] text-sm">
+            {se.noReadingsInRange}
           </div>
         ) : viewMode === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b bg-gray-50">
-                  <SortTh colKey="SampleTimeUtc" label="Sample Time" />
-                  <SortTh colKey="ReadingId"      label="ID" />
-                  <SortTh colKey="ReadingType"    label="Type" />
-                  <SortTh colKey="Latitude"       label="Location" />
+                <tr className="border-b bg-[var(--color-muted)]">
+                  <SortTh colKey="SampleTimeUtc" label={se.sampleTime} />
+                  <SortTh colKey="ReadingId"      label={se.colId} />
+                  <SortTh colKey="ReadingType"    label={se.type} />
+                  <SortTh colKey="Latitude"       label={se.location} />
                   {METRIC_CONFIG.filter(m => selectedMetrics.has(m.key)).map(m => (
                     <SortTh
                       key={m.key}
@@ -831,17 +864,17 @@ export default function SensorDashboardPage() {
                       key={r.ReadingId}
                       className={`border-b last:border-b-0 transition-colors ${
                         alertsByReadingId.has(r.ReadingId)
-                          ? 'bg-red-50/60 hover:bg-red-50'
-                          : 'hover:bg-gray-50'
+                          ? 'bg-[var(--color-error-bg)]/60 hover:bg-[var(--color-error-bg)]'
+                          : 'hover:bg-[var(--color-muted)]'
                       }`}
                     >
-                      <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-[var(--color-muted-foreground)] whitespace-nowrap">
                         {formatDateTime(r.SampleTimeUtc)}
                       </td>
-                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-[var(--color-muted-foreground)] whitespace-nowrap">
                         {r.ReadingId}
                       </td>
-                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-[var(--color-muted-foreground)] whitespace-nowrap">
                         {r.ReadingType ?? '—'}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
@@ -864,14 +897,14 @@ export default function SensorDashboardPage() {
                           <td key={m.key} className="px-3 py-2.5 whitespace-nowrap">
                             {val !== null && val !== undefined ? (
                               <span className={isAlert
-                                ? 'font-bold text-red-600'
-                                : 'font-medium text-gray-800'
+                                ? 'font-bold text-[var(--color-error)]'
+                                : 'font-medium text-[var(--color-foreground)]'
                               }>
                                 {formatNumber(val, m.digits)}{m.unit}
-                                {isAlert && <span className="ml-1 text-red-500">⚠</span>}
+                                {isAlert && <span className="ml-1 text-[var(--color-error)]">⚠</span>}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-[var(--color-muted-foreground)]">—</span>
                             )}
                           </td>
                         );
@@ -885,7 +918,7 @@ export default function SensorDashboardPage() {
         ) : (
           <>
             {/* ref is attached here so html2canvas can capture it */}
-            <div ref={chartRef} style={{ height: 320 }}>
+            <div ref={chartRef} dir="ltr" style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={chartData}
@@ -946,17 +979,17 @@ export default function SensorDashboardPage() {
               </ResponsiveContainer>
             </div>
             {explorerAlerts.length > 0 && (
-              <p className="mt-2 text-xs text-gray-400 flex items-center gap-1.5">
+              <p className="mt-2 text-xs text-[var(--color-muted-foreground)] flex items-center gap-1.5">
                 <span className="inline-block w-3 h-3 rounded-full bg-red-500 shrink-0" />
-                Red dots indicate out-of-range readings
+                {se.redDotsHint}
               </p>
             )}
           </>
         )}
 
         {explorerLoaded && explorerReadings.length > 0 && (
-          <p className="mt-3 text-xs text-gray-400 text-right">
-            {explorerReadings.length} readings · {explorerAlerts.length} out-of-range
+          <p className="mt-3 text-xs text-[var(--color-muted-foreground)] text-right" dir="ltr">
+            {explorerReadings.length} {se.readingsCount} · {explorerAlerts.length} {se.outOfRange}
           </p>
         )}
       </Card>
@@ -971,7 +1004,16 @@ export default function SensorDashboardPage() {
           exportError={exportError}
           onExport={handleExport}
         />
-      )}
-    </main>
+        )}
+      </main>
+    </>
+  );
+}
+
+export default function SensorExplorerPage() {
+  return (
+    <Suspense>
+      <SensorDashboardPage />
+    </Suspense>
   );
 }

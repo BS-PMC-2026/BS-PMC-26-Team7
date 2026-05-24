@@ -14,8 +14,10 @@ from models.user import User
 from models.task import Task
 from models.farm_zone import FarmZone
 from models.pepper_variety import PepperVariety
-from schemas.task import CreateTaskRequest
-from services.task_service import create_task, get_all_tasks
+import models.plant  # noqa: F401 — registers Plants table referenced by SensorAssignment FK
+import models.sensor  # noqa: F401 — registers SensorAssignment, SensorAlert, etc.
+from schemas.task import CreateTaskRequest, ChecklistItemIn
+from services.task_service import create_task, get_all_tasks, get_tasks_by_user, get_completed_tasks
 
 SQLALCHEMY_TEST_URL = "sqlite:///:memory:"
 
@@ -129,3 +131,75 @@ def test_create_task_with_due_date(db):
     assert error is None
     assert result.dueDate is not None
     assert result.dueDate.date() == future.date()
+
+
+# ------------------------------------------------------------------ #
+# 16-18. selectinload — checklist items are returned without N+1 queries
+# ------------------------------------------------------------------ #
+
+def test_get_all_tasks_includes_checklist_items(db):
+    """get_all_tasks must return checklistItems populated by selectinload (no N+1)."""
+    dto = CreateTaskRequest(
+        title="Inspect greenhouse",
+        taskType="inspection",
+        priority="medium",
+        checklistItems=[
+            ChecklistItemIn(title="Check humidity"),
+            ChecklistItemIn(title="Check temperature"),
+        ],
+    )
+    create_task(db, MANAGER_ID, dto)
+    db.expire_all()  # Force a fresh load — simulates a real request lifecycle
+
+    results = get_all_tasks(db)
+
+    assert len(results) == 1
+    task = results[0]
+    assert len(task.checklistItems) == 2
+    titles = {i.title for i in task.checklistItems}
+    assert titles == {"Check humidity", "Check temperature"}
+
+
+def test_get_all_tasks_multiple_tasks_checklist_items_not_mixed(db):
+    """Each task gets only its own checklist items — no cross-task contamination."""
+    dto_a = CreateTaskRequest(
+        title="Task A",
+        taskType="irrigation",
+        priority="low",
+        checklistItems=[ChecklistItemIn(title="Step A1"), ChecklistItemIn(title="Step A2")],
+    )
+    dto_b = CreateTaskRequest(
+        title="Task B",
+        taskType="inspection",
+        priority="high",
+        checklistItems=[ChecklistItemIn(title="Step B1")],
+    )
+    create_task(db, MANAGER_ID, dto_a)
+    create_task(db, MANAGER_ID, dto_b)
+    db.expire_all()
+
+    results = get_all_tasks(db)
+
+    by_title = {r.title: r for r in results}
+    assert len(by_title["Task A"].checklistItems) == 2
+    assert len(by_title["Task B"].checklistItems) == 1
+    a_titles = {i.title for i in by_title["Task A"].checklistItems}
+    assert a_titles == {"Step A1", "Step A2"}
+
+
+def test_get_tasks_by_user_includes_checklist_items(db):
+    """get_tasks_by_user also eagerly loads checklistItems via selectinload."""
+    dto = CreateTaskRequest(
+        title="Worker task with checklist",
+        taskType="harvesting",
+        priority="critical",
+        assignedToUserId=WORKER_ID,
+        checklistItems=[ChecklistItemIn(title="Pick row A"), ChecklistItemIn(title="Pick row B")],
+    )
+    create_task(db, MANAGER_ID, dto)
+    db.expire_all()
+
+    results = get_tasks_by_user(db, WORKER_ID)
+
+    assert len(results) == 1
+    assert len(results[0].checklistItems) == 2

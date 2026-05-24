@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import TaskCard from '@/components/tasks/TaskCard';
-import { AlertInfo, Task } from '@/types/task';
+import { AlertInfo, ChecklistItem, Task } from '@/types/task';
 import { Worker } from '@/types/user';
 
 const baseTask: Task = {
@@ -22,7 +22,17 @@ const baseTask: Task = {
   alertInfo: null,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
+  checklistItems: [],
 };
+
+function makeItems(states: boolean[]): ChecklistItem[] {
+  return states.map((isCompleted, index) => ({
+    itemId: index + 1,
+    title: `Step ${index + 1}`,
+    isCompleted,
+    position: index,
+  }));
+}
 
 const sampleAlertInfo: AlertInfo = {
   severity: 'High',
@@ -57,17 +67,17 @@ describe('TaskCard', () => {
 
   it('renders status badge', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('todo')).toBeInTheDocument();
+    expect(screen.getByText('To Do')).toBeInTheDocument();
   });
 
   it('renders in_progress status with space', () => {
     render(<TaskCard task={{ ...baseTask, status: 'in_progress' }} workers={[]} />);
-    expect(screen.getByText('in progress')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
   });
 
   it('renders priority badge', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('medium')).toBeInTheDocument();
+    expect(screen.getByText('Medium')).toBeInTheDocument();
   });
 
   it('uses a bright card color for the task priority', () => {
@@ -78,12 +88,12 @@ describe('TaskCard', () => {
 
   it('uses a bright priority badge color', () => {
     render(<TaskCard task={{ ...baseTask, priority: 'high' }} workers={[]} />);
-    expect(screen.getByText('high')).toHaveClass('bg-orange-200');
+    expect(screen.getByText('High')).toHaveClass('bg-orange-200');
   });
 
   it('renders task type', () => {
     render(<TaskCard task={baseTask} workers={[]} />);
-    expect(screen.getByText('irrigation')).toBeInTheDocument();
+    expect(screen.getByText('Irrigation')).toBeInTheDocument();
   });
 
   it('renders assignee name when assigned', () => {
@@ -166,5 +176,118 @@ describe('TaskCard', () => {
     render(<TaskCard task={task} workers={[]} onStatusChange={onStatusChange} />);
     fireEvent.click(screen.getByText('Complete'));
     expect(onStatusChange).toHaveBeenCalledWith(task, 'done');
+  });
+
+  // ---- Checklist + progress bar (US39) ----
+
+  it('does not render checklist or progress bar when checklistItems is empty', () => {
+    render(<TaskCard task={baseTask} workers={[]} />);
+    expect(screen.queryByText('Progress')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByText(/completed/)).not.toBeInTheDocument();
+  });
+
+  it('renders checklist item titles when items exist', () => {
+    const task = { ...baseTask, checklistItems: makeItems([false, false, false]) };
+    render(<TaskCard task={task} workers={[]} />);
+    expect(screen.getByText('Step 1')).toBeInTheDocument();
+    expect(screen.getByText('Step 2')).toBeInTheDocument();
+    expect(screen.getByText('Step 3')).toBeInTheDocument();
+  });
+
+  it('progress bar width reflects completed ratio (2/4 = 50%)', () => {
+    const task = {
+      ...baseTask,
+      checklistItems: makeItems([true, true, false, false]),
+    };
+    render(<TaskCard task={task} workers={[]} />);
+    expect(screen.getByText('2 / 4 completed')).toBeInTheDocument();
+    const bar = screen.getByTestId('checklist-progress-bar');
+    expect(bar).toHaveStyle({ width: '50%' });
+  });
+
+  it('calls onToggleChecklistItem with the new completed state when a checkbox is clicked', () => {
+    const onToggleChecklistItem = jest.fn();
+    const task = { ...baseTask, checklistItems: makeItems([false]) };
+    render(
+      <TaskCard
+        task={task}
+        workers={[]}
+        onToggleChecklistItem={onToggleChecklistItem}
+      />,
+    );
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+    expect(onToggleChecklistItem).toHaveBeenCalledWith(
+      task,
+      task.checklistItems[0],
+      true,
+    );
+  });
+
+  // ---- Complete-button gating by checklist completion (US39) ----
+
+  it('disables the Complete button when not all checklist items are completed', () => {
+    const onStatusChange = jest.fn();
+    const task = {
+      ...baseTask,
+      status: 'in_progress' as const,
+      checklistItems: makeItems([true, true, false, false]),
+    };
+    render(
+      <TaskCard task={task} workers={[]} onStatusChange={onStatusChange} />,
+    );
+    const completeButton = screen.getByText('Complete') as HTMLButtonElement;
+    expect(completeButton).toBeDisabled();
+    expect(completeButton).toHaveAttribute(
+      'title',
+      'Complete all checklist items first',
+    );
+    fireEvent.click(completeButton);
+    expect(onStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('enables the Complete button when all checklist items are completed', () => {
+    const onStatusChange = jest.fn();
+    const task = {
+      ...baseTask,
+      status: 'in_progress' as const,
+      checklistItems: makeItems([true, true, true, true]),
+    };
+    render(
+      <TaskCard task={task} workers={[]} onStatusChange={onStatusChange} />,
+    );
+    const completeButton = screen.getByText('Complete') as HTMLButtonElement;
+    expect(completeButton).not.toBeDisabled();
+    fireEvent.click(completeButton);
+    expect(onStatusChange).toHaveBeenCalledWith(task, 'done');
+  });
+
+  it('keeps the Complete button enabled when the task has no checklist items', () => {
+    const onStatusChange = jest.fn();
+    const task = { ...baseTask, status: 'in_progress' as const };
+    render(
+      <TaskCard task={task} workers={[]} onStatusChange={onStatusChange} />,
+    );
+    const completeButton = screen.getByText('Complete') as HTMLButtonElement;
+    expect(completeButton).not.toBeDisabled();
+    fireEvent.click(completeButton);
+    expect(onStatusChange).toHaveBeenCalledWith(task, 'done');
+  });
+
+  it('does not gate the Start button on checklist completion', () => {
+    const onStatusChange = jest.fn();
+    const task = {
+      ...baseTask,
+      status: 'todo' as const,
+      checklistItems: makeItems([false, false]),
+    };
+    render(
+      <TaskCard task={task} workers={[]} onStatusChange={onStatusChange} />,
+    );
+    const startButton = screen.getByText('Start') as HTMLButtonElement;
+    expect(startButton).not.toBeDisabled();
+    fireEvent.click(startButton);
+    expect(onStatusChange).toHaveBeenCalledWith(task, 'in_progress');
   });
 });

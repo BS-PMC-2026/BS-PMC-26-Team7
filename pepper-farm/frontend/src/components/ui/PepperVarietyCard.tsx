@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Flame, ArrowRight } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface PepperVarietyCardProps {
   /** Display name of the pepper variety */
@@ -34,6 +35,7 @@ export default function PepperVarietyCard({
 }: PepperVarietyCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-40px 0px' });
+  const { t } = useLanguage();
 
   const inner = (
     <motion.div
@@ -78,7 +80,7 @@ export default function PepperVarietyCard({
           className="mt-4 flex items-center gap-1 text-xs font-medium text-green-700"
           whileHover={{ gap: '0.5rem' }}
         >
-          <span>Explore variety</span>
+          <span>{t.landing.exploreVariety}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </motion.div>
       </div>

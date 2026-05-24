@@ -6,12 +6,15 @@ import TaskList from '@/components/tasks/TaskList';
 import PageHeader from '@/components/ui/PageHeader';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
-import { Task, TaskStatus } from '@/types/task';
-import { getMyTasks, updateTask } from '@/services/tasks';
+import { ChecklistItem, Task, TaskStatus } from '@/types/task';
+import { getMyTasks, updateChecklistItem, updateTask } from '@/services/tasks';
 import { useToast } from '@/context/ToastContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function MyTasksPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const wk = t.worker;
   const { show } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +33,7 @@ export default function MyTasksPage() {
       const data = await getMyTasks(token);
       setTasks(data);
     } catch {
-      setError('Failed to load tasks. Is the backend running?');
+      setError(wk.failedToLoad);
     } finally {
       setIsLoading(false);
     }
@@ -62,20 +65,70 @@ export default function MyTasksPage() {
     }
   }, [show]);
 
+  const handleToggleChecklistItem = useCallback(
+    async (task: Task, item: ChecklistItem, nextCompleted: boolean) => {
+      const token = localStorage.getItem('token') ?? '';
+      // Optimistic update: flip the item locally, revert on error.
+      setTasks((prev) =>
+        prev.map((tt) =>
+          tt.id === task.id
+            ? {
+                ...tt,
+                checklistItems: tt.checklistItems.map((ci) =>
+                  ci.itemId === item.itemId
+                    ? { ...ci, isCompleted: nextCompleted }
+                    : ci,
+                ),
+              }
+            : tt,
+        ),
+      );
+      try {
+        await updateChecklistItem(task.id, item.itemId, { isCompleted: nextCompleted }, token);
+      } catch (err) {
+        setTasks((prev) =>
+          prev.map((tt) =>
+            tt.id === task.id
+              ? {
+                  ...tt,
+                  checklistItems: tt.checklistItems.map((ci) =>
+                    ci.itemId === item.itemId
+                      ? { ...ci, isCompleted: item.isCompleted }
+                      : ci,
+                  ),
+                }
+              : tt,
+          ),
+        );
+        show({
+          title: 'Error',
+          body: err instanceof Error ? err.message : t.tasks.failedToUpdateChecklistItem,
+          severity: 'High',
+          autoDismissMs: 6000,
+        });
+      }
+    },
+    [show, t.tasks.failedToUpdateChecklistItem],
+  );
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <PageHeader title="My Tasks" subtitle="Tasks assigned to you" />
+        <PageHeader title={wk.myTasksTitle} subtitle={wk.myTasksSubtitle} />
       </div>
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-12">Loading tasks...</p>
+        <p className="text-sm text-[var(--color-muted-foreground)] text-center py-12">{t.tasks.loading}</p>
       ) : tasks.length === 0 ? (
-        <EmptyState title="No tasks yet." description="You have no tasks assigned." />
+        <EmptyState title={wk.noTasksYet} description={wk.youHaveNoTasks} />
       ) : (
-        <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
+        <TaskList
+          tasks={tasks}
+          onStatusChange={handleStatusChange}
+          onToggleChecklistItem={handleToggleChecklistItem}
+        />
       )}
     </div>
   );

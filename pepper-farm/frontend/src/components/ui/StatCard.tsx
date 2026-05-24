@@ -32,13 +32,13 @@ export default function StatCard({ value, label, icon, delay = 0 }: StatCardProp
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       className="flex flex-col items-center gap-2 p-6 bg-white/70 backdrop-blur-sm rounded-2xl border border-green-100 shadow-sm cursor-default"
     >
-      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+      <div className="w-10 h-10 rounded-full bg-[var(--color-secondary-light)] flex items-center justify-center text-[var(--color-primary)]">
         {icon}
       </div>
-      <span className="text-3xl font-bold text-green-800" style={{ fontFamily: 'Lora, serif' }}>
+      <span className="text-3xl font-bold text-[var(--color-foreground)]" style={{ fontFamily: 'Lora, serif' }}>
         {value}
       </span>
-      <span className="text-sm text-green-600 text-center" style={{ fontFamily: 'Raleway, sans-serif' }}>
+      <span className="text-sm text-[var(--color-primary)] text-center" style={{ fontFamily: 'Raleway, sans-serif' }}>
         {label}
       </span>
     </motion.div>

@@ -161,10 +161,10 @@ export default function EditProductPage() {
   if (loadingProduct) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <div className="h-6 bg-gray-100 rounded w-1/3 animate-pulse mb-4" />
-        <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="h-6 bg-[var(--color-muted)] rounded w-1/3 animate-pulse mb-4" />
+        <div className="space-y-4 rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-sm">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+            <div key={i} className="h-10 bg-[var(--color-muted)] rounded animate-pulse" />
           ))}
         </div>
       </main>
@@ -177,31 +177,31 @@ export default function EditProductPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-3 text-sm text-gray-500 hover:text-gray-800 transition"
+          className="mb-3 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
         >
           ← Back
         </button>
         <h1 className="text-3xl font-bold">Edit Product</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
           Update the product details below.
         </p>
       </div>
 
       {successMessage && (
-        <div className="mb-4 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800">
+        <div className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--color-secondary-light)] px-4 py-3 text-[var(--color-primary)]">
           {successMessage}
         </div>
       )}
 
       {errorMessage && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800">
+        <div className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--color-error-bg)] px-4 py-3 text-[var(--color-error)]">
           {errorMessage}
         </div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+        className="space-y-5 rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-sm"
       >
         <div>
           <label htmlFor="ProductName" className="mb-1 block text-sm font-medium">
@@ -214,7 +214,7 @@ export default function EditProductPage() {
             value={form.ProductName}
             onChange={handleChange}
             maxLength={150}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             placeholder="e.g. Jalapeño Sauce"
           />
         </div>
@@ -230,7 +230,7 @@ export default function EditProductPage() {
             onChange={handleChange}
             maxLength={1000}
             rows={4}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             placeholder="Short product description"
           />
         </div>
@@ -246,7 +246,7 @@ export default function EditProductPage() {
             value={form.Category}
             onChange={handleChange}
             maxLength={100}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             placeholder="e.g. Sauce / Powder / Fresh Produce"
           />
         </div>
@@ -263,7 +263,7 @@ export default function EditProductPage() {
             min="0"
             value={form.Price}
             onChange={handleChange}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             placeholder="0.00"
           />
         </div>
@@ -279,7 +279,7 @@ export default function EditProductPage() {
             value={form.ImageUrl}
             onChange={handleChange}
             maxLength={500}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             placeholder="https://... or /uploads/..."
           />
         </div>
@@ -294,7 +294,7 @@ export default function EditProductPage() {
             value={form.PepperId}
             onChange={handleChange}
             disabled={loadingPeppers}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-black disabled:bg-gray-100"
+            className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
           >
             <option value="">No linked pepper variety</option>
             {peppers.map((pepper) => (
@@ -304,7 +304,7 @@ export default function EditProductPage() {
             ))}
           </select>
           {loadingPeppers && (
-            <p className="mt-1 text-sm text-gray-500">Loading pepper varieties...</p>
+            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Loading pepper varieties...</p>
           )}
         </div>
 
@@ -325,14 +325,14 @@ export default function EditProductPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-black px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-[var(--color-primary)] px-5 py-2 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Saving...' : 'Save Changes'}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+            className="rounded-md border border-[var(--color-border)] px-5 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition"
           >
             Cancel
           </button>

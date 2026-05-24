@@ -41,7 +41,7 @@ function Toast({
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={`
         relative flex gap-3 items-start w-80 rounded-xl shadow-lg border bg-white p-4
-        ${isHigh ? 'border-l-4 border-l-red-500 border-gray-200' : 'border-l-4 border-l-amber-400 border-gray-200'}
+        ${isHigh ? 'border-l-4 border-l-red-500 border-[var(--color-border)]' : 'border-l-4 border-l-amber-400 border-[var(--color-border)]'}
       `}
     >
       {/* Severity dot */}
@@ -51,16 +51,16 @@ function Toast({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${isHigh ? 'text-red-600' : 'text-amber-600'}`}>
+        <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${isHigh ? 'text-[var(--color-error)]' : 'text-[var(--color-warning)]'}`}>
           {item.title}
         </p>
-        <p className="text-xs text-gray-600 leading-snug whitespace-pre-line">{item.body}</p>
+        <p className="text-xs text-[var(--color-muted-foreground)] leading-snug whitespace-pre-line">{item.body}</p>
       </div>
 
       {/* Close */}
       <button
         onClick={() => onDismiss(item.id)}
-        className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors text-base leading-none cursor-pointer"
+        className="shrink-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors text-base leading-none cursor-pointer"
         aria-label="Dismiss"
       >
         ×

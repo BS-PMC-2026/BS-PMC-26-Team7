@@ -5,29 +5,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Leaf, Menu as MenuIcon, X } from 'lucide-react';
 import NavMenu, { IMenu } from '@/components/ui/navbar';
-
-const NAV_ITEMS: IMenu[] = [
-  { id: 1, title: 'Peppers', url: '/#peppers', dropdown: false },
-  {
-    id: 2,
-    title: 'Explore',
-    url: '#',
-    dropdown: true,
-    items: [
-      { id: 21, title: 'Farm Map', url: '/visitor/map' },
-      { id: 22, title: 'Products', url: '/visitor/products' },
-      { id: 23, title: 'All Varieties', url: '/visitor/peppers/1' },
-    ],
-  },
-  { id: 3, title: 'Our Farm', url: '/#farm', dropdown: false },
-];
-
-const MOBILE_LINKS = [
-  { label: 'Peppers', href: '/#peppers' },
-  { label: 'Farm', href: '/#farm' },
-  { label: 'Products', href: '/visitor/products' },
-  { label: 'Farm Map', href: '/visitor/map' },
-];
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface LandingNavbarProps {
   /** Whether the page has been scrolled past the hero (drives visual state) */
@@ -42,6 +21,33 @@ interface LandingNavbarProps {
  */
 export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useLanguage();
+  const la = t.landing;
+
+  const NAV_ITEMS: IMenu[] = [
+    { id: 1, title: la.navPeppers, url: '/#peppers', dropdown: false },
+    {
+      id: 2,
+      title: la.navExplore,
+      url: '#',
+      dropdown: true,
+      items: [
+        { id: 21, title: la.navFarmMap,      url: '/visitor/map'       },
+        { id: 22, title: la.navSafetyMap,    url: '/visitor/spray-restrictions' },
+        { id: 23, title: la.navProducts,     url: '/visitor/products'  },
+        { id: 24, title: la.navAllVarieties, url: '/visitor/peppers/1' },
+      ],
+    },
+    { id: 3, title: la.navOurFarm, url: '/#farm', dropdown: false },
+  ];
+
+  const MOBILE_LINKS = [
+    { label: la.navPeppers,  href: '/#peppers'         },
+    { label: la.navOurFarm,  href: '/#farm'            },
+    { label: la.navProducts, href: '/visitor/products' },
+    { label: la.navFarmMap,  href: '/visitor/map'      },
+    { label: la.navSafetyMap, href: '/visitor/spray-restrictions' },
+  ];
 
   return (
     <motion.header
@@ -84,18 +90,19 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           <NavMenu list={NAV_ITEMS} />
         </div>
 
-        {/* Auth buttons — desktop */}
+        {/* Auth buttons + language switcher — desktop */}
         <div className="hidden md:flex items-center gap-2">
+          <LanguageSwitcher />
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/login"
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 cursor-pointer border ${
                 scrolled
-                  ? 'text-green-700 border-green-200 hover:bg-green-50'
+                  ? 'text-[var(--color-primary)] border-[var(--color-border)] hover:bg-[var(--color-secondary-light)]'
                   : 'text-white border-white/30 hover:bg-white/10'
               }`}
             >
-              Sign In
+              {la.signIn}
             </Link>
           </motion.div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
@@ -103,7 +110,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
               href="/register"
               className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-150 cursor-pointer"
             >
-              Get Started
+              {la.getStarted}
             </Link>
           </motion.div>
         </div>
@@ -113,7 +120,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           whileTap={{ scale: 0.9 }}
           className={`md:hidden p-2 rounded-lg transition-colors cursor-pointer ${
             scrolled
-              ? 'text-green-800 hover:bg-green-100'
+              ? 'text-green-800 hover:bg-[var(--color-muted)]'
               : 'text-white hover:bg-white/10'
           }`}
           onClick={() => setMobileOpen((v) => !v)}
@@ -167,25 +174,30 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   <Link
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block py-2.5 px-3 text-sm font-medium text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
+                    className="block py-2.5 px-3 text-sm font-medium text-green-800 hover:bg-[var(--color-secondary-light)] rounded-lg transition-colors cursor-pointer"
                   >
                     {item.label}
                   </Link>
                 </motion.div>
               ))}
-              <div className="border-t border-green-100 mt-2 pt-3 flex gap-2">
-                <Link
-                  href="/login"
-                  className="flex-1 text-center py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
-                >
-                  Register
-                </Link>
+              <div className="border-t border-green-100 mt-2 pt-3 flex flex-col gap-2">
+                <div className="flex justify-center">
+                  <LanguageSwitcher />
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    className="flex-1 text-center py-2 text-sm font-medium text-[var(--color-primary)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-secondary-light)] cursor-pointer"
+                  >
+                    {la.signIn}
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
+                  >
+                    {la.register}
+                  </Link>
+                </div>
               </div>
             </div>
           </motion.div>

@@ -4,36 +4,36 @@ import { motion } from 'framer-motion';
 import { Sprout, Droplets, Sun } from 'lucide-react';
 import RevealSection from '@/components/ui/RevealSection';
 import FeatureRow from '@/components/ui/FeatureRow';
+import { useLanguage } from '@/context/LanguageContext';
 
-const FEATURES = [
-  {
-    icon:    <Sprout className="w-10 h-10" />,
-    title:   'Planted by hand',
-    body:    'Every seedling is started in our nursery and transplanted by hand into raised beds enriched with compost. No shortcuts, no machinery guesswork.',
-    reverse: false,
-    delay:   0,
-  },
-  {
-    icon:    <Droplets className="w-10 h-10" />,
-    title:   'Smart irrigation',
-    body:    'Our drip-irrigation system delivers precise water at root level, monitored by soil sensors. Plants get exactly what they need — no more, no less.',
-    reverse: true,
-    delay:   0.1,
-  },
-  {
-    icon:    <Sun className="w-10 h-10" />,
-    title:   'Harvested at peak',
-    body:    'We track every plant from seed to harvest day. Peppers are picked at the exact moment of peak flavour and immediately packed for freshness.',
-    reverse: false,
-    delay:   0.2,
-  },
-];
-
-/**
- * Dark green "Our Process" section with alternating FeatureRow layout.
- * Includes top and bottom SVG wave dividers.
- */
 export default function FarmStorySection() {
+  const { t } = useLanguage();
+  const la = t.landing;
+
+  const FEATURES = [
+    {
+      icon:    <Sprout className="w-10 h-10" />,
+      title:   la.feature1Title,
+      body:    la.feature1Body,
+      reverse: false,
+      delay:   0,
+    },
+    {
+      icon:    <Droplets className="w-10 h-10" />,
+      title:   la.feature2Title,
+      body:    la.feature2Body,
+      reverse: true,
+      delay:   0.1,
+    },
+    {
+      icon:    <Sun className="w-10 h-10" />,
+      title:   la.feature3Title,
+      body:    la.feature3Body,
+      reverse: false,
+      delay:   0.2,
+    },
+  ];
+
   return (
     <>
       {/* Top wave */}
@@ -47,13 +47,13 @@ export default function FarmStorySection() {
         <div className="max-w-5xl mx-auto">
           <RevealSection className="text-center mb-16">
             <p className="text-xs font-semibold tracking-widest text-green-300 uppercase mb-3">
-              Our Process
+              {la.ourProcess}
             </p>
             <h2
               className="text-4xl font-bold text-white"
               style={{ fontFamily: 'Lora, serif' }}
             >
-              Grown with intention
+              {la.grownWithIntention}
             </h2>
           </RevealSection>
 

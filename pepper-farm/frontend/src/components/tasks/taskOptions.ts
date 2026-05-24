@@ -12,6 +12,7 @@ export const TASK_TYPE_OPTIONS = [
   { value: 'harvesting', label: 'Harvesting' },
   { value: 'planting', label: 'Planting' },
   { value: 'fertilizing', label: 'Fertilizing' },
+  { value: 'spray', label: 'Spray' },
   { value: 'inspection', label: 'Inspection' },
   { value: 'other', label: 'Other' },
 ];

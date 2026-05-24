@@ -62,7 +62,7 @@ export default function AnomalyMetricChart({ alerts }: Props) {
   const maxTotal = Math.max(...counts.map((c) => c.total), 1);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" dir="ltr">
       {counts.map(({ metric, total, high, medium }) => {
         const cfg = METRIC_CONFIG[metric];
         const highPct = (high / maxTotal) * 100;

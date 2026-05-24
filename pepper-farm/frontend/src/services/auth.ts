@@ -1,4 +1,4 @@
-import { API_URL } from "@/lib/constants";
+import { apiFetch } from "./apiClient";
 
 export interface RegisterData {
   fullName: string;
@@ -26,23 +26,15 @@ export interface LoginResponse {
 }
 
 export async function registerUser(data: RegisterData): Promise<RegisterResponse> {
-  const res = await fetch(`${API_URL}/api/auth/register`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(data),
+  return apiFetch<RegisterResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Registration failed.");
-  return json;
 }
 
 export async function loginUser(data: LoginData): Promise<LoginResponse> {
-  const res = await fetch(`${API_URL}/api/auth/login`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(data),
+  return apiFetch<LoginResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.detail ?? "Login failed.");
-  return json;
 }

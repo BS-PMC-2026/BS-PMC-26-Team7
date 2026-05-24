@@ -56,3 +56,89 @@ export interface SprayReportSubmissionResponse {
   report: SprayReport;
   safetyWarning: SafetyWarning;
 }
+
+// US30: Manager spray alert created when a worker submits a spray report.
+// Returned by GET /api/spray-reports/alerts (FarmManager only).
+export interface SprayAlert {
+  SprayAlertId: number;
+  SprayReportId: number;
+  ZoneId: number;
+  ZoneCode: string;
+  ZoneName: string;
+  PesticideName: string | null;
+  ReportedByUserId: number | null;
+  ReportStatus: 'completed' | 'planned';
+  Severity: 'high' | 'medium' | 'low';
+  SafetyMessage: string;
+  RequiresApproval: boolean;
+  ReEntryIntervalHours: number | null;
+  SafeToReEnterAtUtc: string | null;
+  SafeToHarvestAtUtc: string | null;
+  HazardLevel: string | null;
+  PpeRequired: string | null;
+  SprayedAtUtc: string | null;
+  IsRead: boolean;
+  CreatedAt: string;
+}
+
+// Per-zone spray status returned by GET /api/spray-reports/zone-map (US28).
+export type ZoneSprayStatus =
+  | 'safe'
+  | 'unsafe'
+  | 'requires_approval'
+  | 'pending'
+  | 'never_sprayed';
+
+// US33 entry permission status — derived by the backend from sprayStatus + REI.
+export type EntryPermissionStatus =
+  | 'allowed'
+  | 'restricted'
+  | 'caution'
+  | 'planned_warning'
+  | 'no_data';
+
+export interface ZoneSprayStatusData {
+  zoneId: number;
+  zoneCode: string;
+  zoneName: string;
+  sprayStatus: ZoneSprayStatus;
+  lastCompletedAtUtc: string | null;
+  pesticideName: string | null;
+  safeToReEnterAtUtc: string | null;
+  safeToHarvestAtUtc: string | null;
+  requiresApproval: boolean;
+  hazardLevel: string | null;
+  ppeRequired: string | null;
+  nextPlannedAtUtc: string | null;
+  // US33 — explicit entry permission fields
+  entryPermissionStatus: EntryPermissionStatus;
+  entryAllowed: boolean;
+  entryMessage: string;
+  remainingRestrictionMinutes: number | null;
+}
+
+// US32: Manager overdue spray alert — created by periodic scheduler when a zone
+// has not been sprayed within DEFAULT_SPRAY_INTERVAL_DAYS (30 days).
+// Separate from SprayAlert (US30) which is tied to a specific SprayReport.
+export interface OverdueSprayAlert {
+  OverdueAlertId:    number;
+  ZoneId:            number;
+  ZoneCode:          string;
+  ZoneName:          string;
+  LastSprayedAtUtc:  string | null;
+  OverdueSinceUtc:   string;
+  SprayIntervalDays: number;
+  Severity:          'high' | 'medium' | 'low';
+  Message:           string;
+  IsRead:            boolean;
+  IsResolved:        boolean;
+  ResolvedAtUtc:     string | null;
+  AssignedTaskId:    number | null;
+  CreatedAt:         string;
+}
+
+// Body for POST /api/spray-reports/overdue-alerts/{id}/assign
+export interface AssignOverdueAlertRequest {
+  assignedToUserId: number;
+  dueDate?: string;
+}
