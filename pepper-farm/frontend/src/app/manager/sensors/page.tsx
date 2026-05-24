@@ -17,6 +17,7 @@ import {
 import Alert from '@/components/ui/Alert';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import DelayedPageLoader from '@/components/ui/DelayedPageLoader';
 import ExportModal, { ExportOptions } from '@/components/sensors/ExportModal';
 import {
   getLatestSensorReading,
@@ -511,11 +512,7 @@ function SensorDashboardPage() {
   // ── loading skeleton ────────────────────────────────────────────────────────
 
   if (sensorsLoading || (loading && sensors.length === 0)) {
-    return (
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <p className="text-[var(--color-muted-foreground)] text-sm">{se.loadingSensorDashboard}</p>
-      </main>
-    );
+    return <DelayedPageLoader />;
   }
 
   if (!sensorsLoading && sensors.length === 0) {

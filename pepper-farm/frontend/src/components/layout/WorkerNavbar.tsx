@@ -17,10 +17,10 @@ import {
   Bell,
   X,
   ClipboardCheck,
-  ShieldAlert,
 } from 'lucide-react';
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/context/LanguageContext';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
@@ -39,22 +39,6 @@ type NavGroup = {
   icon: React.ReactNode;
   items: NavItem[];
 };
-
-/* -------------------------------------------------------------------------- */
-/* Navigation structure                                                         */
-/* -------------------------------------------------------------------------- */
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: 'plants',
-    label: 'Plants',
-    icon: <Sprout size={15} />,
-    items: [
-      { label: 'Add Plant',       href: '/worker/plants/add',             icon: <Sprout size={14} />, description: 'Register a new plant' },
-      { label: 'Update Location', href: '/worker/plants/update-location', icon: <MapPin size={14} />, description: 'Move a plant to a new zone' },
-    ],
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                      */
@@ -85,16 +69,63 @@ const PRIORITY_COLOR: Record<string, string> = {
 export default function WorkerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t, dir } = useLanguage();
   const { unreadCount, clearUnread, newTasks, activeTasks } = useWorkerNotification();
 
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [bellOpen,  setBellOpen]  = useState(false);
   const [scrolled,  setScrolled]  = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
+  const [dismissedTaskIds, setDismissedTaskIds] = useState<number[]>([]);
 
   const navRef        = useRef<HTMLElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navGroups: NavGroup[] = [
+    {
+      id: 'plants',
+      label: t.nav.plants,
+      icon: <Sprout size={15} />,
+      items: [
+        { label: t.nav.addPlant,       href: '/worker/plants/add',             icon: <Sprout size={14} />, description: t.nav.addPlantSub },
+        { label: t.nav.updateLocation, href: '/worker/plants/update-location', icon: <MapPin size={14} />, description: t.nav.updateLocationSub },
+      ],
+    },
+  ];
 
-  const popupTasks = newTasks.length > 0 ? newTasks.slice(0, 6) : activeTasks.slice(0, 6);
+  const dismissedTaskIdSet = new Set(dismissedTaskIds);
+  const visibleNewTasks = newTasks.filter((task) => !dismissedTaskIdSet.has(task.id));
+  const visibleActiveTasks = activeTasks.filter((task) => !dismissedTaskIdSet.has(task.id));
+  const popupTasks = visibleNewTasks.length > 0 ? visibleNewTasks.slice(0, 6) : visibleActiveTasks.slice(0, 6);
+  const historyTasks = [...newTasks, ...activeTasks].filter((task, index, all) =>
+    dismissedTaskIdSet.has(task.id) && all.findIndex((item) => item.id === task.id) === index,
+  );
+  const visibleUnreadCount = Math.max(0, unreadCount - newTasks.filter((task) => dismissedTaskIdSet.has(task.id)).length);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('pepper-farm-worker-dismissed-notifications');
+      if (raw) setDismissedTaskIds(JSON.parse(raw));
+    } catch {
+      setDismissedTaskIds([]);
+    }
+  }, []);
+
+  const persistDismissed = (ids: number[]) => {
+    setDismissedTaskIds(ids);
+    localStorage.setItem('pepper-farm-worker-dismissed-notifications', JSON.stringify(ids));
+  };
+
+  const dismissTask = (taskId: number) => {
+    persistDismissed(Array.from(new Set([...dismissedTaskIds, taskId])));
+  };
+
+  const restoreTask = (taskId: number) => {
+    persistDismissed(dismissedTaskIds.filter((id) => id !== taskId));
+  };
+
+  const clearTaskGroup = () => {
+    persistDismissed(Array.from(new Set([...dismissedTaskIds, ...popupTasks.map((task) => task.id)])));
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -143,7 +174,7 @@ export default function WorkerNavbar() {
   return (
     <motion.header
       ref={navRef as React.RefObject<HTMLElement>}
-      dir="ltr"
+      dir={dir}
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
           ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
@@ -179,21 +210,20 @@ export default function WorkerNavbar() {
                 : 'text-white/50 bg-white/10 border-white/20'
             }`}
           >
-            Worker
+            {t.worker.label}
           </span>
         </Link>
 
         {/* Divider */}
         <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-        <NavLinkDirect href="/worker"              label="Dashboard"    icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
-        <NavLinkDirect href="/worker/my-tasks"     label="My Tasks"     icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')}         scrolled={scrolled} />
-        <NavLinkDirect href="/worker/products"     label="Products"     icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
-        <NavLinkDirect href="/worker/spray-report"        label="Spray Report" icon={<Droplets size={14} />}     active={pathname.startsWith('/worker/spray-report')}         scrolled={scrolled} />
-        <NavLinkDirect href="/worker/spray-restrictions"  label="Safety Map"   icon={<ShieldAlert size={14} />} active={pathname.startsWith('/worker/spray-restrictions')}   scrolled={scrolled} />
+        <NavLinkDirect href="/worker"              label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
+        <NavLinkDirect href="/worker/my-tasks"     label={t.worker.myTasks} icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')}         scrolled={scrolled} />
+        <NavLinkDirect href="/worker/products"     label={t.nav.products} icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
+        <NavLinkDirect href="/worker/spray-report" label={t.worker.sprayReport} icon={<Droplets size={14} />} active={pathname.startsWith('/worker/spray-report') || pathname.startsWith('/worker/spray-restrictions')} scrolled={scrolled} />
 
         {/* Plants dropdown */}
-        {NAV_GROUPS.map((group) => {
+        {navGroups.map((group) => {
           const active = isGroupActive(group);
           const open   = openGroup === group.id;
           return (
@@ -268,18 +298,18 @@ export default function WorkerNavbar() {
         <div className="relative">
           <button
             onClick={handleBellClick}
-            aria-label="Task notifications"
+            aria-label={t.notifications.taskNotifications}
             aria-expanded={bellOpen}
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
                 ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
-                : unreadCount > 0
+                : visibleUnreadCount > 0
                   ? scrolled ? 'text-red-500 hover:bg-[var(--color-error-bg)]' : 'text-red-300 hover:bg-white/10'
                   : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
             }`}
           >
             <motion.span
-              animate={unreadCount > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
+              animate={visibleUnreadCount > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
               transition={{ duration: 0.5, ease: 'easeInOut' }}
               className="flex"
             >
@@ -287,7 +317,7 @@ export default function WorkerNavbar() {
             </motion.span>
 
             <AnimatePresence>
-              {unreadCount > 0 && (
+              {visibleUnreadCount > 0 && (
                 <motion.span
                   key="badge"
                   initial={{ scale: 0, opacity: 0 }}
@@ -296,7 +326,7 @@ export default function WorkerNavbar() {
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
                 >
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {visibleUnreadCount > 99 ? '99+' : visibleUnreadCount}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -316,10 +346,10 @@ export default function WorkerNavbar() {
                 {/* Header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
                   <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
-                    My Tasks
-                    {unreadCount > 0 && (
+                    {t.notifications.taskNotifications}
+                    {visibleUnreadCount > 0 && (
                       <span className="ml-1.5 text-[10px] font-bold text-red-400">
-                        {unreadCount} new
+                        {visibleUnreadCount} {t.common.new.toLowerCase()}
                       </span>
                     )}
                   </span>
@@ -331,32 +361,63 @@ export default function WorkerNavbar() {
                   </button>
                 </div>
 
+                <div className="px-3.5 pt-2 flex items-center gap-1">
+                  <button
+                    onClick={() => setNotificationTab('active')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium ${notificationTab === 'active' ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]'}`}
+                  >
+                    {t.notifications.active}
+                  </button>
+                  <button
+                    onClick={() => setNotificationTab('history')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium ${notificationTab === 'history' ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]'}`}
+                  >
+                    {t.notifications.history}
+                  </button>
+                  {notificationTab === 'active' && popupTasks.length > 0 && (
+                    <button
+                      onClick={clearTaskGroup}
+                      className="ml-auto text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                    >
+                      {t.notifications.clearGroup}
+                    </button>
+                  )}
+                  {notificationTab === 'history' && historyTasks.length > 0 && (
+                    <button
+                      onClick={() => persistDismissed([])}
+                      className="ml-auto text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
+                    >
+                      {t.notifications.clearHistory}
+                    </button>
+                  )}
+                </div>
+
                 {/* Section */}
+                {notificationTab === 'active' ? (
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
-                      {newTasks.length > 0 ? 'Newly Assigned' : 'Active Tasks'}
+                      {visibleNewTasks.length > 0 ? t.notifications.newlyAssigned : t.notifications.activeTasks}
                     </span>
                     <Link
                       href="/worker/my-tasks"
                       onClick={() => setBellOpen(false)}
                       className="text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
-                      View all
+                      {t.common.viewAll}
                     </Link>
                   </div>
 
                   {popupTasks.length === 0 ? (
-                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 pb-3 italic">No active tasks assigned to you</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 pb-3 italic">{t.notifications.noActiveTasksAssigned}</p>
                   ) : (
                     <div className="flex flex-col gap-0.5 pb-2">
                       {popupTasks.map((task) => (
-                        <Link
+                        <div
                           key={task.id}
-                          href="/worker/my-tasks"
-                          onClick={() => setBellOpen(false)}
                           className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
+                          <Link href="/worker/my-tasks" onClick={() => setBellOpen(false)} className="contents">
                           <span className={`mt-0.5 shrink-0 ${PRIORITY_COLOR[task.priority] ?? 'text-[var(--color-muted-foreground)]'}`}>
                             <ClipboardCheck size={13} />
                           </span>
@@ -371,11 +432,51 @@ export default function WorkerNavbar() {
                           <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(task.createdAt)}
                           </span>
-                        </Link>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => dismissTask(task.id)}
+                            title={t.notifications.dismiss}
+                            aria-label={t.notifications.dismiss}
+                            className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
                 </div>
+                ) : (
+                <div className="px-3.5 pt-2.5 pb-3">
+                  {historyTasks.length === 0 ? (
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noHistory}</p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {historyTasks.slice(0, 8).map((task) => (
+                        <div key={task.id} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg bg-[var(--color-muted)]/50">
+                          <ClipboardCheck size={13} className="mt-0.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">{task.title}</span>
+                            <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
+                              {[task.taskType, task.zoneCode].filter(Boolean).join(' · ')}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => restoreTask(task.id)}
+                            title={t.notifications.restore}
+                            aria-label={t.notifications.restore}
+                            className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
+                          >
+                            <ClipboardCheck size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -390,8 +491,8 @@ export default function WorkerNavbar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          title="Sign out"
-          aria-label="Sign out"
+          title={t.notifications.signOut}
+          aria-label={t.notifications.signOut}
           className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'

@@ -33,8 +33,9 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
       dropdown: true,
       items: [
         { id: 21, title: la.navFarmMap,      url: '/visitor/map'       },
-        { id: 22, title: la.navProducts,     url: '/visitor/products'  },
-        { id: 23, title: la.navAllVarieties, url: '/visitor/peppers/1' },
+        { id: 22, title: la.navSafetyMap,    url: '/visitor/spray-restrictions' },
+        { id: 23, title: la.navProducts,     url: '/visitor/products'  },
+        { id: 24, title: la.navAllVarieties, url: '/visitor/peppers/1' },
       ],
     },
     { id: 3, title: la.navOurFarm, url: '/#farm', dropdown: false },
@@ -45,6 +46,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
     { label: la.navOurFarm,  href: '/#farm'            },
     { label: la.navProducts, href: '/visitor/products' },
     { label: la.navFarmMap,  href: '/visitor/map'      },
+    { label: la.navSafetyMap, href: '/visitor/spray-restrictions' },
   ];
 
   return (

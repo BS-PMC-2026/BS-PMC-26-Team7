@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/context/LanguageContext';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
@@ -44,24 +45,6 @@ type NavGroup = {
   icon: React.ReactNode;
   items: NavItem[];
 };
-
-/* -------------------------------------------------------------------------- */
-/* Navigation structure                                                         */
-/* -------------------------------------------------------------------------- */
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: 'inventory',
-    label: 'Inventory',
-    icon: <Boxes size={15} />,
-    items: [
-      { label: 'Stock',    href: '/manager/inventory',        icon: <Boxes size={14} />,       description: 'Warehouse stock levels' },
-      { label: 'Plants',   href: '/manager/inventory/plants', icon: <Sprout size={14} />,      description: 'Plant tracking' },
-      { label: 'Peppers',  href: '/manager/peppers',          icon: <Leaf size={14} />,        description: 'Pepper variety catalog' },
-      { label: 'Products', href: '/manager/products',         icon: <ShoppingBag size={14} />, description: 'Product catalog' },
-    ],
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                      */
@@ -85,29 +68,90 @@ function timeAgo(dateStr: string | null | undefined): string {
 export default function ManagerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t, dir } = useLanguage();
   const {
     unreadCount,
     clearUnread,
     liveAlerts,
     completedTasks,
     sprayAlerts = [],
-    sprayUnreadCount = 0,
     acknowledgeSprayAlert,
+    overdueAlerts = [],
+    acknowledgeOverdueAlert,
   } = useAnomalyNotification();
 
   const [openGroup,  setOpenGroup]  = useState<string | null>(null);
   const [bellOpen,   setBellOpen]   = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
+  const [dismissed, setDismissed] = useState<Record<string, number[]>>({
+    sensor: [],
+    spray: [],
+    overdue: [],
+    completed: [],
+  });
 
   const navRef        = useRef<HTMLElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navGroups: NavGroup[] = [
+    {
+      id: 'inventory',
+      label: t.nav.inventory,
+      icon: <Boxes size={15} />,
+      items: [
+        { label: t.nav.stock,    href: '/manager/inventory',        icon: <Boxes size={14} />,       description: t.nav.stockSub },
+        { label: t.nav.plants,   href: '/manager/inventory/plants', icon: <Sprout size={14} />,      description: t.nav.plantsSub },
+        { label: t.nav.peppers,  href: '/manager/peppers',          icon: <Leaf size={14} />,        description: t.nav.peppersSub },
+        { label: t.nav.products, href: '/manager/products',         icon: <ShoppingBag size={14} />, description: t.nav.productsSub },
+      ],
+    },
+  ];
 
-  const activeAlerts      = liveAlerts.filter((a) => !a.isResolved).slice(0, 6);
-  const activeAlertsCount = liveAlerts.filter((a) => !a.isResolved).length;
-  const recentCompleted   = completedTasks.slice(0, 6);
-  const recentSprayAlerts = sprayAlerts.slice(0, 6);
+  const dismissedSensor = new Set(dismissed.sensor);
+  const dismissedSpray = new Set(dismissed.spray);
+  const dismissedOverdue = new Set(dismissed.overdue);
+  const dismissedCompleted = new Set(dismissed.completed);
+  const activeAlerts      = liveAlerts.filter((a) => !a.isResolved && !dismissedSensor.has(a.alertId)).slice(0, 6);
+  const activeAlertsCount = liveAlerts.filter((a) => !a.isResolved && !dismissedSensor.has(a.alertId)).length;
+  const recentCompleted   = completedTasks.filter((task) => !dismissedCompleted.has(task.id)).slice(0, 6);
+  const recentSprayAlerts = sprayAlerts.filter((alert) => !dismissedSpray.has(alert.SprayAlertId)).slice(0, 6);
+  const recentOverdueAlerts = overdueAlerts.filter((alert) => !alert.IsResolved && !dismissedOverdue.has(alert.OverdueAlertId)).slice(0, 6);
+  const historyItems = [
+    ...liveAlerts.filter((a) => dismissedSensor.has(a.alertId)).map((a) => ({ kind: 'sensor' as const, id: a.alertId, title: `${a.metricName}: ${a.actualValue}`, meta: [a.zoneName, a.pepperName].filter(Boolean).join(' · '), time: a.createdAtUtc })),
+    ...sprayAlerts.filter((a) => dismissedSpray.has(a.SprayAlertId)).map((a) => ({ kind: 'spray' as const, id: a.SprayAlertId, title: a.ZoneName, meta: [a.PesticideName, a.ReportStatus].filter(Boolean).join(' · '), time: a.CreatedAt })),
+    ...overdueAlerts.filter((a) => dismissedOverdue.has(a.OverdueAlertId)).map((a) => ({ kind: 'overdue' as const, id: a.OverdueAlertId, title: a.ZoneName, meta: a.Message, time: a.CreatedAt })),
+    ...completedTasks.filter((t) => dismissedCompleted.has(t.id)).map((task) => ({ kind: 'completed' as const, id: task.id, title: task.title, meta: task.taskType ?? '', time: task.completedAt ?? task.createdAt })),
+  ].sort((a, b) => new Date(b.time ?? '').getTime() - new Date(a.time ?? '').getTime());
 
-  const badgeCount = activeAlertsCount + sprayUnreadCount + (unreadCount > activeAlertsCount ? unreadCount - activeAlertsCount : 0);
+  const visibleSprayUnread = sprayAlerts.filter((alert) => !alert.IsRead && !dismissedSpray.has(alert.SprayAlertId)).length;
+  const visibleOverdueUnread = overdueAlerts.filter((alert) => !alert.IsRead && !alert.IsResolved && !dismissedOverdue.has(alert.OverdueAlertId)).length;
+  const badgeCount = activeAlertsCount + visibleSprayUnread + visibleOverdueUnread + Math.max(0, unreadCount - liveAlerts.filter((a) => !a.isResolved).length);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('pepper-farm-manager-dismissed-notifications');
+      if (raw) setDismissed({ sensor: [], spray: [], overdue: [], completed: [], ...JSON.parse(raw) });
+    } catch {
+      setDismissed({ sensor: [], spray: [], overdue: [], completed: [] });
+    }
+  }, []);
+
+  const persistDismissed = (next: Record<string, number[]>) => {
+    setDismissed(next);
+    localStorage.setItem('pepper-farm-manager-dismissed-notifications', JSON.stringify(next));
+  };
+
+  const dismissNotification = (kind: 'sensor' | 'spray' | 'overdue' | 'completed', id: number) => {
+    persistDismissed({ ...dismissed, [kind]: Array.from(new Set([...(dismissed[kind] ?? []), id])) });
+  };
+
+  const restoreNotification = (kind: 'sensor' | 'spray' | 'overdue' | 'completed', id: number) => {
+    persistDismissed({ ...dismissed, [kind]: (dismissed[kind] ?? []).filter((item) => item !== id) });
+  };
+
+  const clearGroup = (kind: 'sensor' | 'spray' | 'overdue' | 'completed', ids: number[]) => {
+    persistDismissed({ ...dismissed, [kind]: Array.from(new Set([...(dismissed[kind] ?? []), ...ids])) });
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -164,7 +208,7 @@ export default function ManagerNavbar() {
   return (
     <motion.header
       ref={navRef as React.RefObject<HTMLElement>}
-      dir="ltr"
+      dir={dir}
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
           ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
@@ -200,7 +244,7 @@ export default function ManagerNavbar() {
                 : 'text-white/50 bg-white/10 border-white/20'
             }`}
           >
-            Manager
+            {t.manager.label}
           </span>
         </Link>
 
@@ -208,16 +252,16 @@ export default function ManagerNavbar() {
         <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
         {/* Dashboard */}
-        <NavLinkDirect href="/manager" label="Dashboard" icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
+        <NavLinkDirect href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
 
         {/* Tasks */}
-        <NavLinkDirect href="/manager/tasks" label="Tasks" icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
+        <NavLinkDirect href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
 
         {/* Sensor Explorer */}
-        <NavLinkDirect href="/manager/sensors" label="Sensor Explorer" icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
+        <NavLinkDirect href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
 
         {/* Inventory dropdown */}
-        {NAV_GROUPS.map((group) => {
+        {navGroups.map((group) => {
           const active = isGroupActive(group);
           const open   = openGroup === group.id;
 
@@ -305,13 +349,13 @@ export default function ManagerNavbar() {
         })}
 
         {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
-        <NavLinkDirect href="/manager/spray-map" label="Spray Map" icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
+        <NavLinkDirect href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
 
         {/* Analytics */}
-        <NavLinkDirect href="/manager/reports" label="Analytics" icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
+        <NavLinkDirect href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
 
         {/* Users */}
-        <NavLinkDirect href="/manager/users" label="Users" icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
+        <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -320,7 +364,7 @@ export default function ManagerNavbar() {
         <div className="relative">
           <button
             onClick={handleBellClick}
-            aria-label="Notifications"
+            aria-label={t.notifications.notifications}
             aria-expanded={bellOpen}
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
@@ -368,7 +412,7 @@ export default function ManagerNavbar() {
                 {/* Panel header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
                   <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
-                    Notifications
+                    {t.notifications.notifications}
                   </span>
                   <button
                     onClick={() => setBellOpen(false)}
@@ -378,32 +422,65 @@ export default function ManagerNavbar() {
                   </button>
                 </div>
 
+                <div className="px-3.5 pt-2 flex items-center gap-1">
+                  <button
+                    onClick={() => setNotificationTab('active')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium ${notificationTab === 'active' ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]'}`}
+                  >
+                    {t.notifications.active}
+                  </button>
+                  <button
+                    onClick={() => setNotificationTab('history')}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium ${notificationTab === 'history' ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]'}`}
+                  >
+                    {t.notifications.history}
+                  </button>
+                  {notificationTab === 'history' && historyItems.length > 0 && (
+                    <button
+                      onClick={() => persistDismissed({ sensor: [], spray: [], overdue: [], completed: [] })}
+                      className="ml-auto text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
+                    >
+                      {t.notifications.clearHistory}
+                    </button>
+                  )}
+                </div>
+
                 {/* Active Sensor Alerts section */}
+                {notificationTab === 'active' ? (
+                <>
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
-                      Active Alerts
+                      {t.notifications.activeAlerts}
                     </span>
+                    {activeAlerts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => clearGroup('sensor', activeAlerts.map((alert) => alert.alertId))}
+                        className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                      >
+                        {t.notifications.clearGroup}
+                      </button>
+                    )}
                     <Link
                       href="/manager/sensors?tab=anomalies"
                       onClick={() => setBellOpen(false)}
                       className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
-                      View all <ExternalLink size={9} />
+                      {t.common.viewAll} <ExternalLink size={9} />
                     </Link>
                   </div>
 
                   {activeAlerts.length === 0 ? (
-                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No active alerts</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noActiveAlerts}</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {activeAlerts.map((alert) => (
-                        <Link
+                        <div
                           key={alert.alertId}
-                          href={`/manager/sensors?tab=anomalies&openAlertId=${alert.alertId}`}
-                          onClick={() => setBellOpen(false)}
                           className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
+                          <Link href={`/manager/sensors?tab=anomalies&openAlertId=${alert.alertId}`} onClick={() => setBellOpen(false)} className="contents">
                           <span className={`mt-0.5 shrink-0 ${alert.severity === 'High' ? 'text-red-500' : 'text-amber-500'}`}>
                             <AlertTriangle size={13} />
                           </span>
@@ -420,7 +497,17 @@ export default function ManagerNavbar() {
                           <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(alert.createdAtUtc)}
                           </span>
-                        </Link>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => dismissNotification('sensor', alert.alertId)}
+                            aria-label={t.notifications.dismiss}
+                            title={t.notifications.dismiss}
+                            className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -433,32 +520,44 @@ export default function ManagerNavbar() {
                 <div className="px-3.5 pt-2 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
-                      Spray Alerts
+                      {t.notifications.sprayAlerts}
                     </span>
+                    {recentSprayAlerts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => clearGroup('spray', recentSprayAlerts.map((alert) => alert.SprayAlertId))}
+                        className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                      >
+                        {t.notifications.clearGroup}
+                      </button>
+                    )}
                     <Link
                       href="/manager/spray-map#spray-alerts"
                       onClick={() => setBellOpen(false)}
                       className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
-                      View all <ExternalLink size={9} />
+                      {t.common.viewAll} <ExternalLink size={9} />
                     </Link>
                   </div>
 
                   {recentSprayAlerts.length === 0 ? (
-                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No spray alerts</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noSprayAlerts}</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {recentSprayAlerts.map((alert) => (
-                        <Link
+                        <div
                           key={alert.SprayAlertId}
-                          href="/manager/spray-map#spray-alerts"
-                          onClick={() => {
-                            setBellOpen(false);
-                            if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
-                          }}
                           className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}
-                          data-testid="spray-alert-item"
                         >
+                          <Link
+                            href="/manager/spray-map#spray-alerts"
+                            onClick={() => {
+                              setBellOpen(false);
+                              if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
+                            }}
+                            className="contents"
+                            data-testid="spray-alert-item"
+                          >
                           <span className={`mt-0.5 shrink-0 ${
                             alert.Severity === 'high' ? 'text-red-500' :
                             alert.Severity === 'medium' ? 'text-amber-500' :
@@ -478,7 +577,20 @@ export default function ManagerNavbar() {
                           <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
                             {timeAgo(alert.CreatedAt)}
                           </span>
-                        </Link>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
+                              dismissNotification('spray', alert.SprayAlertId);
+                            }}
+                            aria-label={t.notifications.dismiss}
+                            title={t.notifications.dismiss}
+                            className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -487,53 +599,110 @@ export default function ManagerNavbar() {
                 {/* Divider */}
                 <div className="h-px bg-[var(--color-border)] my-1" />
 
-                {/* Completed Tasks section */}
-                <div className="px-3.5 pt-2 pb-3">
+                <div className="px-3.5 pt-2 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
-                      Completed Tasks
+                      {t.notifications.overdueSprayAlerts}
                     </span>
-                    <Link
-                      href="/manager/tasks?tab=history"
-                      onClick={() => setBellOpen(false)}
-                      className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
-                    >
-                      View history <ExternalLink size={9} />
+                    {recentOverdueAlerts.length > 0 && (
+                      <button type="button" onClick={() => clearGroup('overdue', recentOverdueAlerts.map((alert) => alert.OverdueAlertId))} className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]">
+                        {t.notifications.clearGroup}
+                      </button>
+                    )}
+                    <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                      {t.common.viewAll} <ExternalLink size={9} />
                     </Link>
                   </div>
 
-                  {recentCompleted.length === 0 ? (
-                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">No completed tasks yet</p>
+                  {recentOverdueAlerts.length === 0 ? (
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noOverdueAlerts}</p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
-                      {recentCompleted.map((task) => (
-                        <Link
-                          key={task.id}
-                          href="/manager/tasks?tab=history"
-                          onClick={() => setBellOpen(false)}
-                          className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
-                        >
-                          <span className="mt-0.5 shrink-0 text-green-500">
-                            <CheckCircle2 size={13} />
-                          </span>
-                          <span className="flex-1 min-w-0">
-                            <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">
-                              {task.title}
+                      {recentOverdueAlerts.map((alert) => (
+                        <div key={alert.OverdueAlertId} className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}>
+                          <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => { setBellOpen(false); if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); }} className="contents">
+                            <span className={alert.Severity === 'high' ? 'mt-0.5 shrink-0 text-red-500' : 'mt-0.5 shrink-0 text-amber-500'}>
+                              <ShieldAlert size={13} />
                             </span>
-                            {task.taskType && (
-                              <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
-                                {task.taskType}
-                              </span>
-                            )}
-                          </span>
-                          <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">
-                            {timeAgo(task.completedAt)}
-                          </span>
-                        </Link>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">{alert.ZoneName}</span>
+                              <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5 truncate">{alert.Message}</span>
+                            </span>
+                            <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">{timeAgo(alert.CreatedAt)}</span>
+                          </Link>
+                          <button type="button" onClick={() => { if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); dismissNotification('overdue', alert.OverdueAlertId); }} aria-label={t.notifications.dismiss} title={t.notifications.dismiss} className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]">
+                            <X size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
                 </div>
+
+                <div className="h-px bg-[var(--color-border)] my-1" />
+
+                <div className="px-3.5 pt-2 pb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
+                      {t.notifications.completedTasks}
+                    </span>
+                    {recentCompleted.length > 0 && (
+                      <button type="button" onClick={() => clearGroup('completed', recentCompleted.map((task) => task.id))} className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]">
+                        {t.notifications.clearGroup}
+                      </button>
+                    )}
+                    <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                      {t.common.viewHistory} <ExternalLink size={9} />
+                    </Link>
+                  </div>
+
+                  {recentCompleted.length === 0 ? (
+                    <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noCompletedTasks}</p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {recentCompleted.map((task) => (
+                        <div key={task.id} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors">
+                          <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="contents">
+                            <span className="mt-0.5 shrink-0 text-green-500">
+                              <CheckCircle2 size={13} />
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">{task.title}</span>
+                              {task.taskType && <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5">{task.taskType}</span>}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)] mt-0.5">{timeAgo(task.completedAt)}</span>
+                          </Link>
+                          <button type="button" onClick={() => dismissNotification('completed', task.id)} aria-label={t.notifications.dismiss} title={t.notifications.dismiss} className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-error)]">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                </>
+                ) : (
+                  <div className="px-3.5 pt-2.5 pb-3">
+                    {historyItems.length === 0 ? (
+                      <p className="text-xs text-[var(--color-muted-foreground)] py-1.5 italic">{t.notifications.noHistory}</p>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        {historyItems.slice(0, 10).map((item) => (
+                          <div key={`${item.kind}-${item.id}`} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg bg-[var(--color-muted)]/50">
+                            <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-xs font-medium text-[var(--color-foreground)] leading-snug truncate">{item.title}</span>
+                              {item.meta && <span className="block text-[10px] text-[var(--color-muted-foreground)] mt-0.5 truncate">{item.meta}</span>}
+                            </span>
+                            <button type="button" onClick={() => restoreNotification(item.kind, item.id)} aria-label={t.notifications.restore} title={t.notifications.restore} className="shrink-0 mt-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
+                              <CheckCircle2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -548,8 +717,8 @@ export default function ManagerNavbar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          title="Sign out"
-          aria-label="Sign out"
+          title={t.notifications.signOut}
+          aria-label={t.notifications.signOut}
           className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
