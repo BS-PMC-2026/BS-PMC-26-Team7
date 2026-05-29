@@ -215,7 +215,11 @@ export default function CreateProductPage() {
       setSubmitting(true);
       const created = await createProduct(payload);
 
-      setSuccessMessage(`Product "${created.ProductName}" created successfully.`);
+      let msg = `Product "${created.ProductName}" created successfully.`;
+      if (created.emailNotificationSent) {
+        msg += ' Discount saved. Notification emails were sent to subscribed customers.';
+      }
+      setSuccessMessage(msg);
       setForm(initialForm);
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));

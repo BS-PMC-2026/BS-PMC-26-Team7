@@ -4,6 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 
+/** Convert any FastAPI/Pydantic error shape into a displayable string. */
+function normalizeApiError(detail: unknown, fallback: string): string {
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail.trim() || fallback;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((item) =>
+        typeof item === "object" && item !== null && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : null,
+      )
+      .filter(Boolean);
+    return msgs.length > 0 ? msgs.join(" · ") : fallback;
+  }
+  if (typeof detail === "object" && detail !== null && "msg" in detail) {
+    return String((detail as { msg: unknown }).msg) || fallback;
+  }
+  return fallback;
+}
+
 interface FormData {
   fullName: string;
   email:    string;
@@ -59,7 +79,7 @@ export default function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setApiError(data.detail ?? t.auth.registrationFailed);
+        setApiError(normalizeApiError(data?.detail, t.auth.registrationFailed));
         return;
       }
 

@@ -41,6 +41,7 @@ export interface NavDictionary {
   addPlantSub: string;
   updateLocation: string;
   updateLocationSub: string;
+  newsletter: string;
 }
 
 export interface CommonDictionary {
@@ -622,6 +623,99 @@ export interface ProductsDictionary {
   discountStartDateLabel:   string;
   discountEndDateLabel:     string;
   discountEndDateHint:      string;
+  discountEmailSent:        string;
+}
+
+export interface NewsletterDictionary {
+  title:                string;
+  subtitle:             string;
+  subject:              string;
+  subjectPlaceholder:   string;
+  message:              string;
+  messagePlaceholder:   string;
+  recipientGroups:      string;
+  groupCustomers:       string;
+  groupWorkers:         string;
+  groupAll:             string;
+  updateType:           string;
+  typeNewsletter:       string;
+  typeAnnouncement:     string;
+  scheduledLabel:       string;
+  labelWeekly:          string;
+  labelMonthly:         string;
+  labelGeneral:         string;
+  sendNewsletter:       string;
+  sending:              string;
+  sentSuccessfully:     string;
+  failedToSend:         string;
+  sent:                 string;
+  failed:               string;
+  skipped:              string;
+  emailLogs:            string;
+  loadLogs:             string;
+  failedToLoadLogs:     string;
+  colRecipient:         string;
+  colType:              string;
+  colSubject:           string;
+  colStatus:            string;
+  colSentAt:            string;
+  errSubjectRequired:   string;
+  errMessageRequired:   string;
+  errGroupRequired:     string;
+  // Image upload
+  uploadImage:          string;
+  uploadImageBtn:       string;
+  uploading:            string;
+  uploadFailed:         string;
+  pasteImageUrl:        string;
+  invalidImageUrl:      string;
+  imagePreview:         string;
+  // Template management
+  templates:            string;
+  newTemplate:          string;
+  editTemplate:         string;
+  deleteTemplate:       string;
+  noTemplates:          string;
+  noTemplatesDesc:      string;
+  templateTitle:        string;
+  templateTitlePlaceholder: string;
+  preheader:            string;
+  preheaderPlaceholder: string;
+  heroImageUrl:         string;
+  heroImageUrlPlaceholder: string;
+  footerText:           string;
+  footerTextPlaceholder: string;
+  ctaText:              string;
+  ctaTextPlaceholder:   string;
+  ctaUrl:               string;
+  ctaUrlPlaceholder:    string;
+  contentBlocks:        string;
+  addBlock:             string;
+  blockHeading:         string;
+  blockParagraph:       string;
+  blockImage:           string;
+  blockButton:          string;
+  blockDivider:         string;
+  blockText:            string;
+  blockAlt:             string;
+  blockUrl:             string;
+  statusDraft:          string;
+  statusReady:          string;
+  statusArchived:       string;
+  saveTemplate:         string;
+  savingTemplate:       string;
+  savedTemplate:        string;
+  previewTemplate:      string;
+  sendTemplate:         string;
+  sendingTemplate:      string;
+  templateSaved:        string;
+  templateCreated:      string;
+  templateDeleted:      string;
+  failedToSaveTemplate: string;
+  failedToLoadTemplates: string;
+  failedToPreview:      string;
+  confirmDelete:        string;
+  errTitleRequired:     string;
 }
 
 export interface MapDictionary {
@@ -957,7 +1051,8 @@ export interface Dictionary {
   visitor:    VisitorDictionary;
   landing:    LandingDictionary;
   notifications: NotificationsDictionary;
-  spray:      SprayDictionary;
+  spray:         SprayDictionary;
+  newsletter:    NewsletterDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -986,6 +1081,7 @@ const en: Dictionary = {
     addPlantSub: 'Register a new plant',
     updateLocation: 'Update Location',
     updateLocationSub: 'Move a plant to a new zone',
+    newsletter: 'Newsletter',
   },
 
   common: {
@@ -1612,6 +1708,7 @@ const en: Dictionary = {
     discountStartDateLabel:  'Start Date & Time',
     discountEndDateLabel:    'End Date & Time',
     discountEndDateHint:     'Leave empty for unlimited discount',
+    discountEmailSent:       'Discount saved. Notification emails were sent to subscribed customers.',
   },
 
   map: {
@@ -1909,6 +2006,96 @@ const en: Dictionary = {
     ppeRequired: 'PPE required',
     hazardLevel: 'Hazard level',
   },
+
+  newsletter: {
+    title:              'Newsletter & Announcements',
+    subtitle:           'Send newsletters and announcements to your farm community.',
+    subject:            'Subject',
+    subjectPlaceholder: 'e.g. Weekly Farm Update',
+    message:            'Message',
+    messagePlaceholder: 'Write your message here...',
+    recipientGroups:    'Recipient Groups',
+    groupCustomers:     'Subscribed customers',
+    groupWorkers:       'Workers',
+    groupAll:           'All relevant recipients',
+    updateType:         'Update Type',
+    typeNewsletter:     'Newsletter',
+    typeAnnouncement:   'Announcement',
+    scheduledLabel:     'Schedule',
+    labelWeekly:        'Weekly newsletter',
+    labelMonthly:       'Monthly newsletter',
+    labelGeneral:       'General announcement',
+    sendNewsletter:     'Send Newsletter',
+    sending:            'Sending...',
+    sentSuccessfully:   'Newsletter sent successfully',
+    failedToSend:       'Failed to send newsletter',
+    sent:               'Sent',
+    failed:             'Failed',
+    skipped:            'Skipped',
+    emailLogs:          'Email Logs',
+    loadLogs:           'Load Logs',
+    failedToLoadLogs:   'Failed to load email logs',
+    colRecipient:       'Recipient',
+    colType:            'Type',
+    colSubject:         'Subject',
+    colStatus:          'Status',
+    colSentAt:          'Sent At',
+    errSubjectRequired: 'Subject is required.',
+    errMessageRequired: 'Message is required.',
+    errGroupRequired:   'Please select at least one recipient group.',
+    uploadImage:        'Upload Image',
+    uploadImageBtn:     'Choose File',
+    uploading:          'Uploading...',
+    uploadFailed:       'Image upload failed.',
+    pasteImageUrl:      'Or paste URL',
+    invalidImageUrl:    'Image URL must start with https:// or http://',
+    imagePreview:       'Image preview',
+    templates:              'Newsletter Templates',
+    newTemplate:            'New Template',
+    editTemplate:           'Edit Template',
+    deleteTemplate:         'Archive Template',
+    noTemplates:            'No templates yet',
+    noTemplatesDesc:        'Create your first newsletter template to get started.',
+    templateTitle:          'Template Title',
+    templateTitlePlaceholder: 'e.g. Weekly Farm Update',
+    preheader:              'Preview Text',
+    preheaderPlaceholder:   'Short preview text shown by email clients',
+    heroImageUrl:           'Hero Image URL',
+    heroImageUrlPlaceholder: 'https://...',
+    footerText:             'Footer Text',
+    footerTextPlaceholder:  'Unsubscribe or contact info',
+    ctaText:                'Button Label',
+    ctaTextPlaceholder:     'e.g. Shop Now',
+    ctaUrl:                 'Button URL',
+    ctaUrlPlaceholder:      'https://...',
+    contentBlocks:          'Content Blocks',
+    addBlock:               'Add Block',
+    blockHeading:           'Heading',
+    blockParagraph:         'Paragraph',
+    blockImage:             'Image',
+    blockButton:            'Button',
+    blockDivider:           'Divider',
+    blockText:              'Text',
+    blockAlt:               'Alt text',
+    blockUrl:               'URL',
+    statusDraft:            'Draft',
+    statusReady:            'Ready',
+    statusArchived:         'Archived',
+    saveTemplate:           'Save Template',
+    savingTemplate:         'Saving...',
+    savedTemplate:          'Template saved',
+    previewTemplate:        'Preview',
+    sendTemplate:           'Send Newsletter',
+    sendingTemplate:        'Sending...',
+    templateSaved:          'Template saved successfully.',
+    templateCreated:        'Template created successfully.',
+    templateDeleted:        'Template archived.',
+    failedToSaveTemplate:   'Failed to save template.',
+    failedToLoadTemplates:  'Failed to load templates.',
+    failedToPreview:        'Failed to load preview.',
+    confirmDelete:          'Archive this template?',
+    errTitleRequired:       'Template title is required.',
+  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -1937,6 +2124,7 @@ const he: Dictionary = {
     addPlantSub: 'רישום צמח חדש',
     updateLocation: 'עדכון מיקום',
     updateLocationSub: 'העברת צמח לאזור חדש',
+    newsletter: 'ניוזלטר',
   },
 
   common: {
@@ -2561,6 +2749,7 @@ const he: Dictionary = {
     discountStartDateLabel:  'תאריך ושעת התחלה',
     discountEndDateLabel:    'תאריך ושעת סיום',
     discountEndDateHint:     'השאר ריק להנחה ללא הגבלת זמן',
+    discountEmailSent:       'ההנחה נשמרה. הודעות דוא"ל נשלחו ללקוחות רשומים.',
   },
 
   map: {
@@ -2857,6 +3046,96 @@ const he: Dictionary = {
     safeToHarvest: 'בטוח לקטיף',
     ppeRequired: 'ציוד מגן נדרש',
     hazardLevel: 'רמת סיכון',
+  },
+
+  newsletter: {
+    title:              'ניוזלטר והודעות',
+    subtitle:           'שלח ניוזלטרים והודעות לקהילת החווה שלך.',
+    subject:            'נושא',
+    subjectPlaceholder: 'לדוגמה: עדכון שבועי מהחווה',
+    message:            'הודעה',
+    messagePlaceholder: 'כתוב את ההודעה שלך כאן...',
+    recipientGroups:    'קבוצות נמענים',
+    groupCustomers:     'לקוחות רשומים',
+    groupWorkers:       'עובדים',
+    groupAll:           'כל הנמענים הרלוונטיים',
+    updateType:         'סוג עדכון',
+    typeNewsletter:     'ניוזלטר',
+    typeAnnouncement:   'הודעה',
+    scheduledLabel:     'תדירות',
+    labelWeekly:        'ניוזלטר שבועי',
+    labelMonthly:       'ניוזלטר חודשי',
+    labelGeneral:       'הודעה כללית',
+    sendNewsletter:     'שלח ניוזלטר',
+    sending:            'שולח...',
+    sentSuccessfully:   'הניוזלטר נשלח בהצלחה',
+    failedToSend:       'שליחת הניוזלטר נכשלה',
+    sent:               'נשלח',
+    failed:             'נכשל',
+    skipped:            'דולג',
+    emailLogs:          'יומן הודעות',
+    loadLogs:           'טען יומן',
+    failedToLoadLogs:   'טעינת יומן ההודעות נכשלה',
+    colRecipient:       'נמען',
+    colType:            'סוג',
+    colSubject:         'נושא',
+    colStatus:          'סטטוס',
+    colSentAt:          'נשלח ב',
+    errSubjectRequired: 'נושא הוא שדה חובה.',
+    errMessageRequired: 'הודעה היא שדה חובה.',
+    errGroupRequired:   'בחר לפחות קבוצת נמענים אחת.',
+    uploadImage:        'העלאת תמונה',
+    uploadImageBtn:     'בחר קובץ',
+    uploading:          'מעלה...',
+    uploadFailed:       'העלאת התמונה נכשלה.',
+    pasteImageUrl:      'או הדבק כתובת URL',
+    invalidImageUrl:    'כתובת התמונה חייבת להתחיל ב-https:// או http://',
+    imagePreview:       'תצוגה מקדימה של תמונה',
+    templates:              'תבניות ניוזלטר',
+    newTemplate:            'תבנית חדשה',
+    editTemplate:           'ערוך תבנית',
+    deleteTemplate:         'ארכב תבנית',
+    noTemplates:            'אין תבניות עדיין',
+    noTemplatesDesc:        'צור את תבנית הניוזלטר הראשונה שלך כדי להתחיל.',
+    templateTitle:          'שם תבנית',
+    templateTitlePlaceholder: 'לדוגמה: עדכון שבועי מהחווה',
+    preheader:              'טקסט תצוגה מקדימה',
+    preheaderPlaceholder:   'טקסט קצר שיוצג בלקוחות דוא"ל',
+    heroImageUrl:           'כתובת תמונת כותרת',
+    heroImageUrlPlaceholder: 'https://...',
+    footerText:             'טקסט כותרת תחתית',
+    footerTextPlaceholder:  'מידע ביטול הרשמה',
+    ctaText:                'תווית כפתור',
+    ctaTextPlaceholder:     'לדוגמה: לרכישה',
+    ctaUrl:                 'כתובת כפתור',
+    ctaUrlPlaceholder:      'https://...',
+    contentBlocks:          'בלוקי תוכן',
+    addBlock:               'הוסף בלוק',
+    blockHeading:           'כותרת',
+    blockParagraph:         'פסקה',
+    blockImage:             'תמונה',
+    blockButton:            'כפתור',
+    blockDivider:           'מפריד',
+    blockText:              'טקסט',
+    blockAlt:               'טקסט חלופי',
+    blockUrl:               'כתובת URL',
+    statusDraft:            'טיוטה',
+    statusReady:            'מוכן',
+    statusArchived:         'בארכיב',
+    saveTemplate:           'שמור תבנית',
+    savingTemplate:         'שומר...',
+    savedTemplate:          'התבנית נשמרה',
+    previewTemplate:        'תצוגה מקדימה',
+    sendTemplate:           'שלח ניוזלטר',
+    sendingTemplate:        'שולח...',
+    templateSaved:          'התבנית נשמרה בהצלחה.',
+    templateCreated:        'התבנית נוצרה בהצלחה.',
+    templateDeleted:        'התבנית הועברה לארכיב.',
+    failedToSaveTemplate:   'שמירת התבנית נכשלה.',
+    failedToLoadTemplates:  'טעינת התבניות נכשלה.',
+    failedToPreview:        'טעינת תצוגה מקדימה נכשלה.',
+    confirmDelete:          'לארכב תבנית זו?',
+    errTitleRequired:       'שם תבנית הוא שדה חובה.',
   },
 };
 

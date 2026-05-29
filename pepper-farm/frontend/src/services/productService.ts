@@ -30,6 +30,7 @@ export type ProductResponse = {
   DiscountStartDate: string | null;
   DiscountEndDate: string | null;
   DiscountIsCurrentlyValid: boolean;
+  emailNotificationSent?: boolean;   // US39: set by backend when discount emails were triggered
 };
 
 export async function createProduct(

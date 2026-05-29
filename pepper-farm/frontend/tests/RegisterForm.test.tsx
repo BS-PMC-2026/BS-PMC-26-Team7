@@ -119,4 +119,80 @@ describe('RegisterForm', () => {
       expect(screen.getByText('Network error — please try again.')).toBeInTheDocument();
     });
   });
+
+  // ── Error normalization (prevents React crash on Pydantic array) ──────────
+
+  it('does not crash when API returns Pydantic validation array — shows readable message', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok:     false,
+      status: 422,
+      json:   async () => ({
+        detail: [
+          {
+            type:  'value_error',
+            loc:   ['body', 'password'],
+            msg:   'Password must contain at least one digit.',
+            input: 'abcdef',
+            ctx:   {},
+          },
+        ],
+      }),
+    });
+
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByPlaceholderText('Your full name'),
+      { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),
+      { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Min. 6 characters'),
+      { target: { value: 'abcdef' } });
+    fireEvent.click(screen.getByText('Register'));
+
+    await waitFor(() => {
+      const el = screen.getByText('Password must contain at least one digit.');
+      // Critical: must be a plain string, not a React object crash
+      expect(typeof el.textContent).toBe('string');
+      expect(el).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to registrationFailed when detail is null', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false, status: 500,
+      json: async () => ({ detail: null }),
+    });
+
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByPlaceholderText('Your full name'),
+      { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),
+      { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Min. 6 characters'),
+      { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByText('Register'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Registration failed.')).toBeInTheDocument();
+    });
+  });
+
+  it('displays a readable string when API 500 returns a plain detail string', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false, status: 500,
+      json: async () => ({ detail: 'Unexpected server error.' }),
+    });
+
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByPlaceholderText('Your full name'),
+      { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),
+      { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Min. 6 characters'),
+      { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByText('Register'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Unexpected server error.')).toBeInTheDocument();
+    });
+  });
 });
