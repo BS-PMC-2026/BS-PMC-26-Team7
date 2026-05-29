@@ -89,7 +89,9 @@ BS-PMC-26-Team7/
 | `/manager/map` | `src/app/manager/map/page.tsx` | Farm map (plant assignment) | Zones, Plants | FarmMap |
 | `/manager/spray-map` | `src/app/manager/spray-map/page.tsx` | **US28** Spray safety map — zone spray status, last spray date, re-entry windows | `GET /api/spray-reports/zone-map` | SprayZoneMap |
 | `/manager/peppers` | `src/app/manager/peppers/page.tsx` | Pepper variety CRUD | `/api/peppers/*` | PepperCard, PepperForm, DeletePepperModal |
-| `/manager/products` | `src/app/manager/products/page.tsx` | Product catalog | `/api/products/*` | Product components |
+| `/manager/products` | `src/app/manager/products/page.tsx` | Product catalog | `/api/products/*` | ProductCard (shared across all catalog screens) |
+| `/manager/products/create` | `src/app/manager/products/create/page.tsx` | **US38** Create product — includes discount controls: active toggle, percentage input, optional start/end datetime | `POST /api/products` | discount fields section |
+| `/manager/products/[id]/edit` | `src/app/manager/products/[productId]/edit/page.tsx` | **US38** Edit product — same discount controls; existing discount dates loaded and displayed in local time | `GET /api/products/{id}`, `PUT /api/products/{id}` | discount fields section |
 | `/manager/reports` | `src/app/manager/reports/page.tsx` | Reports & export | `/api/tasks/report`, `/api/inventory/report` | ExportModal |
 | `/manager/users` | `src/app/manager/users/page.tsx` | User role management | `/api/users/*` | UserRoleTable |
 | `/worker` | `src/app/worker/page.tsx` | Worker dashboard | `/api/tasks/my` | Task summary |
@@ -97,7 +99,8 @@ BS-PMC-26-Team7/
 | `/worker/spray-report` | `src/app/worker/spray-report/page.tsx` | Spray reporting | `/api/spray-reports/*` | SprayReport form |
 | `/worker/inventory` | `src/app/worker/inventory/page.tsx` | View inventory | `/api/inventory/*` | InventoryReport (read-only) |
 | `/worker/plants` | `src/app/worker/plants/page.tsx` | View plants | `/api/plants/*` | Plant list |
-| `/worker/products` | `src/app/worker/products/page.tsx` | View products | `/api/products/*` | Product list |
+| `/visitor/products` | `src/app/visitor/products/page.tsx` | **US38** Public product catalog — shows discount badge, strikethrough original price, discounted price, expiry or "unlimited offer" label for each active discount | `GET /api/products` | ProductCard |
+| `/worker/products` | `src/app/worker/products/page.tsx` | **US38** Worker product catalog — same discount display as visitor catalog | `GET /api/products` | ProductCard |
 | `/manager/spray-alerts` | `src/app/manager/spray-alerts/page.tsx` | **US30** Redirect only — immediately sends to `/manager/spray-map#spray-alerts` (keeps old bookmarks working) | — | — |
 | `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30 + US32** Spray safety map (zones) + Spray Alert History + Overdue Spray Alerts section (`id="overdue-spray-alerts"`) with assign-task modal | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts`, `GET /api/spray-reports/overdue-alerts`, `POST /api/spray-reports/overdue-alerts/{id}/assign` | SprayZoneMap, spray-alerts table, overdue-alerts table, AssignModal |
 | `/worker/spray-restrictions` | `src/app/worker/spray-restrictions/page.tsx` | **US31 + US33** Read-only spray restriction map for workers — shows which zones are restricted + explicit entry permission status (allowed / restricted / caution / planned_warning / no_data) | `GET /api/spray-reports/restricted-zones` | SprayZoneMap, restriction banner, entry permission column, zone table |
@@ -357,6 +360,9 @@ BS-PMC-26-Team7/
 27. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
     `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
 
+28. **US38: Products support optional discounts (unlimited or time-limited).**  
+    Four columns were added to `Products` via `database/migrations/add_discount_fields_to_products.sql` (safe to re-run): `DiscountPercentage DECIMAL(5,2)`, `DiscountActive BIT NOT NULL DEFAULT 0`, `DiscountStartDate DATETIME2 NULL`, `DiscountEndDate DATETIME2 NULL`. Discount validity is computed server-side inside `ProductResponse.compute_discount_validity()` (Pydantic model validator): valid when `DiscountActive=true` AND `DiscountPercentage > 0` AND start date has passed (if set) AND end date has not passed (if set). `FinalPrice = round(Price × (1 − DiscountPercentage/100), 2)` when valid; otherwise `FinalPrice = Price`. An **unlimited discount** has `DiscountActive=true`, `DiscountPercentage > 0`, and `DiscountEndDate=NULL` — it stays active until the manager disables it. All three catalog screens (manager `/manager/products`, worker `/worker/products`, visitor `/visitor/products`) share `ProductCard`, which shows the discount badge (`N% OFF`), strikethrough original price, discounted price in green, and an end-date or "Unlimited offer" label for currently-valid discounts. Expired discounts do not show a badge, strikethrough, or discounted price anywhere. Backend datetime fields are stored as naive UTC; the frontend always appends `'Z'` when parsing API-returned date strings to avoid local-timezone misinterpretation.
+
 ---
 
 ## 11. Testing Map
@@ -373,7 +379,8 @@ BS-PMC-26-Team7/
 | Backend — spray alerts | Unit/API | `tests/test_spray_alerts_api.py` (21 tests — list, get, mark-read, role enforcement, graceful failure when table missing) | same |
 | Backend — overdue spray alerts | Unit/API | `tests/test_overdue_spray_alerts_api.py` (27 tests — overdue check logic, duplicate prevention, CRUD, task assignment idempotency, spray report resolution, manual trigger, US28/US30 regression) | same |
 | Backend — users | Unit/API | `tests/test_users_api.py`, `test_user_service.py` | same |
-| Backend — products | Unit/API | `tests/test_create_product_item.py`, `test_product_authorization.py` | same |
+| Backend — products | Unit/API | `tests/test_create_product_item.py`, `test_product_authorization.py`, `tests/test_product_discounts.py` (20 tests — schema validation, price computation, expired/unlimited/time-limited discount, create/update/catalog with discount) | same |
+| Frontend — products (US38) | Jest | `tests/ProductCard.test.tsx` (13 tests — discount badge, strikethrough price, unlimited/timed end-date labels, expired discount hidden, frontend UTC safety check) | `npm --prefix pepper-farm/frontend run test` |
 | Backend — plants | Unit | `tests/test_plant_service.py` | same |
 | Backend — map | Unit | `tests/test_farm_map.py` | same |
 | Frontend — components | Jest | `tests/*.test.tsx` (LoginForm, RegisterForm, TaskCard, PepperCard, etc.) | `npm --prefix pepper-farm/frontend run test` |
@@ -457,6 +464,6 @@ Files a new agent should read first when starting work:
 
 ## 14. Last Updated
 
-- **Generated:** 2026-05-23 (US33 added — post-spray entry safety check; entry permission status computed server-side and displayed on public + worker spray restriction maps)
+- **Generated:** 2026-05-29 (US38 added — product discounts; unlimited and time-limited discount support; discount badge, strikethrough price, and discounted price displayed in all catalog screens; manager create/edit forms include discount controls; UTC datetime handling documented)
 - **Method:** Manual initial creation based on full codebase scan; AUTO-GENERATED sections can be refreshed by running `python scripts/generate_project_context.py` from the repo root.
 - **To update:** Run `npm run context:update` or `python scripts/generate_project_context.py`. The script rewrites only content between `<!-- AUTO-GENERATED-START:* -->` and `<!-- AUTO-GENERATED-END:* -->` markers. All other sections are left untouched.
