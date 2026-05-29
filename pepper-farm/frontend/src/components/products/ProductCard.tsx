@@ -11,10 +11,33 @@ interface ProductCardProps {
   showEditButton?: boolean;
 }
 
+/**
+ * The backend stores datetimes as naive UTC and FastAPI serialises them without
+ * a 'Z' suffix.  JavaScript's Date constructor treats strings without a timezone
+ * marker as **local time**, not UTC, which breaks comparisons in non-UTC zones.
+ * Appending 'Z' forces correct UTC interpretation.
+ */
+function parseUtcDate(isoStr: string): Date {
+  return new Date(
+    isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr + 'Z'
+  );
+}
+
+/** Frontend safety check: re-validates expiry even if backend already computed it. */
+function isDiscountCurrentlyActive(product: ProductResponse): boolean {
+  if (!product.DiscountActive || !product.DiscountIsCurrentlyValid) return false;
+  const now = new Date();
+  if (product.DiscountStartDate && parseUtcDate(product.DiscountStartDate) > now) return false;
+  if (product.DiscountEndDate && parseUtcDate(product.DiscountEndDate) < now) return false;
+  return true;
+}
+
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
   const { t } = useLanguage();
   const pr = t.products;
   const outOfStock = product.AllocatedQuantity === 0;
+  const discountValid = isDiscountCurrentlyActive(product);
+  const displayPrice = discountValid ? product.FinalPrice : product.Price;
 
   return (
     <Card
@@ -44,6 +67,12 @@ export default function ProductCard({ product, showEditButton = false }: Product
             {pr.outOfStock}
           </span>
         )}
+
+        {discountValid && (
+          <span className="absolute top-2 right-2 rounded-full bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wide">
+            {Math.round(product.DiscountPercentage)}{pr.discountOff}
+          </span>
+        )}
       </div>
 
       <div className="p-4 flex flex-col gap-2 flex-1">
@@ -59,7 +88,27 @@ export default function ProductCard({ product, showEditButton = false }: Product
         )}
 
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
-          <p className="text-sm font-bold text-gray-900">${Number(product.Price).toFixed(2)}</p>
+          <div>
+            {discountValid ? (
+              <>
+                <p className="text-xs text-gray-400 line-through" dir="ltr">
+                  ${Number(product.Price).toFixed(2)}
+                </p>
+                <p className="text-sm font-bold text-green-700" dir="ltr">
+                  ${Number(displayPrice).toFixed(2)}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  {product.DiscountEndDate
+                    ? `${pr.discountEnds} ${parseUtcDate(product.DiscountEndDate).toLocaleDateString()}`
+                    : pr.discountUnlimited}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm font-bold text-gray-900" dir="ltr">
+                ${Number(product.Price).toFixed(2)}
+              </p>
+            )}
+          </div>
           <p className={`text-xs font-medium ${outOfStock ? 'text-red-600' : 'text-gray-600'}`} dir="ltr">
             {outOfStock ? pr.outOfStock : `${product.AllocatedQuantity} ${pr.unitsLeft}`}
           </p>

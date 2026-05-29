@@ -25,6 +25,10 @@ def create_product(db: Session, product_data: ProductCreate) -> Product:
         ImageUrl=product_data.ImageUrl,
         PepperId=product_data.PepperId,
         IsActive=product_data.IsActive,
+        DiscountPercentage=product_data.DiscountPercentage,
+        DiscountActive=product_data.DiscountActive,
+        DiscountStartDate=product_data.DiscountStartDate,
+        DiscountEndDate=product_data.DiscountEndDate,
     )
 
     db.add(product)
@@ -63,6 +67,10 @@ def _serialize(row) -> dict:
         "PepperId": product.PepperId,
         "IsActive": product.IsActive,
         "AllocatedQuantity": int(allocated),
+        "DiscountPercentage": float(product.DiscountPercentage or 0),
+        "DiscountActive": bool(product.DiscountActive),
+        "DiscountStartDate": product.DiscountStartDate,
+        "DiscountEndDate": product.DiscountEndDate,
     }
 
 
@@ -112,6 +120,10 @@ def update_product(db: Session, product_id: int, product_data: ProductCreate) ->
     product.ImageUrl           = product_data.ImageUrl
     product.PepperId           = product_data.PepperId
     product.IsActive           = product_data.IsActive
+    product.DiscountPercentage = product_data.DiscountPercentage
+    product.DiscountActive     = product_data.DiscountActive
+    product.DiscountStartDate  = product_data.DiscountStartDate
+    product.DiscountEndDate    = product_data.DiscountEndDate
 
     db.commit()
     db.refresh(product)

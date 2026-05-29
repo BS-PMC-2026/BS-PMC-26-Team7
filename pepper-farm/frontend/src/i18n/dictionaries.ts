@@ -611,6 +611,17 @@ export interface ProductsDictionary {
   outOfStock:               string;
   unitsLeft:                string;
   editProduct:              string;
+  // Discount display (ProductCard)
+  discountOff:              string;
+  discountUnlimited:        string;
+  discountEnds:             string;
+  // Discount form fields
+  discountSection:          string;
+  discountActiveLabel:      string;
+  discountPercentageLabel:  string;
+  discountStartDateLabel:   string;
+  discountEndDateLabel:     string;
+  discountEndDateHint:      string;
 }
 
 export interface MapDictionary {
@@ -1592,6 +1603,15 @@ const en: Dictionary = {
     outOfStock:     'Out of stock',
     unitsLeft:      'left',
     editProduct:    '✏️ Edit',
+    discountOff:           '% OFF',
+    discountUnlimited:     'Unlimited offer',
+    discountEnds:          'Ends',
+    discountSection:       'Discount Settings',
+    discountActiveLabel:   'Discount Active',
+    discountPercentageLabel: 'Discount Percentage (%)',
+    discountStartDateLabel:  'Start Date & Time',
+    discountEndDateLabel:    'End Date & Time',
+    discountEndDateHint:     'Leave empty for unlimited discount',
   },
 
   map: {
@@ -2532,6 +2552,15 @@ const he: Dictionary = {
     outOfStock:     'אזל מהמלאי',
     unitsLeft:      'נותרו',
     editProduct:    '✏️ ערוך',
+    discountOff:           '% הנחה',
+    discountUnlimited:     'מבצע ללא הגבלה',
+    discountEnds:          'מסתיים',
+    discountSection:       'הגדרות הנחה',
+    discountActiveLabel:   'הנחה פעילה',
+    discountPercentageLabel: 'אחוז הנחה (%)',
+    discountStartDateLabel:  'תאריך ושעת התחלה',
+    discountEndDateLabel:    'תאריך ושעת סיום',
+    discountEndDateHint:     'השאר ריק להנחה ללא הגבלת זמן',
   },
 
   map: {
