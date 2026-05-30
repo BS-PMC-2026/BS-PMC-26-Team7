@@ -4,10 +4,31 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 
+/** Convert any FastAPI/Pydantic error shape into a displayable string. */
+function normalizeApiError(detail: unknown, fallback: string): string {
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail.trim() || fallback;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((item) =>
+        typeof item === "object" && item !== null && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : null,
+      )
+      .filter(Boolean);
+    return msgs.length > 0 ? msgs.join(" · ") : fallback;
+  }
+  if (typeof detail === "object" && detail !== null && "msg" in detail) {
+    return String((detail as { msg: unknown }).msg) || fallback;
+  }
+  return fallback;
+}
+
 interface FormData {
-  fullName: string;
-  email:    string;
-  password: string;
+  fullName:     string;
+  email:        string;
+  password:     string;
+  emailConsent: boolean;
 }
 
 interface FieldErrors {
@@ -20,7 +41,9 @@ export default function RegisterForm() {
   const router = useRouter();
   const { t } = useLanguage();
 
-  const [form,     setForm]     = useState<FormData>({ fullName: "", email: "", password: "" });
+  const [form,     setForm]     = useState<FormData>({
+    fullName: "", email: "", password: "", emailConsent: false,
+  });
   const [errors,   setErrors]   = useState<FieldErrors>({});
   const [apiError, setApiError] = useState("");
   const [success,  setSuccess]  = useState(false);
@@ -39,9 +62,15 @@ export default function RegisterForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: undefined });
-    setApiError("");
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    if (name !== "emailConsent") {
+      setErrors({ ...errors, [name]: undefined });
+      setApiError("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +88,7 @@ export default function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setApiError(data.detail ?? t.auth.registrationFailed);
+        setApiError(normalizeApiError(data?.detail, t.auth.registrationFailed));
         return;
       }
 
@@ -140,6 +169,19 @@ export default function RegisterForm() {
           <span className="text-red-500 text-xs">{errors.password}</span>
         )}
       </div>
+
+      {/* US40: email consent checkbox — unchecked by default */}
+      <label className="flex items-start gap-2 cursor-pointer text-sm text-gray-600">
+        <input
+          name="emailConsent"
+          type="checkbox"
+          checked={form.emailConsent}
+          onChange={handleChange}
+          className="mt-0.5 accent-green-600"
+          data-testid="email-consent-checkbox"
+        />
+        <span>{t.consent.agreeToEmails}</span>
+      </label>
 
       {apiError && (
         <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm">

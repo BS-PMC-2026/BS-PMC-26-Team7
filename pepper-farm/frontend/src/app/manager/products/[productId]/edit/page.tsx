@@ -209,7 +209,11 @@ export default function EditProductPage() {
     try {
       setSubmitting(true);
       const updated = await updateProduct(Number(productId), payload);
-      setSuccessMessage(`Product "${updated.ProductName}" updated successfully.`);
+      let msg = `Product "${updated.ProductName}" updated successfully.`;
+      if (updated.emailNotificationSent) {
+        msg += ' Discount saved. Notification emails were sent to subscribed customers.';
+      }
+      setSuccessMessage(msg);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Failed to update product.'

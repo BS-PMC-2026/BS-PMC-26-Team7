@@ -21,6 +21,12 @@ import {
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/context/LanguageContext';
+import {
+  getUnreadCount,
+  markAllNotificationsRead,
+  getMyNotifications,
+} from '@/services/notificationsService';
+import type { AppNotification } from '@/services/notificationsService';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
@@ -71,6 +77,44 @@ export default function WorkerNavbar() {
   const router   = useRouter();
   const { t, dir } = useLanguage();
   const { unreadCount, clearUnread, newTasks, activeTasks } = useWorkerNotification();
+
+  // US40: in-app notifications (messages/announcements only — NOT newsletter emails)
+  const [appNotifCount,   setAppNotifCount]   = useState(0);
+  const [appNotifOpen,    setAppNotifOpen]    = useState(false);
+  const [appNotifs,       setAppNotifs]       = useState<AppNotification[]>([]);
+  const [appNotifLoading, setAppNotifLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const { unreadCount: count } = await getUnreadCount();
+        if (!cancelled) setAppNotifCount(count);
+      } catch { /* table not yet created — ignore */ }
+    };
+    poll();
+    const id = setInterval(poll, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  async function openAppNotifs() {
+    setAppNotifOpen(true);
+    setAppNotifLoading(true);
+    try {
+      const list = await getMyNotifications();
+      setAppNotifs(list);
+      setAppNotifCount(list.filter((n) => !n.isRead).length);
+    } catch { /* ignore */ }
+    finally { setAppNotifLoading(false); }
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      await markAllNotificationsRead();
+      setAppNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setAppNotifCount(0);
+    } catch { /* ignore */ }
+  }
 
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [bellOpen,  setBellOpen]  = useState(false);
@@ -163,7 +207,11 @@ export default function WorkerNavbar() {
     const next = !bellOpen;
     setBellOpen(next);
     setOpenGroup(null);
-    if (next) clearUnread();
+    if (next) {
+      clearUnread();
+      // Fix A: load in-app notifications when bell opens so the panel shows real details
+      openAppNotifs();
+    }
   };
 
   const handleLogout = () => {
@@ -294,7 +342,7 @@ export default function WorkerNavbar() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bell */}
+        {/* Bell — unified: task notifications + in-app messages (Fix E: single bell) */}
         <div className="relative">
           <button
             onClick={handleBellClick}
@@ -303,13 +351,13 @@ export default function WorkerNavbar() {
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
                 ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
-                : visibleUnreadCount > 0
+                : (visibleUnreadCount + appNotifCount) > 0
                   ? scrolled ? 'text-red-500 hover:bg-[var(--color-error-bg)]' : 'text-red-300 hover:bg-white/10'
                   : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
             }`}
           >
             <motion.span
-              animate={visibleUnreadCount > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
+              animate={(visibleUnreadCount + appNotifCount) > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
               transition={{ duration: 0.5, ease: 'easeInOut' }}
               className="flex"
             >
@@ -317,7 +365,7 @@ export default function WorkerNavbar() {
             </motion.span>
 
             <AnimatePresence>
-              {visibleUnreadCount > 0 && (
+              {(visibleUnreadCount + appNotifCount) > 0 && (
                 <motion.span
                   key="badge"
                   initial={{ scale: 0, opacity: 0 }}
@@ -325,8 +373,9 @@ export default function WorkerNavbar() {
                   exit={{ scale: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+                  data-testid="worker-bell-badge"
                 >
-                  {visibleUnreadCount > 99 ? '99+' : visibleUnreadCount}
+                  {(visibleUnreadCount + appNotifCount) > 99 ? '99+' : (visibleUnreadCount + appNotifCount)}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -394,6 +443,7 @@ export default function WorkerNavbar() {
 
                 {/* Section */}
                 {notificationTab === 'active' ? (
+                <>
                 <div className="px-3.5 pt-2.5 pb-1">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
@@ -447,6 +497,34 @@ export default function WorkerNavbar() {
                     </div>
                   )}
                 </div>
+
+                {/* Fix E: in-app messages inside the unified bell panel */}
+                {(appNotifs.length > 0 || appNotifCount > 0) && (
+                  <div className="border-t border-[var(--color-border)] px-3.5 pt-2 pb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
+                        {t.appNotifications.appNotifications}
+                      </span>
+                      {appNotifCount > 0 && (
+                        <button onClick={handleMarkAllRead} className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
+                          {t.appNotifications.markAllAsRead}
+                        </button>
+                      )}
+                    </div>
+                    {appNotifLoading
+                      ? <p className="text-xs text-[var(--color-muted-foreground)] italic py-1">{t.common.loading}</p>
+                      : appNotifs.length === 0
+                        ? <p className="text-xs text-[var(--color-muted-foreground)] italic py-1">{t.appNotifications.noNotifications}</p>
+                        : appNotifs.slice(0, 5).map((n) => (
+                          <div key={n.notificationId} className={`px-2 py-1.5 rounded-lg mb-0.5 ${!n.isRead ? 'bg-[var(--color-muted)]/60' : ''}`} data-testid={`notif-item-${n.notificationId}`}>
+                            <p className="text-xs font-medium text-[var(--color-foreground)] truncate">{n.title}</p>
+                            {n.message && <p className="text-[10px] text-[var(--color-muted-foreground)] truncate">{n.message}</p>}
+                          </div>
+                        ))
+                    }
+                  </div>
+                )}
+                </>
                 ) : (
                 <div className="px-3.5 pt-2.5 pb-3">
                   {historyTasks.length === 0 ? (

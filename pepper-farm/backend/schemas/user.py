@@ -15,6 +15,7 @@ class RegisterRequest(BaseModel):
     fullName: str
     email: EmailStr
     password: str
+    emailConsent: bool = False   # US40: opt-in to newsletters; unchecked by default
 
     @field_validator("fullName")
     @classmethod

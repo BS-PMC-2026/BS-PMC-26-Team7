@@ -82,6 +82,7 @@ class ProductResponse(BaseModel):
     DiscountStartDate: Optional[datetime] = None
     DiscountEndDate: Optional[datetime] = None
     DiscountIsCurrentlyValid: bool = False
+    emailNotificationSent: Optional[bool] = None   # US39: set by router when discount emails were triggered
 
     class Config:
         from_attributes = True
