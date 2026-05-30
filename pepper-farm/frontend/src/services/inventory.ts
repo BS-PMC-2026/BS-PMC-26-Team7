@@ -34,5 +34,5 @@ export async function updateInventory(
 }
 
 export async function getInventoryByVariety(): Promise<InventoryByVariety[]> {
-  return apiFetch<InventoryByVariety[]>("/api/inventory/by-variety");
+  return apiFetch<InventoryByVariety[]>("/api/inventory/by-variety", { timeoutMs: 30_000 });
 }
