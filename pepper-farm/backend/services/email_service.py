@@ -41,7 +41,9 @@ def send_email(to_email: str, subject: str, body_html: str, body_text: str = "")
         msg.attach(MIMEText(body_text, "plain", "utf-8"))
     msg.attach(MIMEText(body_html, "html", "utf-8"))
 
-    with smtplib.SMTP(host, port) as smtp:
+    # 30-second connection timeout prevents a single bad recipient from blocking
+    # the entire bulk-send loop indefinitely.
+    with smtplib.SMTP(host, port, timeout=30) as smtp:
         smtp.ehlo()
         smtp.starttls()
         smtp.ehlo()

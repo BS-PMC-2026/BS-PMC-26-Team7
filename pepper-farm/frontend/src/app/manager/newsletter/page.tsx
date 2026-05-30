@@ -18,6 +18,10 @@ import {
   updateTemplate,
   uploadNewsletterImage,
 } from '@/services/emailsService';
+import {
+  AnnounceRole,
+  publishAnnouncement,
+} from '@/services/notificationsService';
 import { useLanguage } from '@/context/LanguageContext';
 
 /* ── Utility ─────────────────────────────────────────────────────────────────── */
@@ -297,7 +301,7 @@ function BlockEditor({ blocks, onChange, t }: BlockEditorProps) {
 
 /* ── Main page ────────────────────────────────────────────────────────────────── */
 
-type View = 'list' | 'editor' | 'preview' | 'logs';
+type View = 'list' | 'editor' | 'preview' | 'logs' | 'announce';
 
 export default function NewsletterPage() {
   const { t } = useLanguage();
@@ -325,6 +329,14 @@ export default function NewsletterPage() {
   const [sendErr,    setSendErr]    = useState('');
 
   const [logs,       setLogs]       = useState<EmailLogEntry[]>([]);
+
+  // In-app announcement state (separate from newsletter email)
+  const [announceTitle,   setAnnounceTitle]   = useState('');
+  const [announceMsg,     setAnnounceMsg]     = useState('');
+  const [announceRoles,   setAnnounceRoles]   = useState<Set<AnnounceRole>>(new Set(['workers']));
+  const [announcing,      setAnnouncing]      = useState(false);
+  const [announceResult,  setAnnounceResult]  = useState('');
+  const [announceErr,     setAnnounceErr]     = useState('');
   const [logsLoading,setLogsLoading]= useState(false);
   const [logsError,  setLogsError]  = useState('');
 
@@ -428,6 +440,21 @@ export default function NewsletterPage() {
     catch (err) { setSendErr(err instanceof Error ? err.message : tn.failedToSend); }
   }
 
+  async function handleAnnounce() {
+    if (!announceTitle.trim()) { setAnnounceErr(tn.errTitleRequired); return; }
+    if (announceRoles.size === 0) { setAnnounceErr('Select at least one recipient group.'); return; }
+    setAnnouncing(true); setAnnounceResult(''); setAnnounceErr('');
+    try {
+      const r = await publishAnnouncement(announceTitle.trim(), announceMsg.trim() || null, Array.from(announceRoles));
+      setAnnounceResult(`${tn.announceSent} ${r.notificationsCreated} user(s).`);
+      setAnnounceTitle(''); setAnnounceMsg('');
+    } catch (err) {
+      setAnnounceErr(err instanceof Error ? err.message : tn.announcementFailed);
+    } finally {
+      setAnnouncing(false);
+    }
+  }
+
   async function loadLogs() {
     setLogsLoading(true); setLogsError('');
     setView('logs');
@@ -453,6 +480,12 @@ export default function NewsletterPage() {
             className={`px-3 py-1.5 text-sm rounded-lg border transition ${view === 'logs' ? 'bg-[var(--color-primary)] text-white border-transparent' : 'border-[var(--color-border)] hover:bg-[var(--color-muted)]'}`}
             data-testid="logs-tab-btn">
             {logsLoading ? t.common.loading : tn.emailLogs}
+          </button>
+          {/* In-app announcement — email is NOT sent, only app notification */}
+          <button onClick={() => { setAnnounceResult(''); setAnnounceErr(''); setView('announce'); }}
+            className={`px-3 py-1.5 text-sm rounded-lg border transition ${view === 'announce' ? 'bg-amber-500 text-white border-transparent' : 'border-[var(--color-border)] hover:bg-amber-50 text-amber-600'}`}
+            data-testid="announce-tab-btn">
+            📢 {tn.announceTitle}
           </button>
           <button onClick={openCreate}
             className="px-3 py-1.5 text-sm rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition"
@@ -541,8 +574,16 @@ export default function NewsletterPage() {
                 {sendErr && <p className="text-sm text-[var(--color-error)] mb-3" data-testid="send-modal-error">{sendErr}</p>}
                 {sendResult && (
                   <div className="rounded-md bg-[var(--color-secondary-light)] px-3 py-2 mb-3 text-sm" data-testid="send-result">
-                    <p className="font-medium text-[var(--color-primary)]">{tn.sentSuccessfully}</p>
-                    <p className="mt-0.5">{tn.sent}: {sendResult.sentCount} · {tn.failed}: {sendResult.failedCount} · {tn.skipped}: {sendResult.skippedCount}</p>
+                    <p className="font-medium text-[var(--color-primary)]">
+                      {sendResult.queued ? tn.sendTemplate : tn.sentSuccessfully}
+                    </p>
+                    {sendResult.queued ? (
+                      /* Queued: show totalRecipients as the meaningful number */
+                      <p className="mt-0.5">{sendResult.message}</p>
+                    ) : (
+                      /* Synchronous (legacy) path: show individual counts */
+                      <p className="mt-0.5">{tn.sent}: {sendResult.sentCount} · {tn.failed}: {sendResult.failedCount} · {tn.skipped}: {sendResult.skippedCount}</p>
+                    )}
                   </div>
                 )}
                 <div className="flex gap-2 justify-end">
@@ -738,6 +779,69 @@ export default function NewsletterPage() {
               </table>
             </div>
           )}
+        </section>
+      )}
+
+      {/* ── ANNOUNCE VIEW — in-app only, no email ── */}
+      {view === 'announce' && (
+        <section data-testid="announce-section">
+          <div className="mb-4 flex items-center gap-3">
+            <button onClick={() => setView('list')} className="text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+              ← {tn.templates}
+            </button>
+            <h2 className="text-xl font-semibold text-amber-600">{tn.announceTitle}</h2>
+          </div>
+          <p className="text-sm text-[var(--color-muted-foreground)] mb-4">{tn.announceSubtitle}</p>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50/30 p-5 space-y-4 max-w-lg">
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t.newsletter.templateTitle} *</label>
+              <input type="text" value={announceTitle} maxLength={200}
+                onChange={(e) => setAnnounceTitle(e.target.value)}
+                placeholder="e.g. System maintenance tonight at 22:00"
+                className="w-full rounded border border-[var(--color-border)] px-3 py-2 text-sm"
+                data-testid="announce-title" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t.newsletter.message}</label>
+              <textarea rows={3} value={announceMsg}
+                onChange={(e) => setAnnounceMsg(e.target.value)}
+                placeholder="Optional additional details..."
+                className="w-full rounded border border-[var(--color-border)] px-3 py-2 text-sm"
+                data-testid="announce-message" />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium">{t.newsletter.recipientGroups}</p>
+              <div className="flex flex-wrap gap-3">
+                {(['workers', 'visitors', 'all'] as AnnounceRole[]).map((r) => (
+                  <label key={r} className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={announceRoles.has(r)}
+                      onChange={() => setAnnounceRoles(prev => {
+                        const next = new Set(prev);
+                        next.has(r) ? next.delete(r) : next.add(r);
+                        return next;
+                      })}
+                      data-testid={`announce-role-${r}`} />
+                    <span className="text-sm">
+                      {r === 'workers' ? tn.announceToWorkers
+                        : r === 'visitors' ? tn.announceToVisitors
+                        : tn.announceToAll}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {announceErr    && <p className="text-sm text-[var(--color-error)]" data-testid="announce-error">{announceErr}</p>}
+            {announceResult && <p className="text-sm text-green-700" data-testid="announce-result">{announceResult}</p>}
+
+            <button onClick={handleAnnounce} disabled={announcing}
+              className="rounded-md bg-amber-500 px-5 py-2 text-white hover:bg-amber-600 disabled:opacity-60 transition"
+              data-testid="announce-submit">
+              {announcing ? tn.publishing : tn.publishAnnouncement}
+            </button>
+          </div>
         </section>
       )}
     </main>

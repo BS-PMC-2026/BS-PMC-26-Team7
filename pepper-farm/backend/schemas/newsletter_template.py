@@ -148,3 +148,4 @@ class SendTemplateResponse(BaseModel):
     failedCount: int
     skippedCount: int
     message: str
+    queued: bool = False   # True when SMTP delivery is happening in background

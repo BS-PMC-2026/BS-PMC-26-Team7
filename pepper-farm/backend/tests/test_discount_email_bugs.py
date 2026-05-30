@@ -96,12 +96,12 @@ def test_discount_html_with_token_has_unsubscribe_link(monkeypatch):
 
 
 def test_discount_html_without_token_has_fallback_footer(monkeypatch):
-    """Bug B fix: even without a token (pre-migration), there must be
-    some unsubscribe/preference link in the footer."""
+    """Bug B fix: footer must never be empty; spec says no profile link in fallback."""
     monkeypatch.setenv("FRONTEND_BASE_URL", "https://shop.example.com")
     html = _build_discount_html("Pepper", 50.0, 10.0, None, "")
-    # Must have either a profile link or an unsubscribe reference
-    assert "/profile" in html or "unsubscribe" in html.lower()
+    # Must have SOME footer content — but no profile link per spec
+    assert "<p" in html.lower()
+    assert "/profile" not in html
 
 
 def test_discount_html_includes_price_details():

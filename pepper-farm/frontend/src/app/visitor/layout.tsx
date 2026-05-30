@@ -119,11 +119,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        {/* Profile link */}
-        <Link href="/profile" className="text-xs text-gray-500 hover:text-green-700 no-underline transition">
-          {t.consent.emailSubscription}
-        </Link>
-
         {/* Logout */}
         <button onClick={handleLogout} aria-label="Sign out" className="text-gray-400 hover:text-red-500 transition">
           <LogOut size={14} />

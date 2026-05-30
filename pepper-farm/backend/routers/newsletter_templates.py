@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import SessionLocal, get_db
 from models.email_log import EmailLog
 from models.role import Role
 from models.user import User
@@ -262,15 +262,78 @@ def preview_newsletter_template(
         raise HTTPException(status_code=500, detail="Failed to render preview.")
 
 
+# ── Background sender ─────────────────────────────────────────────────────────
+
+def _send_template_bg(
+    template_id: int,
+    manager_id: int,
+    recipients: List[dict],   # plain dicts: {user_id, email, name, rtype}
+) -> None:
+    """Background task: renders template per-recipient and sends via SMTP.
+    Uses its own DB session.  Does NOT create in-app Notification rows.
+    """
+    db = SessionLocal()
+    try:
+        t = get_template(db, template_id)
+        plain_base = render_plain_text(t)
+
+        for r in recipients:
+            token      = get_or_create_token(db, r["user_id"])
+            html_body  = render_html(t, unsubscribe_token=token)
+            plain_text = plain_base + build_unsubscribe_footer_text(token)
+            try:
+                send_email(r["email"], t.Subject, html_body, plain_text)
+                log = EmailLog(
+                    RecipientEmail=r["email"],
+                    RecipientName=r["name"],
+                    RecipientType=r["rtype"],
+                    Subject=t.Subject,
+                    MessagePreview=plain_text[:200],
+                    EmailType="newsletter",
+                    Status="sent",
+                    SentAtUtc=datetime.now(timezone.utc).replace(tzinfo=None),
+                    CreatedBy=manager_id,
+                )
+            except Exception as exc:
+                log = EmailLog(
+                    RecipientEmail=r["email"],
+                    RecipientName=r["name"],
+                    RecipientType=r["rtype"],
+                    Subject=t.Subject,
+                    MessagePreview=plain_text[:200],
+                    EmailType="newsletter",
+                    Status="failed",
+                    ErrorMessage=str(exc)[:500],
+                    CreatedBy=manager_id,
+                )
+            db.add(log)
+
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
+    finally:
+        db.close()
+
+
 # ── Send endpoint ──────────────────────────────────────────────────────────────
 
 @router.post("/{template_id}/send", response_model=SendTemplateResponse)
 def send_newsletter_template(
     template_id: int,
     request: SendTemplateRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role("FarmManager")),
 ):
+    """Queue template email delivery in background.
+
+    Returns immediately with queued=True and recipient count.
+    This endpoint does NOT create in-app Notification rows.
+    """
     given_groups = [g.lower() for g in request.recipientGroups]
     valid = {"customers", "workers", "all"}
     if not given_groups or not any(g in valid for g in given_groups):
@@ -290,73 +353,30 @@ def send_newsletter_template(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    plain_text_base = render_plain_text(t)
     recipients = _get_recipients(db, given_groups)
-    manager_id: int = current_user["user_id"]
+    recipient_data = [
+        {
+            "user_id": u.UserId,
+            "email":   u.Email,
+            "name":    u.FullName,
+            "rtype":   _recipient_type(_role_name(u)),
+        }
+        for u in recipients
+    ]
 
-    sent_count = 0
-    failed_count = 0
-    skipped_count = 0
+    background_tasks.add_task(
+        _send_template_bg,
+        template_id=template_id,
+        manager_id=current_user["user_id"],
+        recipients=recipient_data,
+    )
 
-    for user in recipients:
-        role = _role_name(user)
-        rtype = _recipient_type(role)
-
-        # US40: per-recipient unsubscribe link injected into the rendered HTML/text
-        token      = get_or_create_token(db, user.UserId)
-        html_body  = render_html(t, unsubscribe_token=token)
-        plain_text = plain_text_base + build_unsubscribe_footer_text(token)
-
-        try:
-            send_email(user.Email, t.Subject, html_body, plain_text)
-            sent_count += 1
-            log = EmailLog(
-                RecipientEmail=user.Email,
-                RecipientName=user.FullName,
-                RecipientType=rtype,
-                Subject=t.Subject,
-                MessagePreview=plain_text[:200],
-                EmailType="newsletter",
-                Status="sent",
-                SentAtUtc=datetime.now(timezone.utc).replace(tzinfo=None),
-                RelatedProductId=None,
-                CreatedBy=manager_id,
-            )
-        except Exception as exc:
-            failed_count += 1
-            log = EmailLog(
-                RecipientEmail=user.Email,
-                RecipientName=user.FullName,
-                RecipientType=rtype,
-                Subject=t.Subject,
-                MessagePreview=plain_text[:200],
-                EmailType="newsletter",
-                Status="failed",
-                ErrorMessage=str(exc)[:500],
-                CreatedBy=manager_id,
-            )
-
-        try:
-            db.add(log)
-        except Exception:
-            pass
-
-    try:
-        db.commit()
-    except OperationalError as exc:
-        db.rollback()
-        if "invalid object name" in str(exc).lower():
-            print("[newsletter-templates] EmailLogs table missing — logs not persisted")
-        else:
-            traceback.print_exc()
-    except Exception:
-        db.rollback()
-
-    total = sent_count + failed_count + skipped_count
     return SendTemplateResponse(
-        totalRecipients=total,
-        sentCount=sent_count,
-        failedCount=failed_count,
-        skippedCount=skipped_count,
-        message=f"Sent: {sent_count}, failed: {failed_count}, skipped: {skipped_count}.",
+        totalRecipients=len(recipient_data),
+        sentCount=0,
+        failedCount=0,
+        skippedCount=0,
+        message=f"Newsletter queued for {len(recipient_data)} recipient(s). "
+                "Check email logs for delivery status.",
+        queued=True,
     )

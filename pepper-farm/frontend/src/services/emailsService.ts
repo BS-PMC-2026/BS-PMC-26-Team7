@@ -20,6 +20,7 @@ export interface NewsletterResult {
   failedCount: number;
   skippedCount: number;
   message: string;
+  queued?: boolean;   // true when sending is happening in background
 }
 
 export interface EmailLogEntry {
@@ -106,6 +107,7 @@ export interface SendTemplateResult {
   failedCount: number;
   skippedCount: number;
   message: string;
+  queued?: boolean;   // true when delivery is happening in background
 }
 
 export interface PreviewResult {

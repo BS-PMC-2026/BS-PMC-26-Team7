@@ -1,24 +1,31 @@
 """
 US40 — In-App Notifications (messages / system announcements only)
-Newsletters and promotional emails do NOT create rows here.
 
-GET  /api/notifications              → own notifications list (authenticated)
-GET  /api/notifications/unread-count → unread count (authenticated)
-PUT  /api/notifications/{id}/read    → mark single as read (authenticated, own only)
-PUT  /api/notifications/mark-all-read → mark all own as read (authenticated)
-POST /api/notifications/broadcast    → FarmManager creates system announcement for all/role
+IMPORTANT: Newsletters and promotional emails do NOT create rows here.
+Only explicit app announcements/messages create Notification rows.
+
+GET  /api/notifications                → own notifications (authenticated)
+GET  /api/notifications/unread-count   → unread count (authenticated)
+PUT  /api/notifications/{id}/read      → mark single as read (own only)
+PUT  /api/notifications/mark-all-read  → mark all own as read
+POST /api/notifications/broadcast      → FarmManager → single user
+POST /api/notifications/announce       → FarmManager → all users by role (in-app only, no email)
 """
 import traceback
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import OperationalError, ProgrammingError, SQLAlchemyError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models.notification import Notification
+from models.role import Role
+from models.user import User
 from schemas.notification import (
+    AnnounceRequest,
+    AnnounceResponse,
     NotificationCreate,
     NotificationResponse,
     UnreadCountResponse,
@@ -224,3 +231,83 @@ def broadcast_notification(
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to create notification.")
+
+
+# ── In-app announcement endpoint ───────────────────────────────────────────────
+
+@router.post("/announce", response_model=AnnounceResponse, status_code=201)
+def announce_to_roles(
+    payload: AnnounceRequest,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_role("FarmManager")),
+):
+    """Create in-app Notification rows for all active users of the given roles.
+
+    This is the ONLY path that creates app notifications.
+    Newsletter email sends and discount email sends must NOT call this.
+    recipientRoles accepts: "workers", "visitors", "all"
+    """
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Title is required.")
+
+    role_map = {"workers": "Worker", "visitors": "Visitor", "all": None}
+    given = [r.lower() for r in payload.recipientRoles]
+    valid = {"workers", "visitors", "all"}
+    if not given or not any(g in valid for g in given):
+        raise HTTPException(
+            status_code=400,
+            detail="recipientRoles must include at least one of: workers, visitors, all.",
+        )
+
+    try:
+        users: List[User] = []
+        seen: set[int] = set()
+
+        def _collect(role_name: Optional[str]) -> None:
+            q = db.query(User).join(Role, User.RoleId == Role.RoleId).filter(User.IsActive == True)  # noqa: E712
+            if role_name:
+                q = q.filter(Role.RoleName == role_name)
+            for u in q.all():
+                if u.UserId not in seen:
+                    seen.add(u.UserId)
+                    users.append(u)
+
+        if "all" in given:
+            _collect(None)
+        else:
+            if "workers" in given:
+                _collect("Worker")
+            if "visitors" in given:
+                _collect("Visitor")
+
+        created = 0
+        for u in users:
+            n = Notification(
+                UserId=u.UserId,
+                Title=payload.title.strip(),
+                Message=payload.message,
+                NotificationType="system",
+            )
+            db.add(n)
+            created += 1
+
+        db.commit()
+        return AnnounceResponse(
+            notificationsCreated=created,
+            message=f"In-app announcement sent to {created} user(s).",
+        )
+
+    except (OperationalError, ProgrammingError) as exc:
+        db.rollback()
+        if _is_table_missing(exc):
+            raise HTTPException(
+                status_code=503,
+                detail="Notifications table not yet available. "
+                       "Run database/migrations/create_notifications_table.sql.",
+            )
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to create announcements.")
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to create announcements.")

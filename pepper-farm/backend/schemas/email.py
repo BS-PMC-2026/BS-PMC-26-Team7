@@ -17,6 +17,7 @@ class NewsletterResponse(BaseModel):
     failedCount: int
     skippedCount: int
     message: str
+    queued: bool = False   # True when sending is happening in background
 
 
 class EmailLogResponse(BaseModel):

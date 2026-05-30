@@ -716,6 +716,17 @@ export interface NewsletterDictionary {
   failedToPreview:      string;
   confirmDelete:        string;
   errTitleRequired:     string;
+  // In-app announcement (separate from email newsletter)
+  announceTitle:        string;
+  announceSubtitle:     string;
+  announceToWorkers:    string;
+  announceToVisitors:   string;
+  announceToAll:        string;
+  publishAnnouncement:  string;
+  publishing:           string;
+  announcementPublished: string;
+  announcementFailed:   string;
+  announceSent:         string;
 }
 
 export interface MapDictionary {
@@ -2124,6 +2135,16 @@ const en: Dictionary = {
     failedToPreview:        'Failed to load preview.',
     confirmDelete:          'Archive this template?',
     errTitleRequired:       'Template title is required.',
+    announceTitle:          'In-App Announcement',
+    announceSubtitle:       'Publish a message that appears in the in-app notification bell (no email sent).',
+    announceToWorkers:      'Workers',
+    announceToVisitors:     'Customers / Visitors',
+    announceToAll:          'Everyone',
+    publishAnnouncement:    'Publish Announcement',
+    publishing:             'Publishing...',
+    announcementPublished:  'Announcement published successfully.',
+    announcementFailed:     'Failed to publish announcement.',
+    announceSent:           'Announcement sent to',
   },
 
   consent: {
@@ -3192,6 +3213,16 @@ const he: Dictionary = {
     failedToPreview:        'טעינת תצוגה מקדימה נכשלה.',
     confirmDelete:          'לארכב תבנית זו?',
     errTitleRequired:       'שם תבנית הוא שדה חובה.',
+    announceTitle:          'הודעה אפליקטיבית',
+    announceSubtitle:       'פרסם הודעה שתופיע בפעמון ההתראות (ללא שליחת מייל).',
+    announceToWorkers:      'עובדים',
+    announceToVisitors:     'לקוחות / מבקרים',
+    announceToAll:          'כולם',
+    publishAnnouncement:    'פרסם הודעה',
+    publishing:             'מפרסם...',
+    announcementPublished:  'ההודעה פורסמה בהצלחה.',
+    announcementFailed:     'פרסום ההודעה נכשל.',
+    announceSent:           'ההודעה נשלחה לـ',
   },
 
   consent: {

@@ -207,7 +207,11 @@ export default function WorkerNavbar() {
     const next = !bellOpen;
     setBellOpen(next);
     setOpenGroup(null);
-    if (next) clearUnread();
+    if (next) {
+      clearUnread();
+      // Fix A: load in-app notifications when bell opens so the panel shows real details
+      openAppNotifs();
+    }
   };
 
   const handleLogout = () => {

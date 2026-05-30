@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/products/ProductCard';
 import Alert from '@/components/ui/Alert';
@@ -8,14 +9,48 @@ import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
 import { getProducts } from '@/services/productService';
 import { ProductResponse } from '@/services/productService';
+import { getMyConsent, updateMyConsent } from '@/services/emailConsentService';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function VisitorProductsPage() {
   const { t } = useLanguage();
   const vi = t.visitor;
-  const [products, setProducts] = useState<ProductResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
+  const [products,        setProducts]        = useState<ProductResponse[]>([]);
+  const [isLoading,       setIsLoading]       = useState(true);
+  const [loadError,       setLoadError]       = useState<string | null>(null);
+
+  // Fix D+G: determine auth state without clearing it
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setIsAuthenticated(!!token);
+  }, []);
+
+  // Fix D: email subscription state for logged-in visitors
+  const [subscribed,      setSubscribed]      = useState<boolean | null>(null);
+  const [subLoading,      setSubLoading]      = useState(false);
+  const [subMsg,          setSubMsg]          = useState('');
+  const [subErr,          setSubErr]          = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getMyConsent()
+      .then((s) => setSubscribed(s.emailConsent))
+      .catch(() => {/* consent API unavailable — hide section */});
+  }, [isAuthenticated]);
+
+  async function handleSubscribe() {
+    setSubLoading(true); setSubMsg(''); setSubErr('');
+    try {
+      const updated = await updateMyConsent(true);
+      setSubscribed(updated.emailConsent);
+      setSubMsg(t.consent.subscriptionUpdated);
+    } catch (e) {
+      setSubErr(e instanceof Error ? e.message : 'Failed to update subscription.');
+    } finally {
+      setSubLoading(false); }
+  }
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
@@ -44,20 +79,23 @@ export default function VisitorProductsPage() {
               title={vi.productCatalogTitle}
               subtitle={vi.productCatalogSubtitle}
             />
-            <div className="flex gap-3 mt-1">
-              <Link
-                href="/login"
-                className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
-              >
-                {vi.login}
-              </Link>
-              <Link
-                href="/register"
-                className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition"
-              >
-                {vi.register}
-              </Link>
-            </div>
+            {/* Fix D: Show Login/Register only when NOT authenticated */}
+            {!isAuthenticated && (
+              <div className="flex gap-3 mt-1">
+                <Link
+                  href="/login"
+                  className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
+                >
+                  {vi.login}
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition"
+                >
+                  {vi.register}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -103,6 +141,37 @@ export default function VisitorProductsPage() {
               ))}
             </div>
           </>
+        )}
+
+        {/* Fix D: Subscribe-again section — only for logged-in Visitor/Customer */}
+        {isAuthenticated && subscribed !== null && (
+          <div className="mt-12 border-t border-[var(--color-border)] pt-8" data-testid="subscribe-section">
+            {subscribed ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]" data-testid="subscribe-status-subscribed">
+                ✓ {t.consent.subscribed} — {t.consent.receiveNewsletterEmails.toLowerCase()}.
+                {' '}
+                <span className="text-xs text-[var(--color-muted-foreground)]">
+                  ({t.consent.unsubscribeFromNewsletter} is available in our emails.)
+                </span>
+              </p>
+            ) : (
+              <div>
+                <p className="text-sm text-[var(--color-muted-foreground)] mb-3" data-testid="subscribe-status-unsubscribed">
+                  {t.consent.unsubscribed} — {t.consent.receiveNewsletterEmails}.
+                </p>
+                {subMsg && <p className="text-sm text-green-700 mb-2" data-testid="subscribe-success">{subMsg}</p>}
+                {subErr && <p className="text-sm text-red-600 mb-2" data-testid="subscribe-error">{subErr}</p>}
+                <button
+                  onClick={handleSubscribe}
+                  disabled={subLoading}
+                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50 transition"
+                  data-testid="subscribe-again-btn"
+                >
+                  {subLoading ? t.common.saving : t.consent.updateSubscription}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

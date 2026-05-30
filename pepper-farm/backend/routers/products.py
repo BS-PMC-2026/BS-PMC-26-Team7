@@ -39,17 +39,10 @@ def _build_discount_html(product_name: str, price: float, pct: float, end_date: 
         if end_date
         else "Unlimited offer — no expiry date"
     )
-    # Bug A fix: absolute catalog URL, not "#"
+    # Absolute catalog URL (Bug A fix from previous session)
     catalog_url = f"{get_frontend_base_url()}/visitor/products"
-    # Bug B fix: always show unsubscribe footer; fall back to profile page when token not available
+    # build_unsubscribe_footer_html always returns something now (shared helper)
     unsubscribe_html = build_unsubscribe_footer_html(unsubscribe_token)
-    if not unsubscribe_html:
-        profile_url = f"{get_frontend_base_url()}/profile"
-        unsubscribe_html = (
-            f'<p style="margin:8px 0 0;font-size:11px;color:#aaa">'
-            f'To manage email preferences, visit your '
-            f'<a href="{profile_url}" style="color:#aaa;text-decoration:underline">profile page</a>.</p>'
-        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <body style="font-family:Arial,sans-serif;color:#222;max-width:600px;margin:auto;padding:24px">

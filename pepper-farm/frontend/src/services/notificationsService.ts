@@ -32,3 +32,21 @@ export async function markNotificationRead(notificationId: number): Promise<void
 export async function markAllNotificationsRead(): Promise<void> {
   await apiFetch<unknown>('/api/notifications/mark-all-read', { method: 'PUT' });
 }
+
+export type AnnounceRole = 'workers' | 'visitors' | 'all';
+
+export interface AnnounceResult {
+  notificationsCreated: number;
+  message: string;
+}
+
+export async function publishAnnouncement(
+  title: string,
+  message: string | null,
+  recipientRoles: AnnounceRole[],
+): Promise<AnnounceResult> {
+  return apiFetch<AnnounceResult>('/api/notifications/announce', {
+    method: 'POST',
+    body: JSON.stringify({ title, message, recipientRoles }),
+  });
+}

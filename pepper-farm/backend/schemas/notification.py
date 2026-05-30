@@ -30,3 +30,19 @@ class NotificationCreate(BaseModel):
 
 class UnreadCountResponse(BaseModel):
     unreadCount: int
+
+
+class AnnounceRequest(BaseModel):
+    """Broadcast an in-app announcement to all users of the given roles.
+
+    This creates Notification rows — it does NOT send emails.
+    Separate from newsletter/discount emails which do NOT create notifications.
+    """
+    title: str
+    message: Optional[str] = None
+    recipientRoles: list[str] = ["workers"]  # "workers" | "visitors" | "all"
+
+
+class AnnounceResponse(BaseModel):
+    notificationsCreated: int
+    message: str

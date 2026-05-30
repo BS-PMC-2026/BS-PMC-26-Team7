@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -38,9 +38,10 @@ def _read_consent(db: Session, user_id: int) -> dict:
             "emailMarketingConsentUpdatedAtUtc": row[1],
             "emailUnsubscribedAtUtc":            row[2],
         }
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
+        # Bug C fix: SQL Server raises ProgrammingError for "Invalid column name".
+        # Both exception types indicate columns haven't been migrated yet.
         db.rollback()
-        # US40 columns not yet migrated — return safe defaults
         return {
             "emailConsent":                      False,
             "emailMarketingConsentUpdatedAtUtc": None,
@@ -95,7 +96,7 @@ def update_my_consent(
                 {"now": now, "uid": user_id},
             )
         db.commit()
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
         db.rollback()
         raise HTTPException(
             status_code=503,
@@ -130,9 +131,9 @@ def unsubscribe_by_token(
             """),
             {"token": token},
         ).fetchone()
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
         db.rollback()
-        # Column doesn't exist yet — return generic success to avoid information leak
+        # Columns don't exist yet — return generic success to avoid information leak
         return UnsubscribeResponse(success=True, message="You have been unsubscribed.")
 
     if not row:

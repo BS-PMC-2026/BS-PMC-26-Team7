@@ -49,22 +49,30 @@ def build_unsubscribe_url(token: str) -> str:
 
 
 def build_unsubscribe_footer_html(token: str) -> str:
-    """Return a ready-to-embed HTML footer row with the unsubscribe link.
-    Returns empty string when no token is available (pre-migration).
+    """Return a ready-to-embed HTML footer with the unsubscribe link.
+
+    Spec (Bug B fix): the word 'unsubscribe' must be a clickable link.
+    The link must be token-based and must NOT point to the profile page.
+    When no token is available yet (US40 migration pending), show a plain
+    note without any link rather than linking to the wrong destination.
     """
     url = build_unsubscribe_url(token)
-    if not url:
-        return ""
+    if url:
+        return (
+            f'<p style="margin:8px 0 0;font-size:11px;color:#aaa">'
+            f'To stop receiving promotional emails and newsletters, '
+            f'<a href="{url}" style="color:#aaa;text-decoration:underline">click here to unsubscribe</a>.</p>'
+        )
+    # No token yet (migration pending) — plain text, no profile link
     return (
-        f'<p style="margin:8px 0 0;font-size:11px;color:#aaa">'
-        f'<a href="{url}" style="color:#aaa;text-decoration:underline">'
-        f"Unsubscribe from newsletters</a></p>"
+        '<p style="margin:8px 0 0;font-size:11px;color:#aaa">'
+        "You are receiving this email because you subscribed to Pepper Farm updates.</p>"
     )
 
 
 def build_unsubscribe_footer_text(token: str) -> str:
     """Return a plain-text unsubscribe line."""
     url = build_unsubscribe_url(token)
-    if not url:
-        return ""
-    return f"\n---\nTo unsubscribe from marketing emails: {url}"
+    if url:
+        return f"\n---\nTo stop receiving promotional emails, unsubscribe here: {url}"
+    return "\n---\nYou are receiving this email because you subscribed to Pepper Farm updates."
