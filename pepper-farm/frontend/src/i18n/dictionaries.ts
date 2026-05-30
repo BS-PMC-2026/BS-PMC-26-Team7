@@ -1069,6 +1069,93 @@ export interface AppNotificationsDictionary {
   notificationBell:   string;
 }
 
+export interface StoreDictionary {
+  // Cart
+  addToCart:              string;
+  buyNow:                 string;
+  cart:                   string;
+  cartEmpty:              string;
+  cartEmptyDesc:          string;
+  continueShopping:       string;
+  removeItem:             string;
+  quantity:               string;
+  outOfStock:             string;
+  onlyNLeft:              string;
+  itemUnavailable:        string;
+  proceedToCheckout:      string;
+  // Pricing
+  originalPrice:          string;
+  productDiscount:        string;
+  employeeDiscount:       string;
+  couponDiscount:         string;
+  total:                  string;
+  subtotal:               string;
+  currency:               string;
+  // Coupon
+  couponCode:             string;
+  applyCoupon:            string;
+  couponApplied:          string;
+  couponInvalid:          string;
+  removeCoupon:           string;
+  // Checkout
+  checkout:               string;
+  payWithCard:            string;
+  payWithPaypal:          string;
+  cardholderName:         string;
+  cardNumber:             string;
+  expiryDate:             string;
+  cvv:                    string;
+  placeOrder:             string;
+  processing:             string;
+  mockPaypalTitle:        string;
+  mockPaypalBody:         string;
+  mockPaypalConfirm:      string;
+  // Validation
+  errCardholderRequired:  string;
+  errCardNumberInvalid:   string;
+  errCardExpired:         string;
+  errCvvInvalid:          string;
+  // Success
+  orderSuccess:           string;
+  orderNumber:            string;
+  orderThankYou:          string;
+  viewOrders:             string;
+  receiptEmailQueued:     string;
+  transactionId:          string;
+  // Manager: coupons
+  coupons:                string;
+  newCoupon:              string;
+  editCoupon:             string;
+  discountType:           string;
+  discountValue:          string;
+  percentageDiscount:     string;
+  fixedDiscount:          string;
+  activeCoupon:           string;
+  maxUses:                string;
+  minOrderAmount:         string;
+  couponCreated:          string;
+  couponUpdated:          string;
+  couponDeactivated:      string;
+  // Manager: employee discount
+  employeeDiscountTitle:  string;
+  globalDiscountPct:      string;
+  productOverrides:       string;
+  addOverride:            string;
+  useGlobal:              string;
+  excluded:               string;
+  customPercent:          string;
+  overrideSaved:          string;
+  overrideRemoved:        string;
+  // Orders
+  myOrders:               string;
+  orderDate:              string;
+  orderStatus:            string;
+  orderItems:             string;
+  paymentMethod:          string;
+  mockCreditCard:         string;
+  mockPaypal:             string;
+}
+
 export interface Dictionary {
   nav:        NavDictionary;
   common:     CommonDictionary;
@@ -1093,6 +1180,7 @@ export interface Dictionary {
   newsletter:    NewsletterDictionary;
   consent:       ConsentDictionary;
   appNotifications: AppNotificationsDictionary;
+  store:         StoreDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -2173,6 +2261,84 @@ const en: Dictionary = {
     noNotifications:     'No notifications yet.',
     notificationBell:    'Open notifications',
   },
+
+  store: {
+    addToCart:              'Add to Cart',
+    buyNow:                 'Buy Now',
+    cart:                   'Cart',
+    cartEmpty:              'Your cart is empty',
+    cartEmptyDesc:          'Browse products and add items to get started.',
+    continueShopping:       'Continue Shopping',
+    removeItem:             'Remove',
+    quantity:               'Quantity',
+    outOfStock:             'Out of Stock',
+    onlyNLeft:              'Only {n} left',
+    itemUnavailable:        'Item unavailable',
+    proceedToCheckout:      'Proceed to Checkout',
+    originalPrice:          'Original price',
+    productDiscount:        'Product discount',
+    employeeDiscount:       'Employee discount',
+    couponDiscount:         'Coupon discount',
+    total:                  'Total',
+    subtotal:               'Subtotal',
+    currency:               'ILS',
+    couponCode:             'Coupon Code',
+    applyCoupon:            'Apply',
+    couponApplied:          'Coupon applied',
+    couponInvalid:          'Invalid or expired coupon',
+    removeCoupon:           'Remove',
+    checkout:               'Checkout',
+    payWithCard:            'Pay with Credit Card',
+    payWithPaypal:          'Pay with PayPal',
+    cardholderName:         'Cardholder Name',
+    cardNumber:             'Card Number',
+    expiryDate:             'Expiry (MM/YY)',
+    cvv:                    'CVV',
+    placeOrder:             'Place Order',
+    processing:             'Processing...',
+    mockPaypalTitle:        'Mock PayPal — Demo Only',
+    mockPaypalBody:         'This is a simulated PayPal payment. No real transaction will occur.',
+    mockPaypalConfirm:      'Confirm Mock Payment',
+    errCardholderRequired:  'Cardholder name is required.',
+    errCardNumberInvalid:   'Invalid card number.',
+    errCardExpired:         'Card has expired.',
+    errCvvInvalid:          'CVV must be 3 or 4 digits.',
+    orderSuccess:           'Order Placed Successfully!',
+    orderNumber:            'Order Number',
+    orderThankYou:          'Thank you for your purchase. A receipt has been sent to your email.',
+    viewOrders:             'View My Orders',
+    receiptEmailQueued:     'Receipt email has been queued.',
+    transactionId:          'Transaction ID',
+    coupons:                'Coupons',
+    newCoupon:              'New Coupon',
+    editCoupon:             'Edit Coupon',
+    discountType:           'Discount Type',
+    discountValue:          'Discount Value',
+    percentageDiscount:     'Percentage (%)',
+    fixedDiscount:          'Fixed Amount',
+    activeCoupon:           'Active',
+    maxUses:                'Max Total Uses',
+    minOrderAmount:         'Minimum Order Amount',
+    couponCreated:          'Coupon created successfully.',
+    couponUpdated:          'Coupon updated successfully.',
+    couponDeactivated:      'Coupon deactivated.',
+    employeeDiscountTitle:  'Employee Discount Settings',
+    globalDiscountPct:      'Global Worker Discount (%)',
+    productOverrides:       'Product Overrides',
+    addOverride:            'Add Override',
+    useGlobal:              'Use Global',
+    excluded:               'Excluded',
+    customPercent:          'Custom %',
+    overrideSaved:          'Override saved.',
+    overrideRemoved:        'Override removed.',
+    myOrders:               'My Orders',
+    orderDate:              'Order Date',
+    orderStatus:            'Status',
+    orderItems:             'Items',
+    paymentMethod:          'Payment Method',
+    mockCreditCard:         'Mock Credit Card',
+    mockPaypal:             'Mock PayPal',
+  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -3250,6 +3416,84 @@ const he: Dictionary = {
     markAllAsRead:       'סמן הכל כנקרא',
     noNotifications:     'אין התראות עדיין.',
     notificationBell:    'פתח התראות',
+  },
+
+  store: {
+    addToCart:              'הוסף לסל',
+    buyNow:                 'קנה עכשיו',
+    cart:                   'סל קניות',
+    cartEmpty:              'הסל שלך ריק',
+    cartEmptyDesc:          'עיין במוצרים והוסף פריטים כדי להתחיל.',
+    continueShopping:       'המשך קנייה',
+    removeItem:             'הסר',
+    quantity:               'כמות',
+    outOfStock:             'אזל המלאי',
+    onlyNLeft:              'נותרו {n} בלבד',
+    itemUnavailable:        'פריט לא זמין',
+    proceedToCheckout:      'עבור לקופה',
+    originalPrice:          'מחיר מקורי',
+    productDiscount:        'הנחת מוצר',
+    employeeDiscount:       'הנחת עובד',
+    couponDiscount:         'הנחת קופון',
+    total:                  'סה"כ',
+    subtotal:               'סכום ביניים',
+    currency:               'ILS',
+    couponCode:             'קוד קופון',
+    applyCoupon:            'החל',
+    couponApplied:          'קופון הוחל',
+    couponInvalid:          'קופון לא תקין או פג תוקף',
+    removeCoupon:           'הסר',
+    checkout:               'קופה',
+    payWithCard:            'שלם בכרטיס אשראי',
+    payWithPaypal:          'שלם עם PayPal',
+    cardholderName:         'שם בעל הכרטיס',
+    cardNumber:             'מספר כרטיס',
+    expiryDate:             'תוקף (MM/YY)',
+    cvv:                    'CVV',
+    placeOrder:             'בצע הזמנה',
+    processing:             'מעבד...',
+    mockPaypalTitle:        'Mock PayPal — הדגמה בלבד',
+    mockPaypalBody:         'זו עסקת PayPal מדומה. לא תתבצע עסקה אמיתית.',
+    mockPaypalConfirm:      'אשר תשלום מדומה',
+    errCardholderRequired:  'שם בעל הכרטיס נדרש.',
+    errCardNumberInvalid:   'מספר כרטיס לא תקין.',
+    errCardExpired:         'הכרטיס פג תוקף.',
+    errCvvInvalid:          'CVV חייב להכיל 3 או 4 ספרות.',
+    orderSuccess:           'ההזמנה בוצעה בהצלחה!',
+    orderNumber:            'מספר הזמנה',
+    orderThankYou:          'תודה על רכישתך. קבלה נשלחה לאימייל שלך.',
+    viewOrders:             'ראה הזמנותי',
+    receiptEmailQueued:     'קבלה בדוא"ל נוצרה לשליחה.',
+    transactionId:          'מזהה עסקה',
+    coupons:                'קופונים',
+    newCoupon:              'קופון חדש',
+    editCoupon:             'ערוך קופון',
+    discountType:           'סוג הנחה',
+    discountValue:          'ערך הנחה',
+    percentageDiscount:     'אחוז (%)',
+    fixedDiscount:          'סכום קבוע',
+    activeCoupon:           'פעיל',
+    maxUses:                'מקסימום שימושים כולל',
+    minOrderAmount:         'סכום מינימלי להזמנה',
+    couponCreated:          'קופון נוצר בהצלחה.',
+    couponUpdated:          'קופון עודכן בהצלחה.',
+    couponDeactivated:      'קופון הושבת.',
+    employeeDiscountTitle:  'הגדרות הנחת עובד',
+    globalDiscountPct:      'הנחת עובד גלובלית (%)',
+    productOverrides:       'ביטולים לפי מוצר',
+    addOverride:            'הוסף ביטול',
+    useGlobal:              'השתמש בגלובלי',
+    excluded:               'מוחרג',
+    customPercent:          'אחוז מותאם',
+    overrideSaved:          'הביטול נשמר.',
+    overrideRemoved:        'הביטול הוסר.',
+    myOrders:               'הזמנותי',
+    orderDate:              'תאריך הזמנה',
+    orderStatus:            'סטטוס',
+    orderItems:             'פריטים',
+    paymentMethod:          'אמצעי תשלום',
+    mockCreditCard:         'כרטיס אשראי מדומה',
+    mockPaypal:             'PayPal מדומה',
   },
 };
 

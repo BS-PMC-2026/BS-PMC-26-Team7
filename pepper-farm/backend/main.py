@@ -7,6 +7,12 @@ from routers.emails import router as emails_router
 from routers.newsletter_templates import router as newsletter_templates_router
 from routers.email_consent import router as email_consent_router
 from routers.notifications import router as notifications_router
+from routers.cart import router as cart_router
+from routers.checkout import router as checkout_router
+from routers.payments import router as payments_router
+from routers.coupons import router as coupons_router
+from routers.employee_discount import router as employee_discount_router
+from routers.orders import router as orders_router
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -20,6 +26,11 @@ import models.spray  # noqa: F401  — registers Pesticide, SprayReport, SprayAl
 import models.email_log              # noqa: F401  — US39: EmailLogs table
 import models.newsletter_template    # noqa: F401  — US39: NewsletterTemplates table
 import models.notification           # noqa: F401  — US40: Notifications table
+import models.cart                  # noqa: F401  — US41: CartItems
+import models.order                 # noqa: F401  — US41: Orders, OrderItems
+import models.payment               # noqa: F401  — US41: PaymentRecords
+import models.coupon                # noqa: F401  — US41: Coupons, CouponRedemptions
+import models.employee_discount     # noqa: F401  — US41: EmployeeDiscountSettings, Overrides
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
@@ -90,6 +101,12 @@ app.include_router(emails_router)
 app.include_router(newsletter_templates_router)
 app.include_router(email_consent_router)
 app.include_router(notifications_router)
+app.include_router(cart_router)
+app.include_router(checkout_router)
+app.include_router(payments_router)
+app.include_router(coupons_router)
+app.include_router(employee_discount_router)
+app.include_router(orders_router)
 
 @app.get("/api/health/db")
 def db_health():

@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   ShoppingBag,
+  ShoppingCart,
   Sprout,
   ChevronDown,
   Leaf,
@@ -27,6 +28,7 @@ import {
   getMyNotifications,
 } from '@/services/notificationsService';
 import type { AppNotification } from '@/services/notificationsService';
+import { getCart } from '@/services/cartService';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
@@ -77,6 +79,22 @@ export default function WorkerNavbar() {
   const router   = useRouter();
   const { t, dir } = useLanguage();
   const { unreadCount, clearUnread, newTasks, activeTasks } = useWorkerNotification();
+
+  // US41: cart item count badge
+  const [cartCount, setCartCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const loadCart = async () => {
+      try {
+        const cart = await getCart();
+        if (!cancelled) setCartCount(cart.items.reduce((s, i) => s + i.quantity, 0));
+      } catch { /* ignore — worker may not have items */ }
+    };
+    loadCart();
+    // Re-poll cart count every 30 s so badge stays accurate
+    const id = setInterval(loadCart, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [pathname]);   // refresh whenever the route changes (e.g. after checkout)
 
   // US40: in-app notifications (messages/announcements only — NOT newsletter emails)
   const [appNotifCount,   setAppNotifCount]   = useState(0);
@@ -342,6 +360,28 @@ export default function WorkerNavbar() {
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* US41 — cart icon with item count badge (worker has full cart access) */}
+        <Link
+          href="/cart"
+          aria-label="Cart"
+          data-testid="worker-cart-icon"
+          className={`relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
+            pathname.startsWith('/cart')
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          <ShoppingCart size={15} />
+          {cartCount > 0 && (
+            <span
+              className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-green-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+              data-testid="worker-cart-badge"
+            >
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          )}
+        </Link>
+
         {/* Bell — unified: task notifications + in-app messages (Fix E: single bell) */}
         <div className="relative">
           <button
@@ -559,6 +599,19 @@ export default function WorkerNavbar() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* My Orders */}
+        <Link
+          href="/profile/orders"
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+            pathname.startsWith('/profile/orders')
+              ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
+              : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)]' : 'text-white/60 hover:opacity-100 hover:bg-white/10 hover:text-white'
+          }`}
+          data-testid="worker-my-orders-link"
+        >
+          My Orders
+        </Link>
 
         {/* Language switcher */}
         <LanguageSwitcher />

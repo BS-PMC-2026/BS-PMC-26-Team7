@@ -368,6 +368,37 @@ BS-PMC-26-Team7/
 27. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
     `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
 
+47. **US41: PayPal Sandbox (real PayPal, not mock):**
+    - **Credit card = mock only**: Validates card fields + Luhn, stores only last 4 digits + brand. Never calls any real card gateway. Mock-decline card: `4000 0000 0000 0002`. `PaymentMethod="credit_card"` in DB.
+    - **PayPal = real PayPal Sandbox**: Uses PayPal Orders API v2. No mock/fake PayPal flow. `paymentMethod="paypal"` in DB. Credentials: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` (backend-only). Frontend uses `NEXT_PUBLIC_PAYPAL_CLIENT_ID` only. Sandbox: `https://api-m.sandbox.paypal.com`.
+    - **PayPal endpoints**: `POST /api/payments/paypal/create-order`; `POST /api/payments/paypal/capture-order`; `GET /api/payments/paypal/config`.
+    - **PaymentRecord new fields**: `ProviderOrderId`, `ProviderCaptureId`, `ProviderStatus` for PayPal; `MockTransactionId` for credit-card mock only.
+    - **Card number is exactly 16 digits** (schema + frontend).
+    - **No real PayPal network calls in tests** — mocked via `routers.payments.*` patches.
+    - **Migration**: `add_paypal_fields_to_payment_records.sql`.
+
+46. **US41 bug-fix pass (cart/checkout UX):**
+    - **Credit card formatting**: The card number input now auto-inserts a space every 4 digits as the user types (e.g. `4111 1111 1111 1111`). Digits-only are accepted; spaces are stripped before Luhn validation. Validation errors appear on field blur or on submit — not aggressively on every keystroke. Test card: `4111 1111 1111 1111` (valid Visa). Mock-decline card: `4000 0000 0000 0002`.
+    - **Worker cart access**: Workers can access `/cart`, `/checkout`, and `/checkout/success`. `WorkerNavbar` now shows a green cart badge with item count (polls every 30 s, resets on route change). The empty cart "Continue Shopping" link is role-aware and sends Workers to `/worker/products`.
+    - **Mock PayPal — no real credentials required**: US41 PayPal is mock-only. No `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, or `PAYPAL_MODE` env vars are needed. The backend generates a `MOCK-{uuid}` transaction ID and marks payment succeeded without any external network call. See `.env.example` for documentation. Any real PayPal sandbox credentials that may exist in `.env` are unused by the checkout router.
+    - **Currency symbol**: Cart page, checkout page, and success page now display `₪` (ILS) instead of `$`.
+    - **Back navigation**: Cart page has "← Continue Shopping" back-link. Checkout page has "← Back" to cart. Success page has "← Continue Shopping" back-link. All role-aware.
+
+45. **US41: Payment / Cart / Mock Checkout — MOCK PAYMENT ONLY. No real card or PayPal processing.**
+    - **Tables**: `CartItems`, `Orders`, `OrderItems`, `PaymentRecords`, `Coupons`, `CouponRedemptions`, `EmployeeDiscountSettings`, `EmployeeDiscountProductOverrides`. All created by `database/migrations/create_us41_tables.sql` (idempotent).
+    - **Price calculation order** (single source: `services/pricing_service.py`): (1) base product Price → (2) US38 product discount if currently valid → (3) employee discount for Worker role (default 40%, manager-configurable, product-level overrides) → (4) coupon applied to item subtotal after all per-item discounts. Frontend prices are NEVER trusted.
+    - **Stock**: checkout decrements `Inventory.AllocatedQuantity` atomically inside a DB transaction using `UPDATE ... WHERE AllocatedQuantity >= :qty`. If `rowcount == 0`, oversell is prevented and checkout fails cleanly.
+    - **Cart**: stores only `ProductId + Quantity`. Prices recomputed from DB on every view. Never stores stale prices.
+    - **Credit card**: Luhn validation (both client-side and server-side). Only last 4 digits + card brand stored. CVV/full number NEVER stored or logged. Mock decline card: `4000000000000002`.
+    - **Mock PayPal**: always succeeds, generates mock transaction ID, no external API calls.
+    - **Coupons**: percentage or fixed-amount. Case-insensitive. Manager can create/edit/deactivate. Use counted only after successful payment. Validated server-side only.
+    - **Employee discount**: Workers get 40% by default (manager-configurable). Visitors/Managers get 0%. Product-level override modes: `use_global`, `excluded`, `custom_percent`. Manager manages via `/manager/employee-discounts`.
+    - **Receipt/invoice email**: TRANSACTIONAL — sent to every buyer regardless of `EmailConsent`/newsletter subscription. Uses existing SMTP service (`services/email_service.py`). Background task (does not block checkout response). `EmailLogs.EmailType = 'order_receipt'`. No unsubscribe footer. SMTP failure does not roll back order. `PaymentRecords.InvoiceEmailStatus` updated to `sent`/`failed`/`not_sent`.
+    - **Checkout response**: returns immediately after order creation. Receipt email queued via `BackgroundTasks`. Frontend timeout not increased.
+    - **Frontend routes**: `/cart`, `/checkout`, `/checkout/success`, `/manager/coupons`, `/manager/employee-discounts`.
+    - **Migration**: run `database/migrations/create_us41_tables.sql` against SQL Server before deploying.
+    - **Tests**: `tests/test_us41_checkout.py` (34 tests).
+
 44. **US39/US40 integration bug fixes (batch 3 — targeted):**
     - **Worker notification bell shows real details**: `handleBellClick` now calls `openAppNotifs()` when the bell opens, loading Notification rows from `/api/notifications`. Previously the panel always showed "No notifications" because `appNotifs` was never populated.
     - **Unsubscribe email footer wording**: `build_unsubscribe_footer_html/text()` in `services/email_unsubscribe.py` now says "click here to unsubscribe" with the token URL as the link. The fallback (no token) is a plain note with no link — the profile page is NOT linked (spec requirement). Applies to all marketing emails.
