@@ -5,6 +5,8 @@ from routers import tasks, users, auth, peppers, plants, products, inventory, se
 from routers.anomalies import router as anomalies_router, resolve_router
 from routers.emails import router as emails_router
 from routers.newsletter_templates import router as newsletter_templates_router
+from routers.email_consent import router as email_consent_router
+from routers.notifications import router as notifications_router
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -17,6 +19,7 @@ import models.sensor  # noqa: F401  — registers Sensor, SensorAssignment, Sens
 import models.spray  # noqa: F401  — registers Pesticide, SprayReport, SprayAlert, OverdueSprayAlert
 import models.email_log              # noqa: F401  — US39: EmailLogs table
 import models.newsletter_template    # noqa: F401  — US39: NewsletterTemplates table
+import models.notification           # noqa: F401  — US40: Notifications table
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
@@ -85,6 +88,8 @@ app.include_router(spray.router)
 app.include_router(sensors.router)
 app.include_router(emails_router)
 app.include_router(newsletter_templates_router)
+app.include_router(email_consent_router)
+app.include_router(notifications_router)
 
 @app.get("/api/health/db")
 def db_health():

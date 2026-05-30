@@ -22,6 +22,10 @@ from schemas.newsletter_template import (
     TemplateResponse,
 )
 from services.email_service import is_smtp_configured, send_email
+from services.email_unsubscribe import (
+    build_unsubscribe_footer_text,
+    get_or_create_token,
+)
 from services.newsletter_template_service import (
     archive_template,
     create_template,
@@ -286,8 +290,7 @@ def send_newsletter_template(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    html_body = render_html(t)
-    plain_text = render_plain_text(t)
+    plain_text_base = render_plain_text(t)
     recipients = _get_recipients(db, given_groups)
     manager_id: int = current_user["user_id"]
 
@@ -298,6 +301,11 @@ def send_newsletter_template(
     for user in recipients:
         role = _role_name(user)
         rtype = _recipient_type(role)
+
+        # US40: per-recipient unsubscribe link injected into the rendered HTML/text
+        token      = get_or_create_token(db, user.UserId)
+        html_body  = render_html(t, unsubscribe_token=token)
+        plain_text = plain_text_base + build_unsubscribe_footer_text(token)
 
         try:
             send_email(user.Email, t.Subject, html_body, plain_text)

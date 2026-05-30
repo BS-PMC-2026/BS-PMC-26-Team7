@@ -101,6 +101,8 @@ BS-PMC-26-Team7/
 | `/worker/plants` | `src/app/worker/plants/page.tsx` | View plants | `/api/plants/*` | Plant list |
 | `/visitor/products` | `src/app/visitor/products/page.tsx` | **US38** Public product catalog — shows discount badge, strikethrough original price, discounted price, expiry or "unlimited offer" label for each active discount | `GET /api/products` | ProductCard |
 | `/worker/products` | `src/app/worker/products/page.tsx` | **US38** Worker product catalog — same discount display as visitor catalog | `GET /api/products` | ProductCard |
+| `/profile` | `src/app/profile/page.tsx` | **US40** Email subscription toggle for authenticated users — shows current consent status, checkbox to enable/disable marketing emails | `GET/PUT /api/email-consent/me` | ProfilePage (inline) |
+| `/unsubscribe` | `src/app/unsubscribe/page.tsx` | **US40** Public one-click unsubscribe — validates token, calls backend, shows success/already/invalid states | `GET /api/email-consent/unsubscribe?token=` | UnsubscribePage (inline), Suspense |
 | `/manager/newsletter` | `src/app/manager/newsletter/page.tsx` | **US39** Manager newsletter template manager — list/create/edit/preview/send templates, view email logs. Structured content blocks (heading, paragraph, image, button, divider). Templates saved without SMTP; send uses existing email service. | `GET/POST /api/newsletter-templates`, `GET/PUT/DELETE /api/newsletter-templates/{id}`, `GET /api/newsletter-templates/{id}/preview`, `POST /api/newsletter-templates/{id}/send`, `GET /api/emails/logs` | NewsletterPage (inline), BlockEditor (inline) |
 | `/manager/spray-alerts` | `src/app/manager/spray-alerts/page.tsx` | **US30** Redirect only — immediately sends to `/manager/spray-map#spray-alerts` (keeps old bookmarks working) | — | — |
 | `/manager/spray-map` _(extended)_ | `src/app/manager/spray-map/page.tsx` | **US28 + US30 + US32** Spray safety map (zones) + Spray Alert History + Overdue Spray Alerts section (`id="overdue-spray-alerts"`) with assign-task modal | `GET /api/spray-reports/zone-map`, `GET /api/spray-reports/alerts`, `GET /api/spray-reports/overdue-alerts`, `POST /api/spray-reports/overdue-alerts/{id}/assign` | SprayZoneMap, spray-alerts table, overdue-alerts table, AssignModal |
@@ -118,6 +120,8 @@ BS-PMC-26-Team7/
 | Auth | `routers/auth.py` | `services/auth_service.py` | `models/user.py` | `schemas/user.py` | `/api/auth` |
 | Emails | `routers/emails.py` | `services/email_service.py` | `models/email_log.py` | `schemas/email.py` | `/api/emails` |
 | Newsletter Templates | `routers/newsletter_templates.py` | `services/newsletter_template_service.py` | `models/newsletter_template.py` | `schemas/newsletter_template.py` | `/api/newsletter-templates` |
+| Email Consent | `routers/email_consent.py` | `services/email_unsubscribe.py` | _(raw SQL on Users)_ | `schemas/email_consent.py` | `/api/email-consent` |
+| In-App Notifications | `routers/notifications.py` | _(inline)_ | `models/notification.py` | `schemas/notification.py` | `/api/notifications` |
 | Users | `routers/users.py` | `services/user_service.py` | `models/user.py` | `schemas/user.py` | `/api/users` |
 | Tasks | `routers/tasks.py` | `services/task_service.py` | `models/task.py` | `schemas/task.py` | `/api/tasks` |
 | Peppers | `routers/peppers.py` | `services/pepper_service.py` | `models/pepper.py` | `schemas/pepper.py` | `/api/peppers` |
@@ -364,6 +368,26 @@ BS-PMC-26-Team7/
 27. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
     `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
 
+42. **US39/US40 bug fixes (batch):**
+    - **Discount email catalog button**: `href="#"` replaced with `{FRONTEND_BASE_URL}/visitor/products`. Set `FRONTEND_BASE_URL` in `.env` (default `http://localhost:3000`).
+    - **Unsubscribe footer always present**: `_build_discount_html()` now falls back to a `/profile` link when `EmailUnsubscribeToken` migration has not been applied yet. The footer is never empty.
+    - **Product update no longer blocks on SMTP**: `create_product_endpoint` and `update_product_endpoint` use `BackgroundTasks` + `_send_discount_notification_bg()` (creates its own `SessionLocal`). The HTTP response returns immediately; email logs are written by the background task. SMTP failure does not roll back the product update.
+    - **Worker has one bell**: Duplicate US40 amber bell removed from `WorkerNavbar`. In-app notification count is merged into the existing red bell badge (`visibleUnreadCount + appNotifCount`). In-app messages appear as a section inside the existing bell panel.
+    - **Visitor has a bell**: New `/visitor/layout.tsx` wraps all `/visitor/*` pages with a slim header that includes a notification bell (polls `/api/notifications/unread-count` every 60 s).
+    - **Notifications API no longer crashes when table is missing**: `routers/notifications.py` now catches `ProgrammingError` (SQL Server's "Invalid object name" wrapping in pyodbc) in addition to `OperationalError`, returning graceful 200 / empty responses until `create_notifications_table.sql` is applied.
+
+38. **US40: Email consent is NOT subscribed by default — explicit opt-in required.**
+    `EmailConsent BIT NOT NULL DEFAULT 0` (changed from US39's DEFAULT 1). New users are not subscribed unless they check the registration checkbox. Consent can be updated via `PUT /api/email-consent/me`. The US40 migration script `add_email_consent_us40_fields.sql` adds `EmailMarketingConsentUpdatedAtUtc`, `EmailUnsubscribeToken`, `EmailUnsubscribedAtUtc`. Run AFTER `add_email_consent_to_users.sql`.
+
+39. **US40: All marketing emails include a per-recipient unsubscribe link in the footer.**
+    `services/email_unsubscribe.py` provides `get_or_create_token()` (uuid4 hex, stored in `EmailUnsubscribeToken`) and `build_unsubscribe_footer_html/text()`. Each recipient gets their own token so the link is personal. The link points to `{FRONTEND_BASE_URL}/unsubscribe?token=...`. Set `FRONTEND_BASE_URL=https://[frontend-host]` in production. The unsubscribe endpoint `GET /api/email-consent/unsubscribe?token=...` is public (no auth). It does not reveal whether an email exists.
+
+40. **US40: In-app notifications are for app messages/announcements ONLY — never for newsletters.**
+    `Notifications` table + `/api/notifications/*` endpoints. FarmManagers create notifications via `POST /api/notifications/broadcast`. Newsletter/discount sends do NOT create notification rows. Workers see their own notifications in an amber bell badge on the WorkerNavbar. The existing manager bell (sensor/spray alerts) is separate — the amber worker badge is exclusively for in-app messages.
+
+41. **US40: Registration sends `emailConsent: bool` to backend (defaults false).**
+    `RegisterRequest.emailConsent` optional field (default False). After user creation, `auth_service.register()` does a best-effort `UPDATE Users SET EmailConsent=1` if the user opted in. The update is wrapped in try/except so registration never fails if the migration hasn't been applied.
+
 37. **US39 (extended): Newsletter image upload stores files under `uploads/newsletter_images/` and returns an absolute URL.**
     Endpoint: `POST /api/newsletter-templates/upload-image` (FarmManager only).
     Accepted types: JPEG, PNG, WEBP, GIF. Max size: 2 MB. Filenames are uuid4 hex + original extension.
@@ -427,7 +451,10 @@ BS-PMC-26-Team7/
 | Backend — emails API | Unit/API | `tests/test_emails_api.py` (13 tests — auth/role enforcement, validation, recipient filtering, consent filter, email logs created for sent/failed, summary response fields) | same |
 | Backend — newsletter templates | Unit/API | `tests/test_newsletter_templates_api.py` (22 tests — auth, CRUD, archive, preview, send with mocked SMTP, email logs written, invalid URL rejected, XSS escaped, plain-text override) | same |
 | Backend — newsletter image upload | Unit/API | `tests/test_newsletter_image_upload.py` (19 tests — auth, valid JPEG/PNG/WEBP/GIF, oversized rejected, PDF rejected, imageUrl is absolute, BACKEND_BASE_URL respected, uuid unique filenames, schema accepts http/https//uploads/, rejects javascript/data/file schemes, HTML includes img alt) | same |
-| Frontend — register form errors | Jest | `tests/RegisterForm.test.tsx` (+3 new tests — Pydantic array error rendered as string, detail=null falls back to registrationFailed, API 500 string detail shows correctly; 10 total) | `npm --prefix pepper-farm/frontend run test` |
+| Backend — email consent (US40) | Unit/API | `tests/test_email_consent_api.py` (12 tests — auth, GET/PUT consent, unsubscribed_at set, token unsubscribe, invalid/already token, register default false, register with true) | same |
+| Backend — in-app notifications (US40) | Unit/API | `tests/test_notifications_api.py` (13 tests — auth, list own only, unread count, mark as read, cannot mark other's, mark-all-read, FarmManager broadcast, newsletter does NOT create notification) | same |
+| Frontend — register form errors | Jest | `tests/RegisterForm.test.tsx` (+3 new error tests + 4 US40 consent checkbox tests = 17 total) | `npm --prefix pepper-farm/frontend run test` |
+| Frontend — unsubscribe page (US40) | Jest | `tests/UnsubscribePage.test.tsx` (4 tests — success/already/invalid states, calls API with token) | same |
 | Frontend — products (US38) | Jest | `tests/ProductCard.test.tsx` (13 tests — discount badge, strikethrough price, unlimited/timed end-date labels, expired discount hidden, frontend UTC safety check) | `npm --prefix pepper-farm/frontend run test` |
 | Frontend — newsletter (US39) | Jest | `tests/NewsletterPage.test.tsx` (11 tests — renders, validation, success banner with counts, API error, sending state, loads email logs table, status badge) | same |
 | Backend — plants | Unit | `tests/test_plant_service.py` | same |

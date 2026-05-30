@@ -142,7 +142,7 @@ def _render_block(block: dict) -> str:
     return ""
 
 
-def render_html(template: NewsletterTemplate) -> str:
+def render_html(template: NewsletterTemplate, unsubscribe_token: str = "") -> str:
     try:
         blocks: List[dict] = json.loads(template.ContentJson) if template.ContentJson else []
     except (ValueError, TypeError):
@@ -176,6 +176,10 @@ def render_html(template: NewsletterTemplate) -> str:
 
     footer_text = _escape(template.FooterText or "You are receiving this email from Pepper Farm.")
 
+    # US40: per-recipient unsubscribe link
+    from services.email_unsubscribe import build_unsubscribe_footer_html
+    unsubscribe_html = build_unsubscribe_footer_html(unsubscribe_token)
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -198,6 +202,7 @@ def render_html(template: NewsletterTemplate) -> str:
         <tr><td style="background:#f0faf4;padding:16px 36px;
                         border-top:1px solid #e0e0e0;text-align:center">
           <p style="margin:0;font-size:12px;color:#888">{footer_text}</p>
+          {unsubscribe_html}
         </td></tr>
       </table>
     </td></tr>

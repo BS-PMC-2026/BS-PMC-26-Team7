@@ -8,6 +8,12 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from services.email_unsubscribe import (
+    build_unsubscribe_footer_html,
+    build_unsubscribe_footer_text,
+    get_or_create_token,
+)
+
 from database import get_db
 from models.email_log import EmailLog
 from models.role import Role
@@ -105,9 +111,10 @@ def _get_recipients(db: Session, groups: List[str]) -> List[User]:
     return result
 
 
-def _build_html(subject: str, message: str) -> str:
+def _build_html(subject: str, message: str, unsubscribe_token: str = "") -> str:
     safe_message = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     safe_message = safe_message.replace("\n", "<br>")
+    unsubscribe_html = build_unsubscribe_footer_html(unsubscribe_token)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <body style="font-family:Arial,sans-serif;color:#222;max-width:600px;margin:auto;padding:24px">
@@ -117,6 +124,7 @@ def _build_html(subject: str, message: str) -> str:
   <p style="font-size:12px;color:#888">
     You are receiving this email as a registered member of Pepper Farm.
   </p>
+  {unsubscribe_html}
 </body>
 </html>"""
 
@@ -149,7 +157,6 @@ def send_newsletter(
         )
 
     recipients = _get_recipients(db, given_groups)
-    html_body = _build_html(subject, message)
 
     sent_count = 0
     failed_count = 0
@@ -161,8 +168,13 @@ def send_newsletter(
         rtype = _recipient_type(role)
         preview = message[:200] if message else ""
 
+        # US40: build per-recipient HTML with their personal unsubscribe token
+        token = get_or_create_token(db, user.UserId)
+        html_body = _build_html(subject, message, token)
+        plain_body = message + build_unsubscribe_footer_text(token)
+
         try:
-            send_email(user.Email, subject, html_body, message)
+            send_email(user.Email, subject, html_body, plain_body)
             sent_count += 1
             log = EmailLog(
                 RecipientEmail=user.Email,

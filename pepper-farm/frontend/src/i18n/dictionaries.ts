@@ -1031,6 +1031,33 @@ export interface SprayDictionary {
   hazardLevel: string;
 }
 
+export interface ConsentDictionary {
+  emailSubscription:          string;
+  receiveNewsletterEmails:    string;
+  receivePromotions:          string;
+  subscribed:                 string;
+  unsubscribed:               string;
+  updateSubscription:         string;
+  subscriptionUpdated:        string;
+  unsubscribe:                string;
+  unsubscribeFromNewsletter:  string;
+  unsubscribeSuccess:         string;
+  alreadyUnsubscribed:        string;
+  invalidUnsubscribeLink:     string;
+  processingUnsubscribe:      string;
+  agreeToEmails:              string;
+}
+
+export interface AppNotificationsDictionary {
+  appNotifications:   string;
+  newMessage:         string;
+  unreadNotifications: string;
+  markAsRead:         string;
+  markAllAsRead:      string;
+  noNotifications:    string;
+  notificationBell:   string;
+}
+
 export interface Dictionary {
   nav:        NavDictionary;
   common:     CommonDictionary;
@@ -1053,6 +1080,8 @@ export interface Dictionary {
   notifications: NotificationsDictionary;
   spray:         SprayDictionary;
   newsletter:    NewsletterDictionary;
+  consent:       ConsentDictionary;
+  appNotifications: AppNotificationsDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -2096,6 +2125,33 @@ const en: Dictionary = {
     confirmDelete:          'Archive this template?',
     errTitleRequired:       'Template title is required.',
   },
+
+  consent: {
+    emailSubscription:         'Email Subscription',
+    receiveNewsletterEmails:   'Receive newsletters and promotional emails',
+    receivePromotions:         'Receive promotions',
+    subscribed:                'Subscribed',
+    unsubscribed:              'Unsubscribed',
+    updateSubscription:        'Update Subscription',
+    subscriptionUpdated:       'Subscription updated successfully.',
+    unsubscribe:               'Unsubscribe',
+    unsubscribeFromNewsletter: 'Unsubscribe from newsletters',
+    unsubscribeSuccess:        'You have been unsubscribed from marketing emails.',
+    alreadyUnsubscribed:       'You are already unsubscribed.',
+    invalidUnsubscribeLink:    'This unsubscribe link is invalid or has already been used.',
+    processingUnsubscribe:     'Processing...',
+    agreeToEmails:             'I agree to receive newsletters, promotions, and email updates.',
+  },
+
+  appNotifications: {
+    appNotifications:    'Notifications',
+    newMessage:          'New message',
+    unreadNotifications: 'Unread notifications',
+    markAsRead:          'Mark as read',
+    markAllAsRead:       'Mark all as read',
+    noNotifications:     'No notifications yet.',
+    notificationBell:    'Open notifications',
+  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -3136,6 +3192,33 @@ const he: Dictionary = {
     failedToPreview:        'טעינת תצוגה מקדימה נכשלה.',
     confirmDelete:          'לארכב תבנית זו?',
     errTitleRequired:       'שם תבנית הוא שדה חובה.',
+  },
+
+  consent: {
+    emailSubscription:         'הרשמה לדוא"ל',
+    receiveNewsletterEmails:   'קבל ניוזלטרים ומיילים פרסומיים',
+    receivePromotions:         'קבל מבצעים',
+    subscribed:                'רשום',
+    unsubscribed:              'לא רשום',
+    updateSubscription:        'עדכן הרשמה',
+    subscriptionUpdated:       'ההרשמה עודכנה בהצלחה.',
+    unsubscribe:               'ביטול הרשמה',
+    unsubscribeFromNewsletter: 'ביטול הרשמה לניוזלטר',
+    unsubscribeSuccess:        'הוסרת ממיילים פרסומיים.',
+    alreadyUnsubscribed:       'כבר ביטלת את הרשמתך.',
+    invalidUnsubscribeLink:    'הקישור לביטול הרשמה לא תקין או כבר נוצל.',
+    processingUnsubscribe:     'מעבד...',
+    agreeToEmails:             'אני מסכים לקבל ניוזלטרים, מבצעים ועדכוני דוא"ל.',
+  },
+
+  appNotifications: {
+    appNotifications:    'התראות',
+    newMessage:          'הודעה חדשה',
+    unreadNotifications: 'התראות שלא נקראו',
+    markAsRead:          'סמן כנקרא',
+    markAllAsRead:       'סמן הכל כנקרא',
+    noNotifications:     'אין התראות עדיין.',
+    notificationBell:    'פתח התראות',
   },
 };
 

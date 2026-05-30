@@ -19,6 +19,52 @@ describe('RegisterForm', () => {
     expect(screen.getByPlaceholderText('Min. 6 characters')).toBeInTheDocument();
   });
 
+  // US40: email consent checkbox
+  it('renders email consent checkbox unchecked by default', () => {
+    render(<RegisterForm />);
+    const checkbox = screen.getByTestId('email-consent-checkbox') as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('can check and uncheck the email consent checkbox', () => {
+    render(<RegisterForm />);
+    const checkbox = screen.getByTestId('email-consent-checkbox') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('sends emailConsent=false by default to the API', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true, json: async () => ({ userId: 1, fullName: 'Test User', email: 'test@farm.com', role: 'Visitor' }),
+    });
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByPlaceholderText('Your full name'),    { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),    { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Min. 6 characters'), { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByText('Register'));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.emailConsent).toBe(false);
+  });
+
+  it('sends emailConsent=true when checkbox is checked', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true, json: async () => ({ userId: 2, fullName: 'Opt In', email: 'optin@farm.com', role: 'Visitor' }),
+    });
+    render(<RegisterForm />);
+    fireEvent.change(screen.getByPlaceholderText('Your full name'),    { target: { value: 'Opt In' } });
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),    { target: { value: 'optin@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Min. 6 characters'), { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByTestId('email-consent-checkbox'));
+    fireEvent.click(screen.getByText('Register'));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+    expect(body.emailConsent).toBe(true);
+  });
+
   it('renders register button', () => {
     render(<RegisterForm />);
     expect(screen.getByText('Register')).toBeInTheDocument();

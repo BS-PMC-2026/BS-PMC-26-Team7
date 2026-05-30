@@ -25,9 +25,10 @@ function normalizeApiError(detail: unknown, fallback: string): string {
 }
 
 interface FormData {
-  fullName: string;
-  email:    string;
-  password: string;
+  fullName:     string;
+  email:        string;
+  password:     string;
+  emailConsent: boolean;
 }
 
 interface FieldErrors {
@@ -40,7 +41,9 @@ export default function RegisterForm() {
   const router = useRouter();
   const { t } = useLanguage();
 
-  const [form,     setForm]     = useState<FormData>({ fullName: "", email: "", password: "" });
+  const [form,     setForm]     = useState<FormData>({
+    fullName: "", email: "", password: "", emailConsent: false,
+  });
   const [errors,   setErrors]   = useState<FieldErrors>({});
   const [apiError, setApiError] = useState("");
   const [success,  setSuccess]  = useState(false);
@@ -59,9 +62,15 @@ export default function RegisterForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: undefined });
-    setApiError("");
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    if (name !== "emailConsent") {
+      setErrors({ ...errors, [name]: undefined });
+      setApiError("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,6 +169,19 @@ export default function RegisterForm() {
           <span className="text-red-500 text-xs">{errors.password}</span>
         )}
       </div>
+
+      {/* US40: email consent checkbox — unchecked by default */}
+      <label className="flex items-start gap-2 cursor-pointer text-sm text-gray-600">
+        <input
+          name="emailConsent"
+          type="checkbox"
+          checked={form.emailConsent}
+          onChange={handleChange}
+          className="mt-0.5 accent-green-600"
+          data-testid="email-consent-checkbox"
+        />
+        <span>{t.consent.agreeToEmails}</span>
+      </label>
 
       {apiError && (
         <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm">

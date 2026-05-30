@@ -3,17 +3,23 @@ import traceback
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import SessionLocal, get_db
 from models.email_log import EmailLog
 from models.role import Role
 from models.user import User
 from schemas.product import ProductCreate, ProductResponse
 from services.email_service import is_smtp_configured, send_email
+from services.email_unsubscribe import (
+    build_unsubscribe_footer_html,
+    build_unsubscribe_footer_text,
+    get_frontend_base_url,
+    get_or_create_token,
+)
 from services.product_service import create_product, get_product_by_id, get_products, update_product
 from utils.jwt import require_role
 
@@ -26,13 +32,24 @@ def _valid_email(email: str | None) -> bool:
     return bool(email and _EMAIL_RE.match(email))
 
 
-def _build_discount_html(product_name: str, price: float, pct: float, end_date: Optional[datetime]) -> str:
+def _build_discount_html(product_name: str, price: float, pct: float, end_date: Optional[datetime], unsubscribe_token: str = "") -> str:
     final_price = round(price * (1 - pct / 100), 2)
     expiry_line = (
         f"Offer expires: <strong>{end_date.strftime('%Y-%m-%d')}</strong>"
         if end_date
         else "Unlimited offer — no expiry date"
     )
+    # Bug A fix: absolute catalog URL, not "#"
+    catalog_url = f"{get_frontend_base_url()}/visitor/products"
+    # Bug B fix: always show unsubscribe footer; fall back to profile page when token not available
+    unsubscribe_html = build_unsubscribe_footer_html(unsubscribe_token)
+    if not unsubscribe_html:
+        profile_url = f"{get_frontend_base_url()}/profile"
+        unsubscribe_html = (
+            f'<p style="margin:8px 0 0;font-size:11px;color:#aaa">'
+            f'To manage email preferences, visit your '
+            f'<a href="{profile_url}" style="color:#aaa;text-decoration:underline">profile page</a>.</p>'
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <body style="font-family:Arial,sans-serif;color:#222;max-width:600px;margin:auto;padding:24px">
@@ -40,20 +57,21 @@ def _build_discount_html(product_name: str, price: float, pct: float, end_date: 
   <p>We are excited to offer you an exclusive discount on <strong>{product_name}</strong>!</p>
   <table style="border-collapse:collapse;width:100%">
     <tr><td style="padding:6px 0;color:#555">Original price:</td>
-        <td style="padding:6px 0;text-decoration:line-through;color:#888">₪{price:.2f}</td></tr>
+        <td style="padding:6px 0;text-decoration:line-through;color:#888">&#8362;{price:.2f}</td></tr>
     <tr><td style="padding:6px 0;color:#555">Discount:</td>
         <td style="padding:6px 0;color:#e63946"><strong>{pct:.0f}% OFF</strong></td></tr>
     <tr><td style="padding:6px 0;color:#555">Your price:</td>
-        <td style="padding:6px 0;color:#2d6a4f;font-size:1.2em"><strong>₪{final_price:.2f}</strong></td></tr>
+        <td style="padding:6px 0;color:#2d6a4f;font-size:1.2em"><strong>&#8362;{final_price:.2f}</strong></td></tr>
   </table>
   <p style="color:#555;margin-top:12px">{expiry_line}</p>
-  <p><a href="#" style="background:#2d6a4f;color:#fff;padding:10px 20px;
+  <p><a href="{catalog_url}" style="background:#2d6a4f;color:#fff;padding:10px 20px;
      text-decoration:none;border-radius:4px;display:inline-block;margin-top:8px">
      Visit Our Catalog
   </a></p>
   <hr style="border:none;border-top:1px solid #ddd;margin:24px 0">
   <p style="font-size:12px;color:#888">You are receiving this email because you opted in to
   promotional notifications from Pepper Farm.</p>
+  {unsubscribe_html}
 </body>
 </html>"""
 
@@ -100,8 +118,7 @@ def _send_discount_notification(
         )
 
     subject = f"New Discount: {pct:.0f}% OFF {product_name}"
-    html_body = _build_discount_html(product_name, price, pct, end_date)
-    plain_body = (
+    plain_base = (
         f"New discount on {product_name}!\n"
         f"Original: {price:.2f}  →  Your price: {round(price * (1 - pct / 100), 2):.2f} ({pct:.0f}% OFF)\n"
         + (f"Expires: {end_date.strftime('%Y-%m-%d')}" if end_date else "Unlimited offer")
@@ -115,7 +132,7 @@ def _send_discount_notification(
                 RecipientName=user.FullName,
                 RecipientType="customer",
                 Subject=subject,
-                MessagePreview=plain_body[:200],
+                MessagePreview=plain_base[:200],
                 EmailType="discount_promotion",
                 Status="skipped",
                 ErrorMessage="Invalid email address",
@@ -125,6 +142,11 @@ def _send_discount_notification(
             )
             db.add(log)
             continue
+
+        # US40: per-recipient unsubscribe token
+        token = get_or_create_token(db, user.UserId)
+        html_body  = _build_discount_html(product_name, price, pct, end_date, token)
+        plain_body = plain_base + build_unsubscribe_footer_text(token)
 
         try:
             send_email(user.Email, subject, html_body, plain_body)
@@ -167,6 +189,26 @@ def _send_discount_notification(
     return sent
 
 
+def _send_discount_notification_bg(
+    product_name: str,
+    price: float,
+    pct: float,
+    end_date: Optional[datetime],
+    product_id: int,
+    manager_id: Optional[int],
+) -> None:
+    """Background-task wrapper: creates its own DB session so the HTTP response
+    is not blocked by SMTP sends. Failures are logged but do not affect the
+    already-returned product response."""
+    db = SessionLocal()
+    try:
+        _send_discount_notification(db, product_name, price, pct, end_date, product_id, manager_id)
+    except Exception:
+        traceback.print_exc()
+    finally:
+        db.close()
+
+
 def _is_new_discount(data: ProductCreate) -> bool:
     return bool(data.DiscountActive and data.DiscountPercentage and data.DiscountPercentage > 0)
 
@@ -199,30 +241,30 @@ def _discount_changed(old: dict, new: ProductCreate) -> bool:
 @router.post("", response_model=ProductResponse, status_code=201)
 def create_product_endpoint(
     product: ProductCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role("FarmManager")),
 ):
     try:
         created = create_product(db, product)
-        notification_sent = False
+        notification_queued = False
 
         if _is_new_discount(product):
-            try:
-                _send_discount_notification(
-                    db=db,
-                    product_name=created.ProductName,
-                    price=float(created.Price),
-                    pct=float(created.DiscountPercentage),
-                    end_date=created.DiscountEndDate,
-                    product_id=created.ProductId,
-                    manager_id=current_user["user_id"],
-                )
-                notification_sent = True
-            except Exception:
-                traceback.print_exc()
+            # Fix C: schedule email sending in background so the HTTP response
+            # returns immediately, avoiding the 10-second SMTP timeout.
+            background_tasks.add_task(
+                _send_discount_notification_bg,
+                product_name=created.ProductName,
+                price=float(created.Price),
+                pct=float(created.DiscountPercentage),
+                end_date=created.DiscountEndDate,
+                product_id=created.ProductId,
+                manager_id=current_user["user_id"],
+            )
+            notification_queued = True
 
         resp = ProductResponse.model_validate(created)
-        return resp.model_copy(update={"emailNotificationSent": notification_sent})
+        return resp.model_copy(update={"emailNotificationSent": notification_queued})
 
     except ValueError as e:
         db.rollback()
@@ -294,6 +336,7 @@ def get_product_endpoint(product_id: int, db: Session = Depends(get_db)):
 def update_product_endpoint(
     product_id: int,
     product: ProductCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role("FarmManager")),
 ):
@@ -303,24 +346,22 @@ def update_product_endpoint(
 
         updated = update_product(db, product_id, product)
 
-        notification_sent = False
+        notification_queued = False
         if _discount_changed(old, product):
-            try:
-                _send_discount_notification(
-                    db=db,
-                    product_name=updated["ProductName"],
-                    price=float(updated["Price"]),
-                    pct=float(updated["DiscountPercentage"]),
-                    end_date=updated.get("DiscountEndDate"),
-                    product_id=product_id,
-                    manager_id=current_user["user_id"],
-                )
-                notification_sent = True
-            except Exception:
-                traceback.print_exc()
+            # Fix C: background task avoids blocking the PUT response on SMTP
+            background_tasks.add_task(
+                _send_discount_notification_bg,
+                product_name=updated["ProductName"],
+                price=float(updated["Price"]),
+                pct=float(updated["DiscountPercentage"]),
+                end_date=updated.get("DiscountEndDate"),
+                product_id=product_id,
+                manager_id=current_user["user_id"],
+            )
+            notification_queued = True
 
         resp = ProductResponse.model_validate(updated)
-        return resp.model_copy(update={"emailNotificationSent": notification_sent})
+        return resp.model_copy(update={"emailNotificationSent": notification_queued})
 
     except ValueError as e:
         db.rollback()
