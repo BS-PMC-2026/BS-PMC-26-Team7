@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
 from database import get_db
-from schemas.plant import PlantCreate, PlantResponse, UpdatePlantLocationRequest
-from services.plant_service import create_plant, update_plant_location, get_all_plants, get_plant_by_id
+from schemas.plant import PlantCreate, PlantResponse, UpdatePlantLocationRequest, UpdatePlantStatusRequest
+from services.plant_service import create_plant, update_plant_location, update_plant_status, get_all_plants, get_plant_by_id
 from utils.jwt import require_role, require_any_role
 
 router = APIRouter(prefix="/api/plants", tags=["Plants"])
@@ -44,6 +44,30 @@ def get_plant_endpoint(plant_id: int, db: Session = Depends(get_db)):
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found.")
     return plant
+
+
+@router.put("/{plant_id}/status", response_model=PlantResponse)
+def update_plant_status_endpoint(
+    plant_id: int,
+    data: UpdatePlantStatusRequest,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
+):
+    try:
+        plant, error = update_plant_status(db, plant_id, data.Status)
+        if error:
+            if "not found" in error:
+                raise HTTPException(status_code=404, detail=error)
+            raise HTTPException(status_code=400, detail=error)
+        return plant
+    except OperationalError:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Database connection timeout.")
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unexpected server error.")
 
 
 @router.put("/{plant_id}/location", response_model=PlantResponse)

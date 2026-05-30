@@ -70,3 +70,15 @@ def get_all_plants(db: Session) -> list[Plant]:
 
 def get_plant_by_id(db: Session, plant_id: int) -> Plant | None:
     return db.query(Plant).filter(Plant.PlantId == plant_id).first()
+
+
+def update_plant_status(
+    db: Session, plant_id: int, status: str | None
+) -> tuple[Plant | None, str | None]:
+    plant = db.query(Plant).filter(Plant.PlantId == plant_id).first()
+    if not plant:
+        return None, "Plant not found."
+    plant.Status = status
+    db.commit()
+    db.refresh(plant)
+    return plant, None

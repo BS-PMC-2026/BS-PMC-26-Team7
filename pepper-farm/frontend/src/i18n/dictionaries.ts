@@ -351,6 +351,21 @@ export interface InventoryDictionary {
   colPlantId:               string;
   colPlantCode:             string;
   colZone:                  string;
+  // Plants page features
+  searchVarieties:          string;
+  allStatuses:              string;
+  expandAll:                string;
+  collapseAll:              string;
+  exportCsv:                string;
+  statusBreakdown:          string;
+  addPlant:                 string;
+  addPlantTitle:            string;
+  addPlantFailed:           string;
+  noZone:                   string;
+  plantedAt:                string;
+  notesLabel:               string;
+  cancel:                   string;
+  saving:                   string;
   // Create page
   addItemTitle:             string;
   chooseTypeDesc:           string;
@@ -1355,6 +1370,20 @@ const en: Dictionary = {
     colPlantId:               'Plant ID',
     colPlantCode:             'Plant Code',
     colZone:                  'Zone',
+    searchVarieties:          'Search varieties or plant codes...',
+    allStatuses:              'All statuses',
+    expandAll:                'Expand all',
+    collapseAll:              'Collapse all',
+    exportCsv:                'Export CSV',
+    statusBreakdown:          'Status',
+    addPlant:                 'Add Plant',
+    addPlantTitle:            'Add Plant',
+    addPlantFailed:           'Failed to add plant.',
+    noZone:                   'No zone',
+    plantedAt:                'Planted date',
+    notesLabel:               'Notes',
+    cancel:                   'Cancel',
+    saving:                   'Saving...',
     addItemTitle:             'Add Inventory Item',
     chooseTypeDesc:           'Is this item going to be sold in the store, or is it warehouse-only (seeds, fertilizer, tools, raw stock)?',
     chooseProduct:            '🛒 Product for the store',
@@ -2304,6 +2333,20 @@ const he: Dictionary = {
     colPlantId:               'מזהה צמח',
     colPlantCode:             'קוד צמח',
     colZone:                  'אזור',
+    searchVarieties:          'חיפוש זנים או קודי צמחים...',
+    allStatuses:              'כל הסטטוסים',
+    expandAll:                'הרחב הכל',
+    collapseAll:              'כווץ הכל',
+    exportCsv:                'ייצוא CSV',
+    statusBreakdown:          'סטטוס',
+    addPlant:                 'הוסף צמח',
+    addPlantTitle:            'הוסף צמח',
+    addPlantFailed:           'הוספת הצמח נכשלה.',
+    noZone:                   'ללא אזור',
+    plantedAt:                'תאריך שתילה',
+    notesLabel:               'הערות',
+    cancel:                   'ביטול',
+    saving:                   'שומר...',
     addItemTitle:             'הוספת פריט למלאי',
     chooseTypeDesc:           'האם פריט זה יימכר בחנות, או שהוא מיועד למחסן בלבד (זרעים, דשן, כלים, חומרי גלם)?',
     chooseProduct:            '🛒 מוצר לחנות',
