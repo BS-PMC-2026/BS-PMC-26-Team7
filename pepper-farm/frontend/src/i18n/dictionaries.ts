@@ -1074,6 +1074,19 @@ export interface ConsentDictionary {
   agreeToEmails:              string;
 }
 
+export interface ChatbotDictionary {
+  title: string;
+  openLabel: string;
+  placeholder: string;
+  send: string;
+  greeting: string;
+  errorRetry: string;
+  loading: string;
+  sourceDb: string;
+  sourceAi: string;
+  sourceFallback: string;
+}
+
 export interface AppNotificationsDictionary {
   appNotifications:   string;
   newMessage:         string;
@@ -1108,6 +1121,7 @@ export interface Dictionary {
   newsletter:    NewsletterDictionary;
   consent:       ConsentDictionary;
   appNotifications: AppNotificationsDictionary;
+  chatbot:       ChatbotDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -2074,6 +2088,19 @@ const en: Dictionary = {
     safeToHarvest: 'Safe to harvest',
     ppeRequired: 'PPE required',
     hazardLevel: 'Hazard level',
+  },
+
+  chatbot: {
+    title: 'Farm Assistant',
+    openLabel: 'Chat with us',
+    placeholder: 'Ask about peppers, products, or recipes…',
+    send: 'Send',
+    greeting: 'Hi! Ask me about our pepper varieties, products, or cooking ideas.',
+    errorRetry: 'Something went wrong. Please try again.',
+    loading: 'Thinking…',
+    sourceDb: 'From farm data',
+    sourceAi: 'General suggestion',
+    sourceFallback: 'No info available',
   },
 
   newsletter: {
@@ -3166,6 +3193,19 @@ const he: Dictionary = {
     safeToHarvest: 'בטוח לקטיף',
     ppeRequired: 'ציוד מגן נדרש',
     hazardLevel: 'רמת סיכון',
+  },
+
+  chatbot: {
+    title: 'עוזר החווה',
+    openLabel: 'שוחחו איתנו',
+    placeholder: 'שאלו על פלפלים, מוצרים או מתכונים…',
+    send: 'שליחה',
+    greeting: 'היי! שאלו אותי על זני הפלפלים, המוצרים או רעיונות לבישול.',
+    errorRetry: 'משהו השתבש. נסו שוב.',
+    loading: 'חושב…',
+    sourceDb: 'מתוך נתוני החווה',
+    sourceAi: 'המלצה כללית',
+    sourceFallback: 'אין מידע זמין',
   },
 
   newsletter: {
