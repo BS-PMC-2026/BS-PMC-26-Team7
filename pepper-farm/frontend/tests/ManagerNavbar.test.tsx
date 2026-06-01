@@ -51,7 +51,7 @@ jest.mock('lucide-react', () => {
   const icons = [
     'LayoutDashboard','ClipboardList','Radio','Leaf','ShoppingBag','Boxes',
     'Sprout','BarChart2','Users','Bell','LogOut','ChevronDown','AlertTriangle',
-    'CheckCircle2','X','ExternalLink','Droplets','ShieldAlert','ShieldCheck','Clock',
+    'CheckCircle2','X','ExternalLink','Droplets','ShieldAlert','ShieldCheck','Clock','Mail',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {

@@ -146,7 +146,8 @@ describe('US32 — Overdue Spray Alerts section', () => {
     await waitFor(() =>
       expect(screen.getByTestId('overdue-alerts-list')).toBeInTheDocument(),
     );
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    // A severity-filter <option>Critical</option> also exists; target the badge <span>.
+    expect(screen.getByText('Critical', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('shows "ACTIVE" badge on unresolved alert', async () => {

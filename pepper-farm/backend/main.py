@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings, sensors, zones, spray, chatbot
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings, sensors, zones, spray, chatbot, weather
 from routers.anomalies import router as anomalies_router, resolve_router
 from routers.emails import router as emails_router
 from routers.newsletter_templates import router as newsletter_templates_router
@@ -91,6 +91,8 @@ app.include_router(emails_router)
 app.include_router(newsletter_templates_router)
 app.include_router(email_consent_router)
 app.include_router(notifications_router)
+
+app.include_router(weather.router)
 
 @app.get("/api/health/db")
 def db_health():
