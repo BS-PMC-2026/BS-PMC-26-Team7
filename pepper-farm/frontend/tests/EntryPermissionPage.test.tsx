@@ -135,7 +135,7 @@ describe('VisitorSprayRestrictionsPage — US33 entry permission (read-only)', (
     ]);
     renderPage();
     await waitFor(() =>
-      expect(screen.getByText('Caution — Consult Staff')).toBeInTheDocument(),
+      expect(screen.getByText('Caution - Consult Staff')).toBeInTheDocument(),
     );
   });
 

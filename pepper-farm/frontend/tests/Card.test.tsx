@@ -10,7 +10,13 @@ describe('Card', () => {
   it('applies base card classes', () => {
     const { container } = render(<Card>content</Card>);
     const el = container.firstChild as HTMLElement;
-    expect(el).toHaveClass('bg-white', 'rounded-xl', 'border');
+    expect(el).toHaveClass(
+      'bg-[var(--color-surface)]',
+      'rounded-[var(--radius-xl)]',
+      'border',
+      'border-[var(--color-border)]',
+      'shadow-[var(--shadow-card)]',
+    );
   });
 
   it('merges additional className', () => {
