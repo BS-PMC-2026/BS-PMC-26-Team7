@@ -1,4 +1,8 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import text
 from sqlalchemy.orm import Session
+
 from models.user import User
 from models.role import Role
 from schemas.user import RegisterRequest, LoginRequest
@@ -27,7 +31,27 @@ def register(
     )
     db.add(user)
     db.commit()
-    db.refresh(user)
+
+    # US40: persist email consent choice from the registration checkbox.
+    # Wrapped in try/except so registration never fails when the migration
+    # (add_email_consent_to_users.sql + add_email_consent_us40_fields.sql) has
+    # not yet been applied to the database.
+    if data.emailConsent:
+        try:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.execute(
+                text("""
+                    UPDATE Users
+                    SET EmailConsent = 1,
+                        EmailMarketingConsentUpdatedAtUtc = :now
+                    WHERE UserId = :uid
+                """),
+                {"now": now, "uid": user.UserId},
+            )
+            db.commit()
+        except Exception:
+            db.rollback()   # consent update failed — user still created with DEFAULT 0
+
     return user, None
 
 

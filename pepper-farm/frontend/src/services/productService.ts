@@ -8,6 +8,10 @@ export type ProductCreatePayload = {
   ImageUrl: string | null;
   PepperId: number | null;
   IsActive: boolean;
+  DiscountPercentage: number;
+  DiscountActive: boolean;
+  DiscountStartDate: string | null;
+  DiscountEndDate: string | null;
 };
 
 export type ProductResponse = {
@@ -16,10 +20,17 @@ export type ProductResponse = {
   ProductDescription: string | null;
   Category: string | null;
   Price: number;
+  FinalPrice: number;
   ImageUrl: string | null;
   PepperId: number | null;
   IsActive: boolean;
   AllocatedQuantity: number;
+  DiscountPercentage: number;
+  DiscountActive: boolean;
+  DiscountStartDate: string | null;
+  DiscountEndDate: string | null;
+  DiscountIsCurrentlyValid: boolean;
+  emailNotificationSent?: boolean;   // US39: set by backend when discount emails were triggered
 };
 
 export async function createProduct(

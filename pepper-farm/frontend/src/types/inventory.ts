@@ -27,6 +27,7 @@ export type PlantSummary = {
   PlantCode: string;
   Status: string | null;
   ZoneId: number | null;
+  ZoneName: string | null;
 };
 
 export type InventoryByVariety = {
@@ -34,5 +35,6 @@ export type InventoryByVariety = {
   PepperName: string;
   PlantCount: number;
   TotalWarehouseQuantity: number;
+  StatusBreakdown: Record<string, number>;
   Plants: PlantSummary[];
 };

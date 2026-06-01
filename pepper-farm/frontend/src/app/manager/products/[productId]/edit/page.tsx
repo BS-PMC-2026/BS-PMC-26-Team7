@@ -23,11 +23,30 @@ type FormState = {
   ImageUrl: string;
   PepperId: string;
   IsActive: boolean;
+  DiscountActive: boolean;
+  DiscountPercentage: string;
+  DiscountStartDate: string;
+  DiscountEndDate: string;
 };
 
 function normalizeOptionalText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+/**
+ * Convert an ISO datetime string to the value expected by <input type="datetime-local">.
+ * The backend returns naive UTC datetimes without a 'Z' suffix; we append it so
+ * JavaScript parses the value as UTC before extracting local-time components for
+ * display (datetime-local inputs always show local time).
+ */
+function toDatetimeLocal(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  const s = isoString.endsWith('Z') || isoString.includes('+') ? isoString : isoString + 'Z';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function validateForm(form: FormState): string | null {
@@ -47,6 +66,23 @@ function validateForm(form: FormState): string | null {
     const pepperId = Number(form.PepperId);
     if (Number.isNaN(pepperId) || pepperId <= 0) return 'Selected pepper variety is invalid.';
   }
+  if (form.DiscountPercentage) {
+    const pct = Number(form.DiscountPercentage);
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      return 'Discount percentage must be between 0 and 100.';
+    }
+  }
+  if (form.DiscountActive) {
+    const pct = Number(form.DiscountPercentage);
+    if (!form.DiscountPercentage || Number.isNaN(pct) || pct <= 0) {
+      return 'Discount percentage must be greater than 0 when discount is active.';
+    }
+  }
+  if (form.DiscountStartDate && form.DiscountEndDate) {
+    if (new Date(form.DiscountEndDate) <= new Date(form.DiscountStartDate)) {
+      return 'End date must be after start date.';
+    }
+  }
   return null;
 }
 
@@ -62,6 +98,10 @@ export default function EditProductPage() {
     ImageUrl: '',
     PepperId: '',
     IsActive: true,
+    DiscountActive: false,
+    DiscountPercentage: '',
+    DiscountStartDate: '',
+    DiscountEndDate: '',
   });
   const [peppers, setPeppers] = useState<PepperOption[]>([]);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -84,6 +124,12 @@ export default function EditProductPage() {
           ImageUrl: product.ImageUrl ?? '',
           PepperId: product.PepperId ? String(product.PepperId) : '',
           IsActive: product.IsActive,
+          DiscountActive: product.DiscountActive,
+          DiscountPercentage: product.DiscountPercentage > 0
+            ? String(product.DiscountPercentage)
+            : '',
+          DiscountStartDate: toDatetimeLocal(product.DiscountStartDate),
+          DiscountEndDate: toDatetimeLocal(product.DiscountEndDate),
         });
       } catch (error) {
         setErrorMessage(
@@ -118,7 +164,14 @@ export default function EditProductPage() {
     const { name, value, type } = event.target;
     if (type === 'checkbox') {
       const checked = (event.target as HTMLInputElement).checked;
-      setForm((prev) => ({ ...prev, [name]: checked }));
+      setForm((prev) => ({
+        ...prev,
+        [name]: checked,
+        // Reset discount fields when discount is disabled
+        ...(name === 'DiscountActive' && !checked
+          ? { DiscountPercentage: '', DiscountStartDate: '', DiscountEndDate: '' }
+          : {}),
+      }));
       return;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -143,12 +196,24 @@ export default function EditProductPage() {
       ImageUrl: normalizeOptionalText(form.ImageUrl),
       PepperId: form.PepperId ? Number(form.PepperId) : null,
       IsActive: form.IsActive,
+      DiscountActive: form.DiscountActive,
+      DiscountPercentage: form.DiscountPercentage ? Number(form.DiscountPercentage) : 0,
+      DiscountStartDate: form.DiscountStartDate
+        ? new Date(form.DiscountStartDate).toISOString()
+        : null,
+      DiscountEndDate: form.DiscountEndDate
+        ? new Date(form.DiscountEndDate).toISOString()
+        : null,
     };
 
     try {
       setSubmitting(true);
       const updated = await updateProduct(Number(productId), payload);
-      setSuccessMessage(`Product "${updated.ProductName}" updated successfully.`);
+      let msg = `Product "${updated.ProductName}" updated successfully.`;
+      if (updated.emailNotificationSent) {
+        msg += ' Discount saved. Notification emails were sent to subscribed customers.';
+      }
+      setSuccessMessage(msg);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Failed to update product.'
@@ -319,6 +384,79 @@ export default function EditProductPage() {
           <label htmlFor="IsActive" className="text-sm font-medium">
             Active
           </label>
+        </div>
+
+        {/* ── Discount Settings ── */}
+        <div className="rounded-md border border-[var(--color-border)] p-4 space-y-4">
+          <p className="text-sm font-semibold text-gray-700">Discount Settings</p>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="DiscountActive"
+              name="DiscountActive"
+              type="checkbox"
+              checked={form.DiscountActive}
+              onChange={handleChange}
+            />
+            <label htmlFor="DiscountActive" className="text-sm font-medium">
+              Discount Active
+            </label>
+          </div>
+
+          <div className={form.DiscountActive ? '' : 'opacity-40 pointer-events-none'}>
+            <div>
+              <label htmlFor="DiscountPercentage" className="mb-1 block text-sm font-medium">
+                Discount Percentage (%)
+              </label>
+              <input
+                id="DiscountPercentage"
+                name="DiscountPercentage"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={form.DiscountPercentage}
+                onChange={handleChange}
+                disabled={!form.DiscountActive}
+                className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                placeholder="e.g. 20"
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="DiscountStartDate" className="mb-1 block text-sm font-medium">
+                  Start Date & Time
+                </label>
+                <input
+                  id="DiscountStartDate"
+                  name="DiscountStartDate"
+                  type="datetime-local"
+                  value={form.DiscountStartDate}
+                  onChange={handleChange}
+                  disabled={!form.DiscountActive}
+                  className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                />
+              </div>
+              <div>
+                <label htmlFor="DiscountEndDate" className="mb-1 block text-sm font-medium">
+                  End Date & Time
+                </label>
+                <input
+                  id="DiscountEndDate"
+                  name="DiscountEndDate"
+                  type="datetime-local"
+                  value={form.DiscountEndDate}
+                  onChange={handleChange}
+                  disabled={!form.DiscountActive}
+                  className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                />
+                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                  Leave empty for unlimited discount
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-3">

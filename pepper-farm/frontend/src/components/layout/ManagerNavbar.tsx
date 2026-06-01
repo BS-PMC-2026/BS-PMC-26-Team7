@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Droplets,
   ShieldAlert,
+  Mail,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -353,6 +354,9 @@ export default function ManagerNavbar() {
 
         {/* Analytics */}
         <NavLinkDirect href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
+
+        {/* Newsletter */}
+        <NavLinkDirect href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
 
         {/* Users */}
         <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />

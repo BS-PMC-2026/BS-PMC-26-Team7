@@ -15,3 +15,7 @@ class Product(Base):
     PepperId = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=True)
     IsActive = Column(Boolean, nullable=False, default=True)
     CreatedAt = Column(DateTime, nullable=False, server_default=func.sysutcdatetime())
+    DiscountPercentage = Column(Numeric(5, 2), nullable=True, default=0)
+    DiscountActive = Column(Boolean, nullable=False, default=False)
+    DiscountStartDate = Column(DateTime, nullable=True)
+    DiscountEndDate = Column(DateTime, nullable=True)

@@ -21,6 +21,10 @@ type FormState = {
   ImageUrl: string;
   PepperId: string;
   IsActive: boolean;
+  DiscountActive: boolean;
+  DiscountPercentage: string;
+  DiscountStartDate: string;
+  DiscountEndDate: string;
 };
 
 const initialForm: FormState = {
@@ -31,6 +35,10 @@ const initialForm: FormState = {
   ImageUrl: '',
   PepperId: '',
   IsActive: true,
+  DiscountActive: false,
+  DiscountPercentage: '',
+  DiscountStartDate: '',
+  DiscountEndDate: '',
 };
 
 function normalizeOptionalText(value: string): string | null {
@@ -72,6 +80,26 @@ function validateForm(form: FormState): string | null {
     const pepperId = Number(form.PepperId);
     if (Number.isNaN(pepperId) || pepperId <= 0) {
       return 'Selected pepper variety is invalid.';
+    }
+  }
+
+  if (form.DiscountPercentage) {
+    const pct = Number(form.DiscountPercentage);
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      return 'Discount percentage must be between 0 and 100.';
+    }
+  }
+
+  if (form.DiscountActive) {
+    const pct = Number(form.DiscountPercentage);
+    if (!form.DiscountPercentage || Number.isNaN(pct) || pct <= 0) {
+      return 'Discount percentage must be greater than 0 when discount is active.';
+    }
+  }
+
+  if (form.DiscountStartDate && form.DiscountEndDate) {
+    if (new Date(form.DiscountEndDate) <= new Date(form.DiscountStartDate)) {
+      return 'End date must be after start date.';
     }
   }
 
@@ -121,8 +149,8 @@ export default function CreateProductPage() {
         const data = await getAllPeppers();
         setPeppers(data.filter((pepper) => pepper.IsActive));
       } catch (error) {
-  setErrorMessage(getFriendlyErrorMessage(error));
-} finally {
+        setErrorMessage(getFriendlyErrorMessage(error));
+      } finally {
         setLoadingPeppers(false);
       }
     }
@@ -140,6 +168,10 @@ export default function CreateProductPage() {
       setForm((prev) => ({
         ...prev,
         [name]: checked,
+        // Reset percentage when discount is disabled
+        ...(name === 'DiscountActive' && !checked
+          ? { DiscountPercentage: '', DiscountStartDate: '', DiscountEndDate: '' }
+          : {}),
       }));
       return;
     }
@@ -169,17 +201,29 @@ export default function CreateProductPage() {
       ImageUrl: normalizeOptionalText(form.ImageUrl),
       PepperId: form.PepperId ? Number(form.PepperId) : null,
       IsActive: form.IsActive,
+      DiscountActive: form.DiscountActive,
+      DiscountPercentage: form.DiscountPercentage ? Number(form.DiscountPercentage) : 0,
+      DiscountStartDate: form.DiscountStartDate
+        ? new Date(form.DiscountStartDate).toISOString()
+        : null,
+      DiscountEndDate: form.DiscountEndDate
+        ? new Date(form.DiscountEndDate).toISOString()
+        : null,
     };
 
     try {
       setSubmitting(true);
       const created = await createProduct(payload);
 
-      setSuccessMessage(`Product "${created.ProductName}" created successfully.`);
+      let msg = `Product "${created.ProductName}" created successfully.`;
+      if (created.emailNotificationSent) {
+        msg += ' Discount saved. Notification emails were sent to subscribed customers.';
+      }
+      setSuccessMessage(msg);
       setForm(initialForm);
     } catch (error) {
-  setErrorMessage(getFriendlyErrorMessage(error));
-} finally {
+      setErrorMessage(getFriendlyErrorMessage(error));
+    } finally {
       setSubmitting(false);
     }
   }
@@ -328,6 +372,79 @@ export default function CreateProductPage() {
           <label htmlFor="IsActive" className="text-sm font-medium">
             Active
           </label>
+        </div>
+
+        {/* ── Discount Settings ── */}
+        <div className="rounded-md border border-[var(--color-border)] p-4 space-y-4">
+          <p className="text-sm font-semibold text-gray-700">Discount Settings</p>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="DiscountActive"
+              name="DiscountActive"
+              type="checkbox"
+              checked={form.DiscountActive}
+              onChange={handleChange}
+            />
+            <label htmlFor="DiscountActive" className="text-sm font-medium">
+              Discount Active
+            </label>
+          </div>
+
+          <div className={form.DiscountActive ? '' : 'opacity-40 pointer-events-none'}>
+            <div>
+              <label htmlFor="DiscountPercentage" className="mb-1 block text-sm font-medium">
+                Discount Percentage (%)
+              </label>
+              <input
+                id="DiscountPercentage"
+                name="DiscountPercentage"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={form.DiscountPercentage}
+                onChange={handleChange}
+                disabled={!form.DiscountActive}
+                className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                placeholder="e.g. 20"
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="DiscountStartDate" className="mb-1 block text-sm font-medium">
+                  Start Date & Time
+                </label>
+                <input
+                  id="DiscountStartDate"
+                  name="DiscountStartDate"
+                  type="datetime-local"
+                  value={form.DiscountStartDate}
+                  onChange={handleChange}
+                  disabled={!form.DiscountActive}
+                  className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                />
+              </div>
+              <div>
+                <label htmlFor="DiscountEndDate" className="mb-1 block text-sm font-medium">
+                  End Date & Time
+                </label>
+                <input
+                  id="DiscountEndDate"
+                  name="DiscountEndDate"
+                  type="datetime-local"
+                  value={form.DiscountEndDate}
+                  onChange={handleChange}
+                  disabled={!form.DiscountActive}
+                  className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 outline-none focus:border-[var(--color-primary)] disabled:bg-[var(--color-muted)]"
+                />
+                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                  Leave empty for unlimited discount
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <button
