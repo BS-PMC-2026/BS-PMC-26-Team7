@@ -1115,6 +1115,8 @@ export interface WeatherDictionary {
   selectedRange: string;
   today: string;
   next2Days: string;
+  weekly: string;
+  and: string;
   spraying: string;
   irrigation: string;
   fieldWork: string;
@@ -2309,6 +2311,8 @@ const en: Dictionary = {
     selectedRange: 'Range',
     today: 'Today',
     next2Days: 'Next 2 days',
+    weekly: 'Weekly',
+    and: 'and',
     spraying: 'Spraying',
     irrigation: 'Irrigation',
     fieldWork: 'Field Work',
@@ -3474,6 +3478,8 @@ const he: Dictionary = {
     selectedRange: 'טווח',
     today: 'היום',
     next2Days: 'יומיים הקרובים',
+    weekly: 'שבועי',
+    and: 'וגם',
     spraying: 'ריסוס',
     irrigation: 'השקיה',
     fieldWork: 'עבודת שדה',

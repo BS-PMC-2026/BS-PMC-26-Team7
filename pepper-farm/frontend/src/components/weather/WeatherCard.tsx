@@ -47,7 +47,7 @@ const STATUS_STYLES: Record<WeatherRecommendationStatus, string> = {
   not_advised: 'bg-red-100 text-red-800 border-red-200',
 };
 
-const RANGES: WeatherRange[] = ['today', 'next_2_days'];
+const RANGES: WeatherRange[] = ['today', 'next_2_days', 'next_7_days'];
 
 export default function WeatherCard() {
   const { t, locale, dir } = useLanguage();
@@ -92,8 +92,18 @@ export default function WeatherCard() {
       .finally(() => setAiLoading(false));
   }, [selectedRange]);
 
-  const rangeLabel = (range: WeatherRange): string =>
-    range === 'today' ? w.today : w.next2Days;
+  const rangeLabel = (range: WeatherRange): string => {
+    if (range === 'today') return w.today;
+    if (range === 'next_2_days') return w.next2Days;
+    return w.weekly;
+  };
+
+  // Show every contributing factor (e.g. "Moderate wind and high humidity").
+  const factorsLabel = (rec: WeatherRecommendation): string => {
+    const codes = rec.factors && rec.factors.length > 0 ? rec.factors : [rec.reason];
+    const labels = codes.map((c) => translateEnum(c, w.reasons));
+    return labels.length <= 1 ? labels[0] ?? '' : labels.join(` ${w.and} `);
+  };
 
   const statusLabel = (status: WeatherRecommendationStatus): string => {
     if (status === 'advised') return w.advised;
@@ -217,7 +227,9 @@ export default function WeatherCard() {
           <section>
             <h3 className="text-sm font-medium text-gray-500 mb-2">{w.forecast}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {data.forecast.map((day) => (
+              {data.forecast
+                .slice(0, selectedRange === 'next_7_days' ? 7 : 4)
+                .map((day) => (
                 <div
                   key={day.date}
                   className="rounded-lg border border-gray-100 bg-gray-50 p-2 text-center"
@@ -294,7 +306,7 @@ export default function WeatherCard() {
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">
-                      {translateEnum(rec.reason, w.reasons)}
+                      {factorsLabel(rec)}
                     </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[rec.status]}`}

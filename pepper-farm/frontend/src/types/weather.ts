@@ -1,7 +1,7 @@
 // US36 — Weather Integration for Smarter Farming.
 // Mirrors the backend schemas (schemas/weather.py).
 
-export type WeatherRange = "today" | "next_2_days";
+export type WeatherRange = "today" | "next_2_days" | "next_7_days";
 
 export interface WeatherLocation {
   latitude: number;
@@ -44,6 +44,7 @@ export interface WeatherRecommendation {
   activity: WeatherActivity;
   status: WeatherRecommendationStatus;
   reason: string;
+  factors: string[];
 }
 
 export interface WeatherResponse {
