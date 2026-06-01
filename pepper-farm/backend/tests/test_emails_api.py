@@ -212,7 +212,7 @@ def test_send_newsletter_only_opted_in_customers_emailed():
     # Only alice (consent=True) should be emailed; bob (consent=False) should not.
     assert "alice@example.com" in sent_to
     assert "bob@example.com" not in sent_to
-    assert data["sentCount"] == 1
+    assert data["totalRecipients"] == 1
 
 
 def test_send_newsletter_workers_group_includes_workers():
@@ -241,11 +241,12 @@ def test_send_newsletter_creates_logs_for_sent():
     with patch("utils.jwt.jwt.decode", return_value=_manager_token()):
         with patch("routers.emails.is_smtp_configured", return_value=True):
             with patch("routers.emails.send_email"):
-                client.post(
-                    "/api/emails/send-newsletter",
-                    json={"subject": "Test", "message": "Hello", "recipientGroups": ["customers"]},
-                    headers=_get_auth("FarmManager"),
-                )
+                with patch("routers.emails.SessionLocal", new=TestingSessionLocal):
+                    client.post(
+                        "/api/emails/send-newsletter",
+                        json={"subject": "Test", "message": "Hello", "recipientGroups": ["customers"]},
+                        headers=_get_auth("FarmManager"),
+                    )
 
         resp = client.get("/api/emails/logs", headers=_get_auth("FarmManager"))
 
@@ -263,11 +264,12 @@ def test_send_newsletter_creates_logs_for_failed():
     with patch("utils.jwt.jwt.decode", return_value=_manager_token()):
         with patch("routers.emails.is_smtp_configured", return_value=True):
             with patch("routers.emails.send_email", side_effect=boom):
-                client.post(
-                    "/api/emails/send-newsletter",
-                    json={"subject": "Fail", "message": "Body", "recipientGroups": ["customers"]},
-                    headers=_get_auth("FarmManager"),
-                )
+                with patch("routers.emails.SessionLocal", new=TestingSessionLocal):
+                    client.post(
+                        "/api/emails/send-newsletter",
+                        json={"subject": "Fail", "message": "Body", "recipientGroups": ["customers"]},
+                        headers=_get_auth("FarmManager"),
+                    )
 
         resp = client.get("/api/emails/logs", headers=_get_auth("FarmManager"))
 

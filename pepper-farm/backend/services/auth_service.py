@@ -31,6 +31,7 @@ def register(
     )
     db.add(user)
     db.commit()
+    db.refresh(user)
 
     # US40: persist email consent choice from the registration checkbox.
     # Wrapped in try/except so registration never fails when the migration
