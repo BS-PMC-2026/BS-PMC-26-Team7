@@ -282,9 +282,10 @@ def test_send_template_writes_email_logs():
 
         with patch("routers.newsletter_templates.is_smtp_configured", return_value=True):
             with patch("routers.newsletter_templates.send_email"):
-                client.post(f"/api/newsletter-templates/{tid}/send",
-                            json={"recipientGroups": ["customers"]},
-                            headers=_auth("FarmManager"))
+                with patch("routers.newsletter_templates.SessionLocal", new=TestingSessionLocal):
+                    client.post(f"/api/newsletter-templates/{tid}/send",
+                                json={"recipientGroups": ["customers"]},
+                                headers=_auth("FarmManager"))
 
         logs_resp = client.get("/api/emails/logs", headers=_auth("FarmManager"))
         assert logs_resp.status_code == 200

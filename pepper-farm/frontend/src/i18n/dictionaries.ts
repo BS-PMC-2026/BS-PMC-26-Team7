@@ -714,6 +714,7 @@ export interface NewsletterDictionary {
   blockText:            string;
   blockAlt:             string;
   blockUrl:             string;
+  statusLabel:          string;
   statusDraft:          string;
   statusReady:          string;
   statusArchived:       string;
@@ -2174,6 +2175,7 @@ const en: Dictionary = {
     blockText:              'Text',
     blockAlt:               'Alt text',
     blockUrl:               'URL',
+    statusLabel:            'Status',
     statusDraft:            'Draft',
     statusReady:            'Ready',
     statusArchived:         'Archived',
@@ -3279,6 +3281,7 @@ const he: Dictionary = {
     blockText:              'טקסט',
     blockAlt:               'טקסט חלופי',
     blockUrl:               'כתובת URL',
+    statusLabel:            'סטטוס',
     statusDraft:            'טיוטה',
     statusReady:            'מוכן',
     statusArchived:         'בארכיב',
