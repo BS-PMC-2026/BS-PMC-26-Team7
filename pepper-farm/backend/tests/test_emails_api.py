@@ -3,6 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import models  # noqa: F401 — register all ORM models with Base.metadata
 from unittest.mock import patch
 
 import pytest
@@ -103,13 +104,16 @@ def _seed_db(db):
 @pytest.fixture(autouse=True)
 def setup_db():
     app.dependency_overrides[get_db] = override_get_db
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=engine)   # clean slate (in case a previous run left tables)
+    Base.metadata.create_all(bind=engine) # create ALL tables (all models are now registered)
     db = TestingSessionLocal()
-    _seed_db(db)
-    db.close()
-    yield
-    Base.metadata.drop_all(bind=engine)
-    app.dependency_overrides.pop(get_db, None)
+    try:
+        _seed_db(db)
+        yield
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+        app.dependency_overrides.pop(get_db, None)
 
 
 # ── Authentication / Authorization ───────────────────────────────────────────
@@ -212,7 +216,9 @@ def test_send_newsletter_only_opted_in_customers_emailed():
     # Only alice (consent=True) should be emailed; bob (consent=False) should not.
     assert "alice@example.com" in sent_to
     assert "bob@example.com" not in sent_to
-    assert data["sentCount"] == 1
+    # The endpoint queues sends via BackgroundTasks and returns sentCount=0 immediately.
+    # Verify via totalRecipients that exactly one recipient was resolved.
+    assert data["totalRecipients"] == 1
 
 
 def test_send_newsletter_workers_group_includes_workers():
@@ -241,11 +247,12 @@ def test_send_newsletter_creates_logs_for_sent():
     with patch("utils.jwt.jwt.decode", return_value=_manager_token()):
         with patch("routers.emails.is_smtp_configured", return_value=True):
             with patch("routers.emails.send_email"):
-                client.post(
-                    "/api/emails/send-newsletter",
-                    json={"subject": "Test", "message": "Hello", "recipientGroups": ["customers"]},
-                    headers=_get_auth("FarmManager"),
-                )
+                with patch("routers.emails.SessionLocal", new=TestingSessionLocal):
+                    client.post(
+                        "/api/emails/send-newsletter",
+                        json={"subject": "Test", "message": "Hello", "recipientGroups": ["customers"]},
+                        headers=_get_auth("FarmManager"),
+                    )
 
         resp = client.get("/api/emails/logs", headers=_get_auth("FarmManager"))
 
@@ -263,11 +270,12 @@ def test_send_newsletter_creates_logs_for_failed():
     with patch("utils.jwt.jwt.decode", return_value=_manager_token()):
         with patch("routers.emails.is_smtp_configured", return_value=True):
             with patch("routers.emails.send_email", side_effect=boom):
-                client.post(
-                    "/api/emails/send-newsletter",
-                    json={"subject": "Fail", "message": "Body", "recipientGroups": ["customers"]},
-                    headers=_get_auth("FarmManager"),
-                )
+                with patch("routers.emails.SessionLocal", new=TestingSessionLocal):
+                    client.post(
+                        "/api/emails/send-newsletter",
+                        json={"subject": "Fail", "message": "Body", "recipientGroups": ["customers"]},
+                        headers=_get_auth("FarmManager"),
+                    )
 
         resp = client.get("/api/emails/logs", headers=_get_auth("FarmManager"))
 

@@ -1,25 +1,32 @@
 /**
- * Tests for US31 — /worker/spray-restrictions (WorkerSprayRestrictionsPage).
+ * Tests for US31 — Worker spray-restrictions map (SpraySafetyMapSection).
+ *
+ * The route /worker/spray-restrictions was converted to a redirect; the actual
+ * map UI now lives in SpraySafetyMapSection which is embedded in
+ * /worker/spray-report.  We import the component directly to preserve test
+ * coverage over the map functionality.
  *
  * Covers:
- *  - Page renders for worker
+ *  - Component renders for worker
  *  - Loading skeleton shown while fetching
  *  - SprayZoneMap renders with data
  *  - Restricted zones banner shown when unsafe/requires_approval zones exist
  *  - Summary cards render
  *  - Zone table renders with correct status labels
  *  - Error state rendered when fetch fails
- *  - No manager-only alert controls visible
- *  - Legend renders via SprayZoneMap component
+ *  - No manager alert controls visible
  */
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 /* ── Mocks ───────────────────────────────────────────────────────────────── */
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
-  usePathname: () => '/worker/spray-restrictions',
+  redirect:        jest.fn(),
+  useRouter:       () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname:     () => '/worker/spray-report',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 jest.mock('next/link', () => {
@@ -37,10 +44,6 @@ jest.mock('lucide-react', () => {
   });
   return mocks;
 });
-
-jest.mock('@/components/ui/PageHeader', () =>
-  ({ title }: { title: string }) => React.createElement('h1', {}, title),
-);
 
 jest.mock('@/components/spray/SprayZoneMap', () =>
   () => React.createElement('div', { 'data-testid': 'spray-zone-map' }),
@@ -71,12 +74,16 @@ const makeZone = (overrides = {}) => ({
   ...overrides,
 });
 
-/* ── Import page after mocks ─────────────────────────────────────────────── */
+/* ── Import component after mocks ────────────────────────────────────────── */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const SprayRestrictionsPage = require('@/app/worker/spray-restrictions/page').default;
+const SpraySafetyMapSection = require('@/components/spray/SpraySafetyMapSection').default;
 
-const renderPage = () => render(React.createElement(SprayRestrictionsPage));
+function renderSection() {
+  return render(
+    React.createElement(LanguageProvider, {}, React.createElement(SpraySafetyMapSection)),
+  );
+}
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 
@@ -85,21 +92,22 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('renders the page title', async () => {
     mockGetRestrictedZones.mockResolvedValue([]);
-    renderPage();
+    renderSection();
+    // SpraySafetyMapSection renders "Farm Zone Safety Overview" as its heading
     await waitFor(() =>
-      expect(screen.getByText('Spray Restrictions Map')).toBeInTheDocument(),
+      expect(screen.getByText('Farm Zone Safety Overview')).toBeInTheDocument(),
     );
   });
 
   it('shows loading skeleton while fetching', () => {
     mockGetRestrictedZones.mockReturnValue(new Promise(() => {}));
-    renderPage();
+    renderSection();
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
   });
 
   it('renders SprayZoneMap after data loads', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone()]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('spray-zone-map')).toBeInTheDocument(),
     );
@@ -107,7 +115,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('shows safety notice banner', async () => {
     mockGetRestrictedZones.mockResolvedValue([]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByText(/Safety notice/i)).toBeInTheDocument(),
     );
@@ -115,7 +123,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('shows summary cards after load', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone()]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('summary-cards')).toBeInTheDocument(),
     );
@@ -127,7 +135,7 @@ describe('WorkerSprayRestrictionsPage', () => {
     mockGetRestrictedZones.mockResolvedValue([
       makeZone({ zoneId: 1, zoneCode: 'GH-01', sprayStatus: 'unsafe', safeToReEnterAtUtc: future }),
     ]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('restricted-zones-banner')).toBeInTheDocument(),
     );
@@ -136,7 +144,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('does NOT show restricted zones banner when all zones are safe', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone({ sprayStatus: 'safe' })]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.queryByTestId('restricted-zones-banner')).not.toBeInTheDocument(),
     );
@@ -144,7 +152,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('renders zone table with zone name and code', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone()]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('zone-table')).toBeInTheDocument(),
     );
@@ -154,7 +162,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('shows "Safe" status label for safe zones', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone({ sprayStatus: 'safe' })]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('zone-table')).toBeInTheDocument(),
     );
@@ -167,7 +175,7 @@ describe('WorkerSprayRestrictionsPage', () => {
     mockGetRestrictedZones.mockResolvedValue([
       makeZone({ sprayStatus: 'unsafe', safeToReEnterAtUtc: future }),
     ]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('zone-table')).toBeInTheDocument(),
     );
@@ -178,16 +186,16 @@ describe('WorkerSprayRestrictionsPage', () => {
     mockGetRestrictedZones.mockResolvedValue([
       makeZone({ sprayStatus: 'requires_approval', requiresApproval: true }),
     ]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('zone-table')).toBeInTheDocument(),
     );
-    expect(screen.getByText('Caution — Unverified')).toBeInTheDocument();
+    expect(screen.getByText('Caution - Unverified')).toBeInTheDocument();
   });
 
   it('shows error message on fetch failure', async () => {
     mockGetRestrictedZones.mockRejectedValue(new Error('Network error'));
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByText('Network error')).toBeInTheDocument(),
     );
@@ -195,7 +203,7 @@ describe('WorkerSprayRestrictionsPage', () => {
 
   it('does not show manager alert controls', async () => {
     mockGetRestrictedZones.mockResolvedValue([makeZone()]);
-    renderPage();
+    renderSection();
     await waitFor(() =>
       expect(screen.getByTestId('spray-zone-map')).toBeInTheDocument(),
     );
