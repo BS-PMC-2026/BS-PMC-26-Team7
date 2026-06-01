@@ -166,12 +166,25 @@ def _to_optional_int(value: Any) -> Optional[int]:
 
 def _window_size(selected_range: WeatherRange) -> int:
     """Number of forecast days covered by the selected range."""
-    return 1 if selected_range == "today" else 2
+    if selected_range == "today":
+        return 1
+    if selected_range == "next_2_days":
+        return 2
+    return 7  # next_7_days (weekly)
+
+
+def _forecast_days_for(selected_range: WeatherRange) -> int:
+    """How many forecast days to request from Open-Meteo for this range."""
+    return 7 if selected_range == "next_7_days" else FORECAST_DAYS
 
 
 # --- Open-Meteo call -------------------------------------------------------
 
-def _fetch_open_meteo(latitude: float, longitude: float) -> dict[str, Any]:
+def _fetch_open_meteo(
+    latitude: float,
+    longitude: float,
+    forecast_days: int = FORECAST_DAYS,
+) -> dict[str, Any]:
     """Call the Open-Meteo forecast API and return the raw JSON payload."""
     params = {
         "latitude": latitude,
@@ -195,7 +208,7 @@ def _fetch_open_meteo(latitude: float, longitude: float) -> dict[str, Any]:
             ]
         ),
         "wind_speed_unit": "kmh",
-        "forecast_days": FORECAST_DAYS,
+        "forecast_days": forecast_days,
         "timezone": "auto",
     }
 
@@ -360,8 +373,11 @@ def _build_recommendations(
 ) -> list[WeatherRecommendation]:
     """Derive deterministic spraying/irrigation/field-work recommendations.
 
-    Weather is the primary driver; sensor readings are a secondary signal that
-    only nudges the result at the edges.
+    Weather is the primary driver. Sensor readings are a secondary signal that
+    only nudges the result at the edges, and the caller passes `sensors` only
+    for the 'today' range (None for next_2_days / next_7_days). Each result
+    carries `factors` listing every contributing code so the UI and the AI
+    explanation can show the full cross-check.
     """
     window = forecast[: _window_size(selected_range)]
     window_rain = max((_rain_prob(d) for d in window), default=0)
@@ -379,38 +395,44 @@ def _build_recommendations(
         sensor_temp is not None and sensor_temp >= SENSOR_EXTREME_TEMP_C
     )
 
-    # Spraying
+    # Spraying — weather is primary; high sensor humidity is a secondary signal.
     if current.windSpeedKph > SPRAY_WIND_MAX_KPH:
-        spraying = ("not_advised", "high_wind")
+        spray_status, spray_reason, spray_factors = "not_advised", "high_wind", ["high_wind"]
     elif window_rain >= SPRAY_RAIN_PROB_PCT or current.precipitationMm > 0:
-        spraying = ("not_advised", "rain_expected")
-    elif current.windSpeedKph >= SPRAY_WIND_CAUTION_KPH:
-        spraying = ("caution", "moderate_wind")
-    elif high_sensor_humidity:
-        spraying = ("caution", "high_humidity")
+        spray_status, spray_reason, spray_factors = "not_advised", "rain_expected", ["rain_expected"]
     else:
-        spraying = ("advised", "good_conditions")
+        if current.windSpeedKph >= SPRAY_WIND_CAUTION_KPH:
+            spray_status, spray_reason, spray_factors = "caution", "moderate_wind", ["moderate_wind"]
+        else:
+            spray_status, spray_reason, spray_factors = "advised", "good_conditions", ["good_conditions"]
+        # If humidity is high, keep BOTH factors when weather already raised a
+        # caution (e.g. moderate wind), so the cross-check is visible.
+        if high_sensor_humidity:
+            if spray_status == "advised":
+                spray_status, spray_reason, spray_factors = "caution", "high_humidity", ["high_humidity"]
+            else:
+                spray_factors.append("high_humidity")
 
     # Irrigation
     if window_rain >= IRRIGATION_RAIN_PROB_PCT:
-        irrigation = ("not_advised", "rain_expected")
+        irr_status, irr_reason, irr_factors = "not_advised", "rain_expected", ["rain_expected"]
     elif window_max_temp >= IRRIGATION_HEAT_C or extreme_sensor_temp:
-        irrigation = ("caution", "high_heat")
+        irr_status, irr_reason, irr_factors = "caution", "high_heat", ["high_heat"]
     else:
-        irrigation = ("advised", "no_rain_expected")
+        irr_status, irr_reason, irr_factors = "advised", "no_rain_expected", ["no_rain_expected"]
 
     # Field work
     if current.precipitationMm > 0 or window_rain >= FIELDWORK_RAIN_PROB_PCT:
-        field_work = ("not_advised", "rain_expected")
+        fw_status, fw_reason, fw_factors = "not_advised", "rain_expected", ["rain_expected"]
     elif window_max_temp >= FIELDWORK_HEAT_C or extreme_sensor_temp:
-        field_work = ("caution", "extreme_heat")
+        fw_status, fw_reason, fw_factors = "caution", "extreme_heat", ["extreme_heat"]
     else:
-        field_work = ("advised", "clear_conditions")
+        fw_status, fw_reason, fw_factors = "advised", "clear_conditions", ["clear_conditions"]
 
     return [
-        WeatherRecommendation(activity="spraying", status=spraying[0], reason=spraying[1]),
-        WeatherRecommendation(activity="irrigation", status=irrigation[0], reason=irrigation[1]),
-        WeatherRecommendation(activity="field_work", status=field_work[0], reason=field_work[1]),
+        WeatherRecommendation(activity="spraying", status=spray_status, reason=spray_reason, factors=spray_factors),
+        WeatherRecommendation(activity="irrigation", status=irr_status, reason=irr_reason, factors=irr_factors),
+        WeatherRecommendation(activity="field_work", status=fw_status, reason=fw_reason, factors=fw_factors),
     ]
 
 
@@ -425,14 +447,19 @@ def get_weather(
     This NEVER calls OpenAI — it is safe for automatic dashboard load.
     """
     latitude, longitude = _get_coordinates()
-    body = _fetch_open_meteo(latitude, longitude)
+    forecast_days = _forecast_days_for(selected_range)
+    body = _fetch_open_meteo(latitude, longitude, forecast_days)
 
     location = _parse_location(body, (latitude, longitude))
     current = _parse_current(body)
     forecast = _parse_forecast(body)
+
+    # The snapshot is shown for any range when fresh, but sensors only
+    # INFLUENCE the 'today' recommendation. Future ranges use weather-only rules.
     sensors = get_sensor_snapshot(db)
+    effective_sensors = sensors if selected_range == "today" else None
     recommendations = _build_recommendations(
-        current, forecast, sensors, selected_range
+        current, forecast, effective_sensors, selected_range
     )
 
     return WeatherResponse(
@@ -486,9 +513,22 @@ def _summarize_facts(weather: WeatherResponse) -> str:
     else:
         lines.append("Farm sensors: none available")
     rec = "; ".join(
-        f"{r.activity}={r.status} ({r.reason})" for r in weather.recommendations
+        f"{r.activity}={r.status} "
+        f"(factors: {', '.join(r.factors) if r.factors else r.reason})"
+        for r in weather.recommendations
     )
     lines.append(f"Rule-based recommendation (final, do not change): {rec}")
+    if weather.selectedRange == "today" and weather.sensors:
+        lines.append(
+            "Note: for the 'today' range a factor that comes from the sensor "
+            "snapshot (e.g. high_humidity) means the recommendation is supported "
+            "by the current sensor reading — say so in the explanation."
+        )
+    else:
+        lines.append(
+            "Note: the sensor snapshot is current information only and does NOT "
+            "influence this range's recommendation."
+        )
     return "\n".join(lines)
 
 
@@ -514,9 +554,12 @@ def generate_ai_explanation(weather: WeatherResponse) -> WeatherAiResponse:
     system_prompt = (
         "You are an assistant for a pepper farm. You are given weather facts, "
         "farm sensor facts, and an ALREADY-DECIDED rule-based recommendation "
-        "for spraying, irrigation and field work. Do NOT change or override the "
-        "recommendation. Briefly explain it (2-4 short sentences) in plain text "
-        "with no Markdown formatting. Reply in English."
+        "for spraying, irrigation and field work, each with the factors that "
+        "led to it. Do NOT change or override the recommendation. Briefly "
+        "explain it (2-4 short sentences) in plain text with no Markdown, "
+        "citing the listed factors; when a recommendation lists more than one "
+        "factor, mention all of them (e.g. moderate wind and high humidity). "
+        "Reply in English."
     )
 
     try:

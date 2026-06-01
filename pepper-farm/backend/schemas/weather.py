@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from typing import List, Literal, Optional
 
 
-# Recommendation window the manager can choose. "next_7_days" may be added later.
-WeatherRange = Literal["today", "next_2_days"]
+# Recommendation window the manager can choose.
+WeatherRange = Literal["today", "next_2_days", "next_7_days"]
 
 
 class WeatherLocation(BaseModel):
@@ -76,13 +76,16 @@ class WeatherRecommendation(BaseModel):
     """A deterministic, rule-based farming recommendation.
 
     `status` reflects how advisable the activity is given current/forecast
-    conditions (and sensor signals); `reason` is a stable code the frontend
-    translates (en/he). These rules are the source of truth — OpenAI never
-    overrides them.
+    conditions (and, for the 'today' range, sensor signals). `reason` is the
+    primary stable code the frontend translates (en/he); `factors` lists ALL
+    contributing factor codes (e.g. both "moderate_wind" and "high_humidity")
+    so the dashboard and the AI explanation can surface every reason. These
+    rules are the source of truth — OpenAI never overrides them.
     """
     activity: Literal["spraying", "irrigation", "field_work"]
     status: Literal["advised", "caution", "not_advised"]
     reason: str
+    factors: List[str] = []
 
     class Config:
         from_attributes = True
