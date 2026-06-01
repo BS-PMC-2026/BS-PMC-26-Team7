@@ -182,6 +182,43 @@ def seed_sensors(db):
     db.commit()
 
 
+def seed_humid_sensor(db, humidity=92.0, hours_ago=1.0):
+    """One active sensor with a FRESH reading at the given humidity (>= 85%)."""
+    db.add(Sensor(SensorId=1, MacAddress="AA", IsActive=True))
+    db.add(
+        SensorReading(
+            SensorId=1, MacAddress="AA", Temperature=21.0, Humidity=humidity,
+            PAR=120.0, SampleTimeUtc=_hours_ago(hours_ago),
+            ReadingType="std", RawJson="{}",
+        )
+    )
+    db.commit()
+
+
+# Current weather with MODERATE wind (12–20 km/h) -> spraying caution/moderate_wind.
+MODERATE_WIND_CURRENT = {
+    "time": "2026-06-01T14:00",
+    "temperature_2m": 20.0,
+    "relative_humidity_2m": 50,
+    "wind_speed_10m": 15.0,
+    "precipitation": 0.0,
+    "weather_code": 1,
+}
+
+# A calm, dry 7-day daily block for weekly-range tests.
+SEVEN_DAY_DAILY = {
+    "time": [
+        "2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04",
+        "2026-06-05", "2026-06-06", "2026-06-07",
+    ],
+    "weather_code": [1, 2, 1, 0, 3, 1, 2],
+    "temperature_2m_max": [27.0, 28.0, 26.0, 27.0, 29.0, 26.0, 27.0],
+    "temperature_2m_min": [17.0, 16.0, 18.0, 15.0, 17.0, 16.0, 18.0],
+    "precipitation_probability_max": [0, 5, 10, 0, 5, 0, 10],
+    "wind_speed_10m_max": [15.0, 14.0, 12.0, 10.0, 13.0, 11.0, 12.0],
+}
+
+
 # --- GET /api/manager/weather ----------------------------------------------
 
 def test_get_weather_returns_live_response(manager_client):
@@ -288,8 +325,8 @@ def test_sensors_null_when_all_stale(manager_client, db):
     assert res.json()["sensors"] is None
 
 
-def test_stale_sensor_does_not_affect_recommendations(manager_client, db):
-    """A stale, very humid sensor must not flip spraying to high_humidity."""
+def test_stale_sensor_does_not_affect_today(manager_client, db):
+    """A stale, very humid sensor must NOT influence the today recommendation."""
     # If this stale reading were used, spraying would become caution/high_humidity.
     db.add(Sensor(SensorId=1, MacAddress="AA", IsActive=True))
     db.add(
@@ -302,7 +339,7 @@ def test_stale_sensor_does_not_affect_recommendations(manager_client, db):
     db.commit()
 
     with mock_open_meteo(json_data=make_meteo_body()):  # calm, clear weather
-        res = manager_client.get("/api/manager/weather")
+        res = manager_client.get("/api/manager/weather?range=today")
 
     assert res.status_code == 200
     data = res.json()
@@ -310,6 +347,70 @@ def test_stale_sensor_does_not_affect_recommendations(manager_client, db):
     spraying = {r["activity"]: r for r in data["recommendations"]}["spraying"]
     assert spraying["status"] == "advised"
     assert spraying["reason"] == "good_conditions"
+    assert "high_humidity" not in spraying["factors"]
+
+
+def test_today_uses_fresh_sensor_humidity(manager_client, db):
+    """Today: a fresh high-humidity sensor adds high_humidity to spraying."""
+    seed_humid_sensor(db, humidity=92.0)
+    with mock_open_meteo(json_data=make_meteo_body()):  # calm wind (8 km/h)
+        res = manager_client.get("/api/manager/weather?range=today")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "caution"
+    assert spraying["reason"] == "high_humidity"
+    assert "high_humidity" in spraying["factors"]
+
+
+def test_today_combined_factors_wind_and_humidity(manager_client, db):
+    """Today: moderate wind + high sensor humidity → BOTH factors listed."""
+    seed_humid_sensor(db, humidity=92.0)
+    with mock_open_meteo(json_data=make_meteo_body(current=MODERATE_WIND_CURRENT)):
+        res = manager_client.get("/api/manager/weather?range=today")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "caution"
+    assert spraying["reason"] == "moderate_wind"  # weather stays the primary reason
+    assert {"moderate_wind", "high_humidity"}.issubset(set(spraying["factors"]))
+
+
+def test_next_2_days_ignores_sensor(manager_client, db):
+    """Next 2 days: a fresh high-humidity sensor must NOT affect recommendations."""
+    seed_humid_sensor(db, humidity=92.0)
+    with mock_open_meteo(json_data=make_meteo_body()):  # calm
+        res = manager_client.get("/api/manager/weather?range=next_2_days")
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["sensors"] is not None  # snapshot still displayed as current info
+    spraying = {r["activity"]: r for r in data["recommendations"]}["spraying"]
+    assert spraying["status"] == "advised"
+    assert spraying["reason"] == "good_conditions"
+    assert "high_humidity" not in spraying["factors"]
+
+
+def test_weekly_ignores_sensor(manager_client, db):
+    """Weekly: a fresh high-humidity sensor must NOT affect recommendations."""
+    seed_humid_sensor(db, humidity=92.0)
+    with mock_open_meteo(json_data=make_meteo_body(daily=SEVEN_DAY_DAILY)):  # calm
+        res = manager_client.get("/api/manager/weather?range=next_7_days")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert "high_humidity" not in spraying["factors"]
+
+
+def test_weekly_returns_seven_forecast_days(manager_client):
+    """Weekly requests enough days: forecast length 7 and selectedRange echoed."""
+    with mock_open_meteo(json_data=make_meteo_body(daily=SEVEN_DAY_DAILY)):
+        res = manager_client.get("/api/manager/weather?range=next_7_days")
+
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["forecast"]) == 7
+    assert data["selectedRange"] == "next_7_days"
 
 
 def test_range_affects_recommendations(manager_client):
