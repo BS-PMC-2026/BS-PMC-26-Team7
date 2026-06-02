@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -36,7 +36,7 @@ def _period_key(dt: datetime | None, period: str) -> str:
     if period == "daily":
         return d.strftime("%Y-%m-%d")
     if period == "weekly":
-        return d.strftime("%Y-W%W")
+        return d.strftime("%G-W%V")  # ISO 8601 week (Mon-Sun, week 01-53, no W00 edge case)
     if period == "yearly":
         return d.strftime("%Y")
     return d.strftime("%Y-%m")  # monthly (default)
@@ -67,9 +67,14 @@ def get_task_statistics(
     # Load all tasks (lazy="joined" already loads assigned_to, zone, alert)
     tasks: list[Task] = db.query(Task).all()
 
-    # Python-level filtering for SQLite/SQL Server date-compat
+    # Python-level filtering for SQLite/SQL Server date-compat.
+    # end_date is treated as end-of-day inclusive: a date-only value from the
+    # frontend arrives as midnight (00:00:00), so we extend it to just before
+    # the next day rather than excluding the entire chosen day.
     sd = _to_naive(start_date)
     ed = _to_naive(end_date)
+    if ed is not None and ed.hour == 0 and ed.minute == 0 and ed.second == 0:
+        ed = ed + timedelta(days=1) - timedelta(seconds=1)
     if sd is not None:
         tasks = [t for t in tasks if _to_naive(t.CreatedAt) is not None and _to_naive(t.CreatedAt) >= sd]
     if ed is not None:
@@ -89,7 +94,9 @@ def get_task_statistics(
     for t in tasks:
         if t.Status == "done" and t.CompletedAt is not None and t.CreatedAt is not None:
             delta = _to_naive(t.CompletedAt) - _to_naive(t.CreatedAt)
-            completion_times_h.append(delta.total_seconds() / 3600)
+            hours = delta.total_seconds() / 3600
+            if hours > 0:  # guard against clock-skew / data-migration timestamps
+                completion_times_h.append(hours)
     avg_completion_hours = (
         round(sum(completion_times_h) / len(completion_times_h), 1)
         if completion_times_h else None
@@ -189,6 +196,8 @@ def get_product_statistics(
 
     sd = _to_naive(start_date)
     ed = _to_naive(end_date)
+    if ed is not None and ed.hour == 0 and ed.minute == 0 and ed.second == 0:
+        ed = ed + timedelta(days=1) - timedelta(seconds=1)
     if sd is not None:
         all_paid = [o for o in all_paid if _to_naive(o.CreatedAtUtc) is not None and _to_naive(o.CreatedAtUtc) >= sd]
     if ed is not None:
@@ -220,7 +229,9 @@ def get_product_statistics(
         prod_map[name]["units"] += item.Quantity
         prod_map[name]["revenue"] += float(item.LineTotal)
         prod_map[name]["orders"].add(item.OrderId)
-        price = float(item.UnitPriceAfterProductDiscount)
+        # Use the post-employee-discount unit price (most accurate "price paid" per unit).
+        # UnitPriceAfterProductDiscount would overstate for employee purchases.
+        price = float(item.UnitPriceAfterEmployeeDiscount)
         if price > 0:
             prod_map[name]["prices"].append(price)
 

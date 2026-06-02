@@ -292,6 +292,52 @@ def test_recent_orders_include_buyer_name(db):
 
 # ── 13. Revenue by period includes units sold ────────────────────────────────
 
+def test_employee_discount_price_used_for_extremes(db):
+    """Employee-discounted price (UnitPriceAfterEmployeeDiscount) is used for cheapest/most-expensive."""
+    _order(db, order_id=1, total=200.0)
+    lt = Decimal("45.00")  # 90 - 50% employee discount
+    i = OrderItem(
+        OrderId=1,
+        ProductId=None,
+        ProductNameSnapshot="Employee Product",
+        UnitPriceOriginal=Decimal("100.00"),
+        UnitPriceAfterProductDiscount=Decimal("90.00"),  # after product discount
+        UnitPriceAfterEmployeeDiscount=Decimal("45.00"),  # after employee discount
+        Quantity=1,
+        LineSubtotal=lt,
+        LineDiscountTotal=Decimal("0"),
+        LineTotal=lt,
+    )
+    j = OrderItem(
+        OrderId=1,
+        ProductId=None,
+        ProductNameSnapshot="Regular Product",
+        UnitPriceOriginal=Decimal("80.00"),
+        UnitPriceAfterProductDiscount=Decimal("80.00"),
+        UnitPriceAfterEmployeeDiscount=Decimal("80.00"),  # no employee discount
+        Quantity=1,
+        LineSubtotal=Decimal("80.00"),
+        LineDiscountTotal=Decimal("0"),
+        LineTotal=Decimal("80.00"),
+    )
+    db.add(i); db.add(j); db.commit()
+
+    result = get_product_statistics(db)
+    # Employee Product's effective unit price is 45, Regular's is 80
+    assert result.summary.cheapest_sold_product == "Employee Product"
+    assert result.summary.most_expensive_sold_product == "Regular Product"
+
+
+def test_end_date_includes_full_day(db):
+    """An order at 23:59 on the end_date day must be included."""
+    _order(db, order_id=1, total=100.0, created=datetime(2026, 5, 15, 23, 59, 0))
+    _order(db, order_id=2, total=200.0, created=datetime(2026, 5, 16, 0, 0, 1))
+
+    result = get_product_statistics(db, end_date=datetime(2026, 5, 15))
+    assert result.summary.total_orders == 1
+    assert result.summary.total_revenue == 100.0
+
+
 def test_revenue_by_period_includes_units_sold(db):
     created = datetime(2026, 5, 1)
     _order(db, order_id=1, total=100.0, created=created)

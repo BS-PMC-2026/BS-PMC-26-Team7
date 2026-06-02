@@ -294,3 +294,58 @@ def test_overdue_task_list_has_correct_fields(db):
     assert item.priority == "medium"
     assert item.status == "todo"
     assert item.due_date is not None
+
+
+# ── 12. end_date is inclusive of the full day ─────────────────────────────────
+
+def test_end_date_includes_full_day(db):
+    """A task created at 23:59 on the end_date day must be included."""
+    day = datetime(2026, 5, 15)
+    _task(db, created=datetime(2026, 5, 15, 23, 59, 0))
+    _task(db, created=datetime(2026, 5, 16, 0, 0, 1))  # next day — excluded
+
+    # Pass end_date as midnight (simulating a date-only frontend input)
+    result = get_task_statistics(db, end_date=day)
+    assert result.summary.total == 1
+
+
+# ── 13. avg_completion_hours ignores negative deltas ─────────────────────────
+
+def test_avg_completion_time_skips_negative_delta(db):
+    """CompletedAt earlier than CreatedAt is skipped, not included negatively."""
+    base = datetime(2026, 5, 1, 12, 0, 0)
+    # Normal task: 2 h completion
+    _task(db, status="done", created=base, completed_at=base + timedelta(hours=2))
+    # Corrupt task: CompletedAt 1 h BEFORE CreatedAt (clock skew / data error)
+    _task(db, status="done", created=base, completed_at=base - timedelta(hours=1))
+
+    result = get_task_statistics(db)
+    # Only the valid 2-hour task is counted — corrupt delta is skipped
+    assert result.summary.avg_completion_hours == 2.0
+
+
+# ── 14. CompletedAt cleared when task is re-opened ────────────────────────────
+
+def test_completed_at_cleared_on_reopen(db):
+    """Moving a done task back to in_progress must clear CompletedAt."""
+    import importlib, services.task_service as ts_module
+    from schemas.task import UpdateTaskRequest
+
+    # Create and complete a task
+    dto_create = __import__("schemas.task", fromlist=["CreateTaskRequest"]).CreateTaskRequest(
+        title="Reopenable", taskType="inspection", priority="medium",
+        assignedToUserId=WORKER_A_ID,
+    )
+    from services.task_service import create_task, update_task
+    task_resp, _ = create_task(db, MANAGER_ID, dto_create)
+    update_task(db, task_resp.id, UpdateTaskRequest(status="done"))
+
+    # Verify CompletedAt is set
+    from models.task import Task
+    task_obj = db.query(Task).filter(Task.Id == task_resp.id).first()
+    assert task_obj.CompletedAt is not None
+
+    # Re-open
+    update_task(db, task_resp.id, UpdateTaskRequest(status="in_progress"))
+    db.refresh(task_obj)
+    assert task_obj.CompletedAt is None, "CompletedAt must be cleared when re-opened"

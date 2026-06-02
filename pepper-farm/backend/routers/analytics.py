@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ def task_statistics_endpoint(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     worker_id: Optional[int] = None,
-    period: str = "monthly",
+    period: Literal["daily", "weekly", "monthly", "yearly"] = "monthly",
     db: Session = Depends(get_db),
     _: dict = Depends(require_role("FarmManager")),
 ):
@@ -35,7 +35,7 @@ def task_statistics_endpoint(
 def product_statistics_endpoint(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    period: str = "monthly",
+    period: Literal["daily", "weekly", "monthly", "yearly"] = "monthly",
     db: Session = Depends(get_db),
     _: dict = Depends(require_role("FarmManager")),
 ):
