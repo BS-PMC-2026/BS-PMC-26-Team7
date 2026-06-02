@@ -1256,7 +1256,6 @@ export interface WeatherDictionary {
     high_humidity: string;
   };
 }
-}
 
 export interface Dictionary {
   nav:        NavDictionary;
@@ -2533,7 +2532,6 @@ const en: Dictionary = {
       high_humidity: 'High humidity',
     },
   },
-  },
 };
 
 // ── Hebrew ───────────────────────────────────────────────────────────────────
@@ -3779,7 +3777,6 @@ const he: Dictionary = {
       good_conditions: 'תנאים טובים',
       high_humidity: 'לחות גבוהה',
     },
-  },
   },
 };
 
