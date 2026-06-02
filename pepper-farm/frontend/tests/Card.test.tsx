@@ -10,11 +10,13 @@ describe('Card', () => {
   it('applies base card classes', () => {
     const { container } = render(<Card>content</Card>);
     const el = container.firstChild as HTMLElement;
-    // Design system: CSS-variable surface + variable radius + border
-    expect(el).toHaveClass('bg-[var(--color-surface)]');
-    expect(el).toHaveClass('rounded-[var(--radius-xl)]');
-    expect(el).toHaveClass('border');
-    expect(el).toHaveClass('border-[var(--color-border)]');
+    expect(el).toHaveClass(
+      'bg-[var(--color-surface)]',
+      'rounded-[var(--radius-xl)]',
+      'border',
+      'border-[var(--color-border)]',
+      'shadow-[var(--shadow-card)]',
+    );
   });
 
   it('merges additional className', () => {

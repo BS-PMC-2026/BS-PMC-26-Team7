@@ -24,6 +24,16 @@ export async function getAllPlants(token: string): Promise<PlantData[]> {
   });
 }
 
+export async function updatePlantStatus(
+  plantId: number,
+  status: string | null,
+): Promise<PlantData> {
+  return apiFetch<PlantData>(`/api/plants/${plantId}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ Status: status }),
+  });
+}
+
 export async function updatePlantLocation(
   token: string,
   plantId: number,

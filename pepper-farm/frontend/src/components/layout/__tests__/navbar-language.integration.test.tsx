@@ -181,9 +181,11 @@ describe('ManagerNavbar language integration', () => {
       fireEvent.click(screen.getByLabelText('Switch to HE'));
     });
     await waitFor(() => {
-      // After language switch the link text is in Hebrew ('לוח בקרה').
-      // Verify the href is still correct regardless of the label language.
-      const dashboardLink = document.querySelector('a[href="/manager"]');
+      // After switching to Hebrew the label is localized; verify by href, not name.
+      const dashboardLink = screen
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/manager");
+
       expect(dashboardLink).toBeInTheDocument();
     });
   });
@@ -252,9 +254,11 @@ describe('WorkerNavbar language integration', () => {
       fireEvent.click(screen.getByLabelText('Switch to HE'));
     });
     await waitFor(() => {
-      // After language switch the link text is in Hebrew.
-      // Verify the href is still correct regardless of the label language.
-      const dashboardLink = document.querySelector('a[href="/worker"]');
+      // After switching to Hebrew the label is localized; verify by href, not name.
+      const dashboardLink = screen
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/worker");
+
       expect(dashboardLink).toBeInTheDocument();
     });
   });
