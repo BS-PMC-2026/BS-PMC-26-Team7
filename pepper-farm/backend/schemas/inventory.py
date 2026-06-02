@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 class InventoryCreate(BaseModel):
@@ -56,6 +56,7 @@ class PlantSummary(BaseModel):
     PlantCode: str
     Status: Optional[str] = None
     ZoneId: Optional[int] = None
+    ZoneName: Optional[str] = None
 
 
 class InventoryByVariety(BaseModel):
@@ -63,4 +64,5 @@ class InventoryByVariety(BaseModel):
     PepperName: str
     PlantCount: int
     TotalWarehouseQuantity: int
-    Plants: list[PlantSummary]
+    StatusBreakdown: Dict[str, int] = {}
+    Plants: List[PlantSummary]

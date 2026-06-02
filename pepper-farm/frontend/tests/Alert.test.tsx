@@ -10,23 +10,19 @@ describe('Alert', () => {
   it('applies error styles by default', () => {
     render(<Alert>error msg</Alert>);
     const el = screen.getByText('error msg');
-    expect(el).toHaveClass('text-[var(--color-error)]');
-    expect(el).toHaveClass('bg-[var(--color-error-bg)]');
-    expect(el).toHaveClass('border-[var(--color-border)]');
+    expect(el).toHaveClass('text-[var(--color-error)]', 'bg-[var(--color-error-bg)]', 'border-[var(--color-border)]');
   });
 
   it('applies success styles when variant=success', () => {
     render(<Alert variant="success">saved!</Alert>);
     const el = screen.getByText('saved!');
-    expect(el).toHaveClass('text-[var(--color-primary)]');
-    expect(el).toHaveClass('bg-[var(--color-secondary-light)]');
+    expect(el).toHaveClass('text-[var(--color-primary)]', 'bg-[var(--color-secondary-light)]');
   });
 
   it('applies info styles when variant=info', () => {
     render(<Alert variant="info">note</Alert>);
     const el = screen.getByText('note');
-    expect(el).toHaveClass('text-[var(--color-muted-foreground)]');
-    expect(el).toHaveClass('bg-white');
+    expect(el).toHaveClass('text-[var(--color-muted-foreground)]', 'bg-white');
   });
 
   it('merges additional className', () => {

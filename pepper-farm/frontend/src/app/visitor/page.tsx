@@ -11,6 +11,7 @@ import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
 import { Map, ShieldAlert } from 'lucide-react';
+import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorPage() {
   const router = useRouter();
@@ -155,6 +156,8 @@ export default function VisitorPage() {
           </>
         )}
       </div>
+
+      <ChatWidget />
     </div>
   );
 }

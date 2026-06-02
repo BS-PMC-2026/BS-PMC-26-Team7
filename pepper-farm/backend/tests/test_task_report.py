@@ -41,6 +41,7 @@ def make_mock_task(task_id=1, status="todo", assigned_to=3):
     task.zone = zone
     task.CreatedAt = now
     task.UpdatedAt = now
+    task.checklist_items = []
     return task
 
 
@@ -67,7 +68,7 @@ def test_report_returns_only_open_tasks():
 
 def test_report_excludes_done_tasks():
     mock_db = MagicMock()
-    mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    mock_db.query.return_value.options.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: make_manager()
@@ -110,7 +111,7 @@ def test_report_by_worker_returns_200():
 
 def test_report_by_worker_empty():
     mock_db = MagicMock()
-    mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    mock_db.query.return_value.options.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: make_manager()
@@ -127,7 +128,7 @@ def test_report_by_worker_empty():
 
 def test_report_returns_list():
     mock_db = MagicMock()
-    mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    mock_db.query.return_value.options.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: make_manager()

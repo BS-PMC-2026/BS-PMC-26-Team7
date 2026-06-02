@@ -60,6 +60,18 @@ class UpdatePlantLocationRequest(BaseModel):
             raise ValueError("ZoneId must be a positive integer.")
         return value
 
+
+class UpdatePlantStatusRequest(BaseModel):
+    Status: Optional[str] = Field(None, max_length=50)
+
+    @field_validator("Status")
+    @classmethod
+    def validate_status(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        value = value.strip()
+        return value or None
+
 class PlantResponse(BaseModel):
     PlantId: int
     PlantCode: str

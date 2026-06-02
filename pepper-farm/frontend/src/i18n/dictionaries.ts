@@ -352,6 +352,21 @@ export interface InventoryDictionary {
   colPlantId:               string;
   colPlantCode:             string;
   colZone:                  string;
+  // Plants page features
+  searchVarieties:          string;
+  allStatuses:              string;
+  expandAll:                string;
+  collapseAll:              string;
+  exportCsv:                string;
+  statusBreakdown:          string;
+  addPlant:                 string;
+  addPlantTitle:            string;
+  addPlantFailed:           string;
+  noZone:                   string;
+  plantedAt:                string;
+  notesLabel:               string;
+  cancel:                   string;
+  saving:                   string;
   // Create page
   addItemTitle:             string;
   chooseTypeDesc:           string;
@@ -1060,6 +1075,19 @@ export interface ConsentDictionary {
   agreeToEmails:              string;
 }
 
+export interface ChatbotDictionary {
+  title: string;
+  openLabel: string;
+  placeholder: string;
+  send: string;
+  greeting: string;
+  errorRetry: string;
+  loading: string;
+  sourceDb: string;
+  sourceAi: string;
+  sourceFallback: string;
+}
+
 export interface AppNotificationsDictionary {
   appNotifications:   string;
   newMessage:         string;
@@ -1084,6 +1112,7 @@ export interface StoreDictionary {
   onlyNLeft:              string;
   itemUnavailable:        string;
   proceedToCheckout:      string;
+
   // Pricing
   originalPrice:          string;
   productDiscount:        string;
@@ -1092,12 +1121,14 @@ export interface StoreDictionary {
   total:                  string;
   subtotal:               string;
   currency:               string;
+
   // Coupon
   couponCode:             string;
   applyCoupon:            string;
   couponApplied:          string;
   couponInvalid:          string;
   removeCoupon:           string;
+
   // Checkout
   checkout:               string;
   payWithCard:            string;
@@ -1111,11 +1142,13 @@ export interface StoreDictionary {
   mockPaypalTitle:        string;
   mockPaypalBody:         string;
   mockPaypalConfirm:      string;
+
   // Validation
   errCardholderRequired:  string;
   errCardNumberInvalid:   string;
   errCardExpired:         string;
   errCvvInvalid:          string;
+
   // Success
   orderSuccess:           string;
   orderNumber:            string;
@@ -1123,6 +1156,7 @@ export interface StoreDictionary {
   viewOrders:             string;
   receiptEmailQueued:     string;
   transactionId:          string;
+
   // Manager: coupons
   coupons:                string;
   newCoupon:              string;
@@ -1137,6 +1171,7 @@ export interface StoreDictionary {
   couponCreated:          string;
   couponUpdated:          string;
   couponDeactivated:      string;
+
   // Manager: employee discount
   employeeDiscountTitle:  string;
   globalDiscountPct:      string;
@@ -1147,6 +1182,7 @@ export interface StoreDictionary {
   customPercent:          string;
   overrideSaved:          string;
   overrideRemoved:        string;
+
   // Orders
   myOrders:               string;
   orderDate:              string;
@@ -1155,6 +1191,71 @@ export interface StoreDictionary {
   paymentMethod:          string;
   mockCreditCard:         string;
   mockPaypal:             string;
+}
+
+// US36 — Weather Integration for Smarter Farming.
+export interface WeatherDictionary {
+  title: string;
+  currentWeather: string;
+  forecast: string;
+  recommendations: string;
+  sensors: string;
+  sensorSnapshot: string;
+  temperature: string;
+  humidity: string;
+  windSpeed: string;
+  precipitation: string;
+  rainProbability: string;
+  updatedAt: string;
+  observedAt: string;
+  selectedRange: string;
+  today: string;
+  next2Days: string;
+  weekly: string;
+  and: string;
+  spraying: string;
+  irrigation: string;
+  fieldWork: string;
+  advised: string;
+  caution: string;
+  notAdvised: string;
+  loading: string;
+  error: string;
+  aiRecommendation: string;
+  generateAiRecommendation: string;
+  aiLoading: string;
+  aiFallback: string;
+  noSensorData: string;
+  conditions: {
+    clear: string;
+    mainly_clear: string;
+    partly_cloudy: string;
+    overcast: string;
+    fog: string;
+    drizzle: string;
+    freezing_drizzle: string;
+    rain: string;
+    freezing_rain: string;
+    snow: string;
+    snow_grains: string;
+    rain_showers: string;
+    snow_showers: string;
+    thunderstorm: string;
+    thunderstorm_hail: string;
+    unknown: string;
+  };
+  reasons: {
+    high_wind: string;
+    moderate_wind: string;
+    rain_expected: string;
+    high_heat: string;
+    extreme_heat: string;
+    no_rain_expected: string;
+    clear_conditions: string;
+    good_conditions: string;
+    high_humidity: string;
+  };
+}
 }
 
 export interface Dictionary {
@@ -1182,6 +1283,8 @@ export interface Dictionary {
   consent:       ConsentDictionary;
   appNotifications: AppNotificationsDictionary;
   store:         StoreDictionary;
+  chatbot:       ChatbotDictionary;
+  weather:       WeatherDictionary;
 }
 
 // ── English ──────────────────────────────────────────────────────────────────
@@ -1580,6 +1683,20 @@ const en: Dictionary = {
     colPlantId:               'Plant ID',
     colPlantCode:             'Plant Code',
     colZone:                  'Zone',
+    searchVarieties:          'Search varieties or plant codes...',
+    allStatuses:              'All statuses',
+    expandAll:                'Expand all',
+    collapseAll:              'Collapse all',
+    exportCsv:                'Export CSV',
+    statusBreakdown:          'Status',
+    addPlant:                 'Add Plant',
+    addPlantTitle:            'Add Plant',
+    addPlantFailed:           'Failed to add plant.',
+    noZone:                   'No zone',
+    plantedAt:                'Planted date',
+    notesLabel:               'Notes',
+    cancel:                   'Cancel',
+    saving:                   'Saving...',
     addItemTitle:             'Add Inventory Item',
     chooseTypeDesc:           'Is this item going to be sold in the store, or is it warehouse-only (seeds, fertilizer, tools, raw stock)?',
     chooseProduct:            '🛒 Product for the store',
@@ -2136,6 +2253,19 @@ const en: Dictionary = {
     hazardLevel: 'Hazard level',
   },
 
+  chatbot: {
+    title: 'Farm Assistant',
+    openLabel: 'Chat with us',
+    placeholder: 'Ask about peppers, products, or recipes…',
+    send: 'Send',
+    greeting: 'Hi! Ask me about our pepper varieties, products, or cooking ideas.',
+    errorRetry: 'Something went wrong. Please try again.',
+    loading: 'Thinking…',
+    sourceDb: 'From farm data',
+    sourceAi: 'General suggestion',
+    sourceFallback: 'No info available',
+  },
+
   newsletter: {
     title:              'Newsletter & Announcements',
     subtitle:           'Send newsletters and announcements to your farm community.',
@@ -2263,7 +2393,6 @@ const en: Dictionary = {
     noNotifications:     'No notifications yet.',
     notificationBell:    'Open notifications',
   },
-
   store: {
     addToCart:              'Add to Cart',
     buyNow:                 'Buy Now',
@@ -2340,6 +2469,70 @@ const en: Dictionary = {
     paymentMethod:          'Payment Method',
     mockCreditCard:         'Mock Credit Card',
     mockPaypal:             'Mock PayPal',
+  },
+
+  weather: {
+    title: 'Farm Weather',
+    currentWeather: 'Current Weather',
+    forecast: 'Forecast',
+    recommendations: 'Recommendations',
+    sensors: 'Sensors',
+    sensorSnapshot: 'Sensor Snapshot',
+    temperature: 'Temperature',
+    humidity: 'Humidity',
+    windSpeed: 'Wind Speed',
+    precipitation: 'Precipitation',
+    rainProbability: 'Rain Probability',
+    updatedAt: 'Updated at',
+    observedAt: 'Observed at',
+    selectedRange: 'Range',
+    today: 'Today',
+    next2Days: 'Next 2 days',
+    weekly: 'Weekly',
+    and: 'and',
+    spraying: 'Spraying',
+    irrigation: 'Irrigation',
+    fieldWork: 'Field Work',
+    advised: 'Advised',
+    caution: 'Caution',
+    notAdvised: 'Not Advised',
+    loading: 'Loading weather…',
+    error: 'Failed to load weather',
+    aiRecommendation: 'AI Recommendation',
+    generateAiRecommendation: 'Generate AI recommendation',
+    aiLoading: 'Generating recommendation…',
+    aiFallback: 'AI explanation is unavailable right now. Showing the rule-based recommendation.',
+    noSensorData: 'No sensor data available',
+    conditions: {
+      clear: 'Clear',
+      mainly_clear: 'Mainly clear',
+      partly_cloudy: 'Partly cloudy',
+      overcast: 'Overcast',
+      fog: 'Fog',
+      drizzle: 'Drizzle',
+      freezing_drizzle: 'Freezing drizzle',
+      rain: 'Rain',
+      freezing_rain: 'Freezing rain',
+      snow: 'Snow',
+      snow_grains: 'Snow grains',
+      rain_showers: 'Rain showers',
+      snow_showers: 'Snow showers',
+      thunderstorm: 'Thunderstorm',
+      thunderstorm_hail: 'Thunderstorm with hail',
+      unknown: 'Unknown',
+    },
+    reasons: {
+      high_wind: 'High wind',
+      moderate_wind: 'Moderate wind',
+      rain_expected: 'Rain expected',
+      high_heat: 'High heat',
+      extreme_heat: 'Extreme heat',
+      no_rain_expected: 'No rain expected',
+      clear_conditions: 'Clear conditions',
+      good_conditions: 'Good conditions',
+      high_humidity: 'High humidity',
+    },
+  },
   },
 };
 
@@ -2737,6 +2930,20 @@ const he: Dictionary = {
     colPlantId:               'מזהה צמח',
     colPlantCode:             'קוד צמח',
     colZone:                  'אזור',
+    searchVarieties:          'חיפוש זנים או קודי צמחים...',
+    allStatuses:              'כל הסטטוסים',
+    expandAll:                'הרחב הכל',
+    collapseAll:              'כווץ הכל',
+    exportCsv:                'ייצוא CSV',
+    statusBreakdown:          'סטטוס',
+    addPlant:                 'הוסף צמח',
+    addPlantTitle:            'הוסף צמח',
+    addPlantFailed:           'הוספת הצמח נכשלה.',
+    noZone:                   'ללא אזור',
+    plantedAt:                'תאריך שתילה',
+    notesLabel:               'הערות',
+    cancel:                   'ביטול',
+    saving:                   'שומר...',
     addItemTitle:             'הוספת פריט למלאי',
     chooseTypeDesc:           'האם פריט זה יימכר בחנות, או שהוא מיועד למחסן בלבד (זרעים, דשן, כלים, חומרי גלם)?',
     chooseProduct:            '🛒 מוצר לחנות',
@@ -3293,6 +3500,19 @@ const he: Dictionary = {
     hazardLevel: 'רמת סיכון',
   },
 
+  chatbot: {
+    title: 'עוזר החווה',
+    openLabel: 'שוחחו איתנו',
+    placeholder: 'שאלו על פלפלים, מוצרים או מתכונים…',
+    send: 'שליחה',
+    greeting: 'היי! שאלו אותי על זני הפלפלים, המוצרים או רעיונות לבישול.',
+    errorRetry: 'משהו השתבש. נסו שוב.',
+    loading: 'חושב…',
+    sourceDb: 'מתוך נתוני החווה',
+    sourceAi: 'המלצה כללית',
+    sourceFallback: 'אין מידע זמין',
+  },
+
   newsletter: {
     title:              'ניוזלטר והודעות',
     subtitle:           'שלח ניוזלטרים והודעות לקהילת החווה שלך.',
@@ -3420,7 +3640,6 @@ const he: Dictionary = {
     noNotifications:     'אין התראות עדיין.',
     notificationBell:    'פתח התראות',
   },
-
   store: {
     addToCart:              'הוסף לסל',
     buyNow:                 'קנה עכשיו',
@@ -3497,6 +3716,70 @@ const he: Dictionary = {
     paymentMethod:          'אמצעי תשלום',
     mockCreditCard:         'כרטיס אשראי מדומה',
     mockPaypal:             'PayPal מדומה',
+  },
+
+  weather: {
+    title: 'מזג אוויר בחווה',
+    currentWeather: 'מזג אוויר נוכחי',
+    forecast: 'תחזית',
+    recommendations: 'המלצות',
+    sensors: 'חיישנים',
+    sensorSnapshot: 'תמונת מצב חיישנים',
+    temperature: 'טמפרטורה',
+    humidity: 'לחות',
+    windSpeed: 'מהירות רוח',
+    precipitation: 'משקעים',
+    rainProbability: 'סבירות לגשם',
+    updatedAt: 'עודכן בשעה',
+    observedAt: 'נמדד בשעה',
+    selectedRange: 'טווח',
+    today: 'היום',
+    next2Days: 'יומיים הקרובים',
+    weekly: 'שבועי',
+    and: 'וגם',
+    spraying: 'ריסוס',
+    irrigation: 'השקיה',
+    fieldWork: 'עבודת שדה',
+    advised: 'מומלץ',
+    caution: 'זהירות',
+    notAdvised: 'לא מומלץ',
+    loading: 'טוען מזג אוויר…',
+    error: 'טעינת מזג האוויר נכשלה',
+    aiRecommendation: 'המלצה חכמה',
+    generateAiRecommendation: 'קבל המלצה חכמה',
+    aiLoading: 'מפיק המלצה…',
+    aiFallback: 'ההסבר החכם אינו זמין כעת. מוצגת ההמלצה מבוססת-הכללים.',
+    noSensorData: 'אין נתוני חיישנים זמינים',
+    conditions: {
+      clear: 'בהיר',
+      mainly_clear: 'בהיר ברובו',
+      partly_cloudy: 'מעונן חלקית',
+      overcast: 'מעונן',
+      fog: 'ערפל',
+      drizzle: 'טפטוף',
+      freezing_drizzle: 'טפטוף מקפיא',
+      rain: 'גשם',
+      freezing_rain: 'גשם מקפיא',
+      snow: 'שלג',
+      snow_grains: 'גרגרי שלג',
+      rain_showers: 'ממטרים',
+      snow_showers: 'ממטרי שלג',
+      thunderstorm: 'סופת רעמים',
+      thunderstorm_hail: 'סופת רעמים עם ברד',
+      unknown: 'לא ידוע',
+    },
+    reasons: {
+      high_wind: 'רוח חזקה',
+      moderate_wind: 'רוח מתונה',
+      rain_expected: 'צפוי גשם',
+      high_heat: 'חום גבוה',
+      extreme_heat: 'חום קיצוני',
+      no_rain_expected: 'לא צפוי גשם',
+      clear_conditions: 'תנאים נוחים',
+      good_conditions: 'תנאים טובים',
+      high_humidity: 'לחות גבוהה',
+    },
+  },
   },
 };
 
