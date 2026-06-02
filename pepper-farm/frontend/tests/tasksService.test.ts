@@ -193,9 +193,9 @@ test('createTask forwards checklist item titles, trimmed, dropping empties', asy
   await createTask({
     ...baseFormData,
     checklistItems: [
-      { title: '  Check humidity  ' },
-      { title: '' },
-      { title: 'Log results' },
+      { title: '  Check humidity  ', isCompleted: false },
+      { title: '', isCompleted: false },
+      { title: 'Log results', isCompleted: false },
     ],
   });
 

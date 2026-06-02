@@ -681,7 +681,7 @@ export default function NewsletterPage() {
                   className="w-full rounded border border-[var(--color-border)] px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">{t.common.status ?? 'Status'}</label>
+                <label className="mb-1 block text-sm font-medium">{tn.statusLabel}</label>
                 <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value as TemplateStatus }))}
                   className="w-full rounded border border-[var(--color-border)] px-3 py-2 text-sm">
                   <option value="draft">{tn.statusDraft}</option>

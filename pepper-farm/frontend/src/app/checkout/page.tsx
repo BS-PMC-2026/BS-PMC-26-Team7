@@ -19,7 +19,7 @@ import { useLanguage } from '@/context/LanguageContext';
 declare global {
   interface Window {
     paypal?: {
-      Buttons: (options: Record<string, unknown>) => { render: (selector: string) => void };
+      Buttons: (options: Record<string, unknown>) => { render: (container: HTMLElement | string) => void };
     };
   }
 }
@@ -256,7 +256,7 @@ function CheckoutPageInner() {
     if (productId) {
       req.items = [{ productId: Number(productId), quantity: Number(qty ?? 1) }];
     }
-    if (method === 'credit_card') {
+    if (method === 'mock_credit_card') {
       req.creditCard = {
         cardholderName: card.cardholderName,
         cardNumber:     card.cardNumber.replace(/\D/g, ''),
@@ -274,7 +274,7 @@ function CheckoutPageInner() {
     setSubmitting(true);
     setGlobalErr([]);
     try {
-      const result = await pay(buildRequest('credit_card'));
+      const result = await pay(buildRequest('mock_credit_card'));
       if (result.success && result.orderId) {
         router.push(`/checkout/success?orderId=${result.orderId}`);
       } else {

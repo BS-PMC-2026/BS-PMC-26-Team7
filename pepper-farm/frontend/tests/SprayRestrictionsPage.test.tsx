@@ -81,7 +81,7 @@ const SpraySafetyMapSection = require('@/components/spray/SpraySafetyMapSection'
 
 function renderSection() {
   return render(
-    React.createElement(LanguageProvider, {}, React.createElement(SpraySafetyMapSection)),
+    React.createElement(LanguageProvider, null, React.createElement(SpraySafetyMapSection)),
   );
 }
 
