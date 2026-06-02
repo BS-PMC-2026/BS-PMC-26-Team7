@@ -123,7 +123,7 @@ describe('VisitorSprayRestrictionsPage — US33 entry permission (read-only)', (
     );
   });
 
-  it('shows "Caution — Consult Staff" for unverified pesticide', async () => {
+  it('shows "Caution - Consult Staff" for unverified pesticide', async () => {
     mockGetPublicRestrictedZones.mockResolvedValue([
       makeZone({
         sprayStatus: 'requires_approval',

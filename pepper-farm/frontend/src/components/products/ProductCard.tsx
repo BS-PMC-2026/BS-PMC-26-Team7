@@ -1,9 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { ProductResponse } from '@/services/productService';
+import { addToCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface ProductCardProps {
@@ -34,10 +37,47 @@ function isDiscountCurrentlyActive(product: ProductResponse): boolean {
 
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
   const { t } = useLanguage();
+  const router = useRouter();
   const pr = t.products;
+  const st = t.store;
   const outOfStock = product.AllocatedQuantity === 0;
   const discountValid = isDiscountCurrentlyActive(product);
   const displayPrice = discountValid ? product.FinalPrice : product.Price;
+
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMsg, setCartMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role ?? payload.Role ?? null);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const isWorker = userRole === 'Worker';
+
+  async function handleAddToCart() {
+    setAddingToCart(true);
+    setCartMsg(null);
+    try {
+      await addToCart(product.ProductId, 1);
+      setCartMsg('✓');
+      setTimeout(() => setCartMsg(null), 1500);
+    } catch {
+      setCartMsg('!');
+      setTimeout(() => setCartMsg(null), 2000);
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  function handleBuyNow() {
+    router.push(`/checkout?productId=${product.ProductId}&qty=1`);
+  }
 
   return (
     <Card
@@ -71,6 +111,12 @@ export default function ProductCard({ product, showEditButton = false }: Product
         {discountValid && (
           <span className="absolute top-2 right-2 rounded-full bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wide">
             {Math.round(product.DiscountPercentage)}{pr.discountOff}
+          </span>
+        )}
+
+        {isWorker && (
+          <span className="absolute bottom-2 left-2 rounded-full bg-blue-600 text-white text-[9px] font-semibold px-2 py-0.5 uppercase tracking-wide" data-testid="employee-discount-badge">
+            {st.employeeDiscount}
           </span>
         )}
       </div>
@@ -121,6 +167,27 @@ export default function ProductCard({ product, showEditButton = false }: Product
           >
             {pr.editProduct}
           </Link>
+        )}
+
+        {!showEditButton && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={outOfStock || addingToCart}
+              data-testid="add-to-cart-btn"
+              className="flex-1 rounded-md bg-[var(--color-primary)] text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-40 transition"
+            >
+              {addingToCart ? '...' : cartMsg === '✓' ? '✓' : st.addToCart}
+            </button>
+            <button
+              onClick={handleBuyNow}
+              disabled={outOfStock}
+              data-testid="buy-now-btn"
+              className="flex-1 rounded-md border border-[var(--color-primary)] text-[var(--color-primary)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-secondary-light)] disabled:opacity-40 transition"
+            >
+              {st.buyNow}
+            </button>
+          </div>
         )}
       </div>
     </Card>

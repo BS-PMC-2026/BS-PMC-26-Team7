@@ -183,9 +183,10 @@ describe('ManagerNavbar language integration', () => {
     await waitFor(() => {
       // After switching to Hebrew the label is localized; verify by href, not name.
       const dashboardLink = screen
-        .getAllByRole('link')
-        .find((l) => l.getAttribute('href') === '/manager');
-      expect(dashboardLink).toBeTruthy();
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/manager");
+
+      expect(dashboardLink).toBeInTheDocument();
     });
   });
 });
@@ -255,9 +256,10 @@ describe('WorkerNavbar language integration', () => {
     await waitFor(() => {
       // After switching to Hebrew the label is localized; verify by href, not name.
       const dashboardLink = screen
-        .getAllByRole('link')
-        .find((l) => l.getAttribute('href') === '/worker');
-      expect(dashboardLink).toBeTruthy();
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/worker");
+
+      expect(dashboardLink).toBeInTheDocument();
     });
   });
 
