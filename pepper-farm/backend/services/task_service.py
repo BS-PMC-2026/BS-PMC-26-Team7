@@ -136,6 +136,10 @@ def update_task(db: Session, task_id: int, data: UpdateTaskRequest) -> tuple[Tas
             task.StartedAt = datetime.now(timezone.utc)
         if data.status == "done" and task.CompletedAt is None:
             task.CompletedAt = datetime.now(timezone.utc)
+        elif data.status != "done":
+            # Clear CompletedAt when re-opening so completion time is measured
+            # from the most-recent start-to-done cycle, not frozen at first close.
+            task.CompletedAt = None
     if data.assignedToUserId is not None:
         task.AssignedToUserId = data.assignedToUserId
     if data.dueDate is not None:
