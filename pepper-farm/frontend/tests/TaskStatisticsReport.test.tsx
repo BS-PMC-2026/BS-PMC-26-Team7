@@ -42,7 +42,10 @@ import ReportsPage from '@/app/manager/reports/page';
 /* ── Fixtures ───────────────────────────────────────────────────────────────── */
 
 const EMPTY_STATS = {
-  summary: { total: 0, open: 0, completed: 0, overdue: 0, completion_rate: 0, avg_completion_hours: null },
+  summary: {
+    total: 0, open: 0, completed: 0, overdue: 0, completion_rate: 0, avg_completion_hours: null,
+    fastest_worker: null, fastest_worker_hours: null, slowest_worker: null, slowest_worker_hours: null,
+  },
   by_status: [],
   by_worker: [],
   by_period: [],
@@ -50,7 +53,11 @@ const EMPTY_STATS = {
 };
 
 const STATS_WITH_DATA = {
-  summary: { total: 10, open: 5, completed: 4, overdue: 2, completion_rate: 40.0, avg_completion_hours: 3.5 },
+  summary: {
+    total: 10, open: 5, completed: 4, overdue: 2, completion_rate: 40.0, avg_completion_hours: 3.5,
+    fastest_worker: 'Bob Worker', fastest_worker_hours: 2.0,
+    slowest_worker: 'Carol Worker', slowest_worker_hours: 6.0,
+  },
   by_status: [
     { status: 'todo',        count: 3 },
     { status: 'in_progress', count: 2 },
@@ -58,7 +65,8 @@ const STATS_WITH_DATA = {
     { status: 'cancelled',   count: 1 },
   ],
   by_worker: [
-    { worker_id: 1, worker_name: 'Bob Worker', total: 10, completed: 4, overdue: 2, completion_rate: 40.0 },
+    { worker_id: 1, worker_name: 'Bob Worker',   total: 10, completed: 4, overdue: 2, completion_rate: 40.0, avg_completion_hours: 2.0 },
+    { worker_id: 2, worker_name: 'Carol Worker', total: 3,  completed: 2, overdue: 0, completion_rate: 66.7, avg_completion_hours: 6.0 },
   ],
   by_period: [
     { period: '2026-05', total: 6, completed: 3, overdue: 1 },
@@ -184,6 +192,109 @@ describe('Task Statistics Report tab', () => {
     await waitFor(() => {
       expect(screen.getByTestId('tab-task-statistics')).toHaveTextContent('Task Statistics');
     });
+  });
+
+  it('shows fastest and slowest worker speed cards', async () => {
+    mockGetTaskStatistics.mockResolvedValue(STATS_WITH_DATA);
+    render(<ReportsPage />);
+    await waitFor(() => {
+      const speed = screen.getByTestId('speed-cards');
+      expect(within(speed).getByText('Bob Worker')).toBeInTheDocument();   // fastest
+      expect(within(speed).getByText('Carol Worker')).toBeInTheDocument(); // slowest
+      expect(within(speed).getByText('avg 2h per task')).toBeInTheDocument();
+      expect(within(speed).getByText('avg 6h per task')).toBeInTheDocument();
+    });
+  });
+
+  it('hides the speed comparison when a specific worker is selected', async () => {
+    mockGetTaskStatistics.mockResolvedValue(STATS_WITH_DATA);
+    render(<ReportsPage />);
+    // Visible for "All workers"
+    await waitFor(() => expect(screen.getByTestId('speed-cards')).toBeInTheDocument());
+
+    // Selecting a single worker hides the fastest-vs-slowest comparison
+    fireEvent.change(screen.getByTestId('filter-worker'), { target: { value: '1' } });
+    await waitFor(() => {
+      expect(screen.queryByTestId('speed-cards')).not.toBeInTheDocument();
+    });
+  });
+
+  it('hides the speed comparison when only one worker has completions', async () => {
+    mockGetTaskStatistics.mockResolvedValue({
+      ...STATS_WITH_DATA,
+      summary: { ...STATS_WITH_DATA.summary, fastest_worker: 'Bob Worker', slowest_worker: 'Bob Worker' },
+    });
+    render(<ReportsPage />);
+    await waitFor(() => expect(screen.getByTestId('kpi-cards')).toBeInTheDocument());
+    // Same worker for fastest and slowest → no comparison shown
+    expect(screen.queryByTestId('speed-cards')).not.toBeInTheDocument();
+  });
+
+  it('shows "all dates" in the active filter caption by default', async () => {
+    mockGetTaskStatistics.mockResolvedValue(STATS_WITH_DATA);
+    render(<ReportsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('active-date-filter')).toHaveTextContent('all dates');
+    });
+  });
+
+  it('reflects the selected date range in the active filter caption', async () => {
+    mockGetTaskStatistics.mockResolvedValue(STATS_WITH_DATA);
+    render(<ReportsPage />);
+    await waitFor(() => screen.getByTestId('filter-start-date'));
+
+    fireEvent.change(screen.getByTestId('filter-start-date'), { target: { value: '2026-06-04' } });
+    fireEvent.change(screen.getByTestId('filter-end-date'),   { target: { value: '2026-06-04' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-date-filter')).toHaveTextContent('2026-06-04 → 2026-06-04');
+    });
+  });
+
+  it('shows per-worker average completion time in the worker table', async () => {
+    mockGetTaskStatistics.mockResolvedValue(STATS_WITH_DATA);
+    render(<ReportsPage />);
+    await waitFor(() => {
+      const table = screen.getByTestId('worker-table');
+      expect(within(table).getByText('Avg Time')).toBeInTheDocument();
+      expect(within(table).getByText('2h')).toBeInTheDocument(); // Bob
+      expect(within(table).getByText('6h')).toBeInTheDocument(); // Carol
+    });
+  });
+
+  it('allows same-day range (start === end) and fires the request', async () => {
+    mockGetTaskStatistics.mockResolvedValue(EMPTY_STATS);
+    render(<ReportsPage />);
+    await waitFor(() => screen.getByTestId('filter-start-date'));
+
+    fireEvent.change(screen.getByTestId('filter-start-date'), { target: { value: '2026-06-03' } });
+    fireEvent.change(screen.getByTestId('filter-end-date'),   { target: { value: '2026-06-03' } });
+
+    await waitFor(() => {
+      // No validation error for an equal start/end day
+      expect(screen.queryByTestId('date-error')).not.toBeInTheDocument();
+      const calls = mockGetTaskStatistics.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall.startDate).toBe('2026-06-03');
+      expect(lastCall.endDate).toBe('2026-06-03');
+    });
+  });
+
+  it('does not request data for an invalid date range', async () => {
+    mockGetTaskStatistics.mockResolvedValue(EMPTY_STATS);
+    render(<ReportsPage />);
+    await waitFor(() => screen.getByTestId('filter-start-date'));
+
+    mockGetTaskStatistics.mockClear();
+    fireEvent.change(screen.getByTestId('filter-start-date'), { target: { value: '2026-06-10' } });
+    fireEvent.change(screen.getByTestId('filter-end-date'),   { target: { value: '2026-06-01' } });
+
+    await waitFor(() => expect(screen.getByTestId('date-error')).toBeInTheDocument());
+    // No request may carry the invalid combination (start 06-10 with end 06-01).
+    const firedInvalid = mockGetTaskStatistics.mock.calls.some(
+      ([f]) => f.startDate === '2026-06-10' && f.endDate === '2026-06-01',
+    );
+    expect(firedInvalid).toBe(false);
   });
 
   it('calls getTaskStatistics with period filter', async () => {

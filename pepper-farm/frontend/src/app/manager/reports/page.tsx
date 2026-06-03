@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BarChart2, FileText, TrendingUp, ShoppingBag } from 'lucide-react';
 import Alert from '@/components/ui/Alert';
@@ -248,16 +248,30 @@ function TaskStatisticsReport() {
       .catch(() => {/* non-fatal: filter just won't populate */});
   }, [token]);
 
+  // Sequence guard: only the most-recent request may update state, so the
+  // displayed data always matches the latest filters even if an earlier
+  // (slower) request resolves out of order.
+  const reqIdRef = useRef(0);
+
   const loadStats = useCallback(async (filters: TaskStatisticsFilters) => {
+    const reqId = ++reqIdRef.current;
     setIsLoading(true); setError(null);
-    try { setData(await getTaskStatistics(filters)); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Failed to load task statistics.'); }
-    finally { setIsLoading(false); }
+    try {
+      const result = await getTaskStatistics(filters);
+      if (reqId === reqIdRef.current) setData(result);
+    } catch (err) {
+      if (reqId === reqIdRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load task statistics.');
+      }
+    } finally {
+      if (reqId === reqIdRef.current) setIsLoading(false);
+    }
   }, []);
 
-  // Validate date range before firing the request
+  // Validate date range before firing the request. Same-day (start === end) is
+  // allowed; only start strictly after end is invalid.
   const dateError = useMemo(() => {
-    if (startDate && endDate && startDate > endDate) return 'Start date must be before end date.';
+    if (startDate && endDate && startDate > endDate) return 'Start date cannot be after end date.';
     return null;
   }, [startDate, endDate]);
 
@@ -312,6 +326,17 @@ function TaskStatisticsReport() {
         </div>
       </div>
 
+      {/* Honest reflection of the filter actually sent to the API, derived from
+          the same state. Empty inputs mean "all dates" (the default) — never
+          today — so the displayed range always matches the applied range. */}
+      {!dateError && (
+        <p className="text-xs text-[var(--color-muted-foreground)] mb-4" data-testid="active-date-filter">
+          {startDate || endDate
+            ? `Showing tasks created ${startDate || '…'} → ${endDate || '…'}`
+            : 'Showing tasks created across all dates'}
+        </p>
+      )}
+
       {dateError && <div className="bg-[var(--color-error-bg)] text-[var(--color-error)] rounded-lg px-4 py-2 text-sm mb-4" data-testid="date-error">{dateError}</div>}
       {error     && <div className="bg-[var(--color-error-bg)] text-[var(--color-error)] rounded-lg px-4 py-2 text-sm mb-4" data-testid="stats-error">{error}</div>}
 
@@ -330,6 +355,29 @@ function TaskStatisticsReport() {
               value={s.avg_completion_hours != null ? `${s.avg_completion_hours}h` : '—'}
               sub="avg hours to complete" />
           </div>
+
+          {/* Completion speed — fastest vs slowest worker (US45).
+              Only meaningful when comparing across workers: shown for
+              "All workers" with at least two different workers who have
+              completed tasks. For a single selected worker (or when only one
+              worker has completions) the comparison is hidden — that worker's
+              average is already in the "Avg Completion" card and the table. */}
+          {workerId === '' && s.fastest_worker && s.slowest_worker
+            && s.fastest_worker !== s.slowest_worker && (
+            <>
+              <SectionTitle>Completion Speed</SectionTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2" data-testid="speed-cards">
+                <KpiCard label="Fastest Worker"
+                  value={s.fastest_worker ?? '—'}
+                  sub={s.fastest_worker_hours != null ? `avg ${s.fastest_worker_hours}h per task` : undefined}
+                  valueClass="text-green-600" />
+                <KpiCard label="Slowest Worker"
+                  value={s.slowest_worker ?? '—'}
+                  sub={s.slowest_worker_hours != null ? `avg ${s.slowest_worker_hours}h per task` : undefined}
+                  valueClass="text-[var(--color-error)]" />
+              </div>
+            </>
+          )}
 
           {/* By status */}
           {data.by_status.length > 0 && (
@@ -361,6 +409,7 @@ function TaskStatisticsReport() {
                       <th className="px-4 py-3 border-b text-right">Completed</th>
                       <th className="px-4 py-3 border-b text-right">Overdue</th>
                       <th className="px-4 py-3 border-b text-right">Rate</th>
+                      <th className="px-4 py-3 border-b text-right">Avg Time</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -371,6 +420,9 @@ function TaskStatisticsReport() {
                         <td className="px-4 py-3 text-right text-green-600">{w.completed}</td>
                         <td className="px-4 py-3 text-right text-[var(--color-error)]">{w.overdue}</td>
                         <td className="px-4 py-3 text-right font-medium">{w.completion_rate}%</td>
+                        <td className="px-4 py-3 text-right text-[var(--color-muted-foreground)]">
+                          {w.avg_completion_hours != null ? `${w.avg_completion_hours}h` : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

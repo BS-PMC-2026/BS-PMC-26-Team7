@@ -11,6 +11,11 @@ class TaskSummary(BaseModel):
     overdue: int
     completion_rate: float          # 0–100 %
     avg_completion_hours: Optional[float]   # None when no completed tasks
+    # Speed leaderboard (US45) — None when no worker has a completed task.
+    fastest_worker: Optional[str] = None
+    fastest_worker_hours: Optional[float] = None
+    slowest_worker: Optional[str] = None
+    slowest_worker_hours: Optional[float] = None
 
 
 class TaskByStatus(BaseModel):
@@ -25,6 +30,7 @@ class TaskByWorker(BaseModel):
     completed: int
     overdue: int
     completion_rate: float
+    avg_completion_hours: Optional[float] = None   # None when worker has no completed task
 
 
 class TaskByPeriod(BaseModel):

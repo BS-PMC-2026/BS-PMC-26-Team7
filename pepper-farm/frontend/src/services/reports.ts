@@ -42,6 +42,10 @@ export interface TaskStatsSummary {
   overdue: number;
   completion_rate: number;
   avg_completion_hours: number | null;
+  fastest_worker: string | null;
+  fastest_worker_hours: number | null;
+  slowest_worker: string | null;
+  slowest_worker_hours: number | null;
 }
 
 export interface TaskByStatus {
@@ -56,6 +60,7 @@ export interface TaskByWorker {
   completed: number;
   overdue: number;
   completion_rate: number;
+  avg_completion_hours: number | null;
 }
 
 export interface TaskByPeriod {

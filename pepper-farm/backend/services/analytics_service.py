@@ -49,6 +49,28 @@ def _is_overdue(task: Task, now_naive: datetime) -> bool:
     return due is not None and due < now_naive
 
 
+def _completion_hours(task: Task) -> float | None:
+    """
+    Hours a *completed* task took, used for speed metrics (US45).
+
+    Measures actual work time when possible: StartedAt -> CompletedAt.
+    Falls back to CreatedAt -> CompletedAt when StartedAt is missing — e.g.
+    tasks created before the StartedAt column existed, or tasks marked "done"
+    without ever passing through "in_progress".
+
+    Returns None when the task is not done, lacks the needed timestamps, or
+    yields a non-positive delta (clock skew / data-migration artefacts) so such
+    rows are skipped rather than dragging the average to zero or negative.
+    """
+    if task.Status != "done" or task.CompletedAt is None:
+        return None
+    start = _to_naive(task.StartedAt) or _to_naive(task.CreatedAt)
+    if start is None:
+        return None
+    hours = (_to_naive(task.CompletedAt) - start).total_seconds() / 3600
+    return hours if hours > 0 else None
+
+
 # ── Task Statistics ────────────────────────────────────────────────────────────
 
 def get_task_statistics(
@@ -82,7 +104,7 @@ def get_task_statistics(
     if worker_id is not None:
         tasks = [t for t in tasks if t.AssignedToUserId == worker_id]
 
-    # ── Summary ──────────────────────────────────────────────────────────────
+    # ── Aggregate counts ───────────────────────────────────────────────────────
     total = len(tasks)
     completed = sum(1 for t in tasks if t.Status == "done")
     cancelled = sum(1 for t in tasks if t.Status == "cancelled")
@@ -90,25 +112,11 @@ def get_task_statistics(
     overdue_count = sum(1 for t in tasks if _is_overdue(t, now_naive))
     completion_rate = round(completed / total * 100, 1) if total > 0 else 0.0
 
-    completion_times_h: list[float] = []
-    for t in tasks:
-        if t.Status == "done" and t.CompletedAt is not None and t.CreatedAt is not None:
-            delta = _to_naive(t.CompletedAt) - _to_naive(t.CreatedAt)
-            hours = delta.total_seconds() / 3600
-            if hours > 0:  # guard against clock-skew / data-migration timestamps
-                completion_times_h.append(hours)
+    # Global average completion time (StartedAt->CompletedAt, CreatedAt fallback).
+    completion_times_h = [h for h in (_completion_hours(t) for t in tasks) if h is not None]
     avg_completion_hours = (
         round(sum(completion_times_h) / len(completion_times_h), 1)
         if completion_times_h else None
-    )
-
-    summary = TaskSummary(
-        total=total,
-        open=open_count,
-        completed=completed,
-        overdue=overdue_count,
-        completion_rate=completion_rate,
-        avg_completion_hours=avg_completion_hours,
     )
 
     # ── By status ─────────────────────────────────────────────────────────────
@@ -117,7 +125,7 @@ def get_task_statistics(
         status_counts[t.Status] = status_counts.get(t.Status, 0) + 1
     by_status = [TaskByStatus(status=s, count=c) for s, c in sorted(status_counts.items())]
 
-    # ── By worker ─────────────────────────────────────────────────────────────
+    # ── By worker (incl. per-worker average completion time) ───────────────────
     worker_buckets: dict[int | None, dict] = {}
     for t in tasks:
         wid = t.AssignedToUserId
@@ -127,18 +135,45 @@ def get_task_statistics(
                 "worker_id": wid if wid is not None else 0,
                 "worker_name": wname,
                 "total": 0, "completed": 0, "overdue": 0,
+                "_times": [],
             }
         worker_buckets[wid]["total"] += 1
         if t.Status == "done":
             worker_buckets[wid]["completed"] += 1
         if _is_overdue(t, now_naive):
             worker_buckets[wid]["overdue"] += 1
+        ch = _completion_hours(t)
+        if ch is not None:
+            worker_buckets[wid]["_times"].append(ch)
 
     by_worker = []
     for w in worker_buckets.values():
+        times = w.pop("_times")
+        avg_h = round(sum(times) / len(times), 1) if times else None
         rate = round(w["completed"] / w["total"] * 100, 1) if w["total"] > 0 else 0.0
-        by_worker.append(TaskByWorker(**w, completion_rate=rate))
+        by_worker.append(TaskByWorker(**w, completion_rate=rate, avg_completion_hours=avg_h))
     by_worker.sort(key=lambda x: x.total, reverse=True)
+
+    # Fastest / slowest worker by average completion time. Only real, assigned
+    # workers (worker_id != 0) with at least one completed task are eligible;
+    # "Unassigned" tasks are never attributed to a worker. With a single
+    # eligible worker, fastest and slowest are the same person.
+    ranked = [w for w in by_worker if w.worker_id != 0 and w.avg_completion_hours is not None]
+    fastest = min(ranked, key=lambda x: x.avg_completion_hours) if ranked else None
+    slowest = max(ranked, key=lambda x: x.avg_completion_hours) if ranked else None
+
+    summary = TaskSummary(
+        total=total,
+        open=open_count,
+        completed=completed,
+        overdue=overdue_count,
+        completion_rate=completion_rate,
+        avg_completion_hours=avg_completion_hours,
+        fastest_worker=fastest.worker_name if fastest else None,
+        fastest_worker_hours=fastest.avg_completion_hours if fastest else None,
+        slowest_worker=slowest.worker_name if slowest else None,
+        slowest_worker_hours=slowest.avg_completion_hours if slowest else None,
+    )
 
     # ── By period ─────────────────────────────────────────────────────────────
     period_buckets: dict[str, dict] = {}

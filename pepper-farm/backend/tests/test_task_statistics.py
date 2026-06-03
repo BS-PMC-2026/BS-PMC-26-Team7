@@ -63,7 +63,7 @@ def db():
 
 
 def _task(session, *, status="todo", due=None, assigned_to=None,
-          created=None, completed_at=None) -> Task:
+          created=None, completed_at=None, started_at=None) -> Task:
     t = Task(
         Title="Task",
         TaskType="inspection",
@@ -72,6 +72,7 @@ def _task(session, *, status="todo", due=None, assigned_to=None,
         CreatedByUserId=MANAGER_ID,
         AssignedToUserId=assigned_to,
         DueDate=due,
+        StartedAt=started_at,
         CompletedAt=completed_at,
         CreatedAt=created or NOW,
         UpdatedAt=created or NOW,
@@ -322,6 +323,94 @@ def test_avg_completion_time_skips_negative_delta(db):
     result = get_task_statistics(db)
     # Only the valid 2-hour task is counted — corrupt delta is skipped
     assert result.summary.avg_completion_hours == 2.0
+
+
+# ── 15. Per-worker average completion time ────────────────────────────────────
+
+def test_per_worker_avg_completion_time(db):
+    base = datetime(2026, 5, 1, 8, 0, 0)
+    # Bob: two done tasks averaging 2 h (1 h + 3 h)
+    _task(db, assigned_to=WORKER_A_ID, status="done", created=base, completed_at=base + timedelta(hours=1))
+    _task(db, assigned_to=WORKER_A_ID, status="done", created=base, completed_at=base + timedelta(hours=3))
+    # Carol: one done task taking 6 h
+    _task(db, assigned_to=WORKER_B_ID, status="done", created=base, completed_at=base + timedelta(hours=6))
+
+    result = get_task_statistics(db)
+    by_name = {w.worker_name: w for w in result.by_worker}
+    assert by_name["Bob Worker"].avg_completion_hours == 2.0
+    assert by_name["Carol Worker"].avg_completion_hours == 6.0
+
+
+def test_per_worker_avg_is_none_without_completed(db):
+    _task(db, assigned_to=WORKER_A_ID, status="todo")
+    result = get_task_statistics(db)
+    by_name = {w.worker_name: w for w in result.by_worker}
+    assert by_name["Bob Worker"].avg_completion_hours is None
+
+
+# ── 16. Fastest / slowest worker ──────────────────────────────────────────────
+
+def test_fastest_and_slowest_worker(db):
+    base = datetime(2026, 5, 1, 8, 0, 0)
+    # Bob averages 2 h → fastest; Carol averages 6 h → slowest
+    _task(db, assigned_to=WORKER_A_ID, status="done", created=base, completed_at=base + timedelta(hours=2))
+    _task(db, assigned_to=WORKER_B_ID, status="done", created=base, completed_at=base + timedelta(hours=6))
+
+    s = get_task_statistics(db).summary
+    assert s.fastest_worker == "Bob Worker"
+    assert s.fastest_worker_hours == 2.0
+    assert s.slowest_worker == "Carol Worker"
+    assert s.slowest_worker_hours == 6.0
+
+
+def test_fastest_slowest_none_when_no_completions(db):
+    _task(db, assigned_to=WORKER_A_ID, status="todo")
+    s = get_task_statistics(db).summary
+    assert s.fastest_worker is None
+    assert s.slowest_worker is None
+    assert s.fastest_worker_hours is None
+    assert s.slowest_worker_hours is None
+
+
+def test_single_worker_is_both_fastest_and_slowest(db):
+    base = datetime(2026, 5, 1, 8, 0, 0)
+    _task(db, assigned_to=WORKER_A_ID, status="done", created=base, completed_at=base + timedelta(hours=4))
+    s = get_task_statistics(db).summary
+    assert s.fastest_worker == "Bob Worker"
+    assert s.slowest_worker == "Bob Worker"
+
+
+def test_unassigned_tasks_excluded_from_speed_ranking(db):
+    base = datetime(2026, 5, 1, 8, 0, 0)
+    # Only an unassigned completed task exists → no eligible worker for ranking
+    _task(db, assigned_to=None, status="done", created=base, completed_at=base + timedelta(hours=2))
+    s = get_task_statistics(db).summary
+    assert s.fastest_worker is None
+    assert s.slowest_worker is None
+
+
+# ── 17. Completion time prefers StartedAt, falls back to CreatedAt ─────────────
+
+def test_completion_time_prefers_started_at(db):
+    created = datetime(2026, 5, 1, 8, 0, 0)
+    started = datetime(2026, 5, 1, 10, 0, 0)   # work began 2 h after creation
+    completed = datetime(2026, 5, 1, 13, 0, 0)  # finished 3 h after starting
+    _task(db, assigned_to=WORKER_A_ID, status="done",
+          created=created, started_at=started, completed_at=completed)
+
+    # Work time is StartedAt->CompletedAt = 3 h, NOT CreatedAt->CompletedAt (5 h)
+    by_name = {w.worker_name: w for w in get_task_statistics(db).by_worker}
+    assert by_name["Bob Worker"].avg_completion_hours == 3.0
+
+
+def test_completion_time_falls_back_to_created_at(db):
+    created = datetime(2026, 5, 1, 8, 0, 0)
+    completed = datetime(2026, 5, 1, 12, 0, 0)  # 4 h, no StartedAt recorded
+    _task(db, assigned_to=WORKER_A_ID, status="done",
+          created=created, started_at=None, completed_at=completed)
+
+    by_name = {w.worker_name: w for w in get_task_statistics(db).by_worker}
+    assert by_name["Bob Worker"].avg_completion_hours == 4.0
 
 
 # ── 14. CompletedAt cleared when task is re-opened ────────────────────────────
