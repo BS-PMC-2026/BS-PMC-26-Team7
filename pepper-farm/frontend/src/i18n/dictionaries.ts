@@ -301,6 +301,13 @@ export interface TasksDictionary {
   progressOf:                   string;
   failedToUpdateChecklistItem:  string;
   completeBlockedByChecklist:   string;
+  // Delete / cancel task (US42)
+  deleteButton:                 string;
+  confirmDeleteTitle:           string;
+  confirmDeleteBody:            string;
+  confirmDelete:                string;
+  cancelDelete:                 string;
+  failedToDelete:               string;
 }
 
 export interface InventoryDictionary {
@@ -1396,6 +1403,7 @@ const en: Dictionary = {
       in_progress: 'In Progress',
       done:        'Done',
       completed:   'Completed',
+      cancelled:   'Cancelled',
     },
     priority: {
       low:      'Low',
@@ -1636,6 +1644,12 @@ const en: Dictionary = {
     progressOf:                  '{done} / {total} completed',
     failedToUpdateChecklistItem: 'Failed to update checklist item.',
     completeBlockedByChecklist:  'Complete all checklist items first',
+    deleteButton:                'Delete',
+    confirmDeleteTitle:          'Delete task?',
+    confirmDeleteBody:           'This will remove "{title}" from the active and history lists. The task is kept in the database for records but will no longer be shown to workers.',
+    confirmDelete:               'Delete',
+    cancelDelete:                'Cancel',
+    failedToDelete:              'Failed to delete task.',
   },
 
   inventory: {
@@ -2645,6 +2659,7 @@ const he: Dictionary = {
       in_progress: 'בביצוע',
       done:        'בוצע',
       completed:   'הושלם',
+      cancelled:   'בוטל',
     },
     priority: {
       low:      'נמוכה',
@@ -2883,6 +2898,12 @@ const he: Dictionary = {
     progressOf:                  '{done} / {total} הושלמו',
     failedToUpdateChecklistItem: 'עדכון פריט נכשל.',
     completeBlockedByChecklist:  'יש לסיים את כל פריטי הרשימה תחילה',
+    deleteButton:                'מחק',
+    confirmDeleteTitle:          'למחוק משימה?',
+    confirmDeleteBody:           'פעולה זו תסיר את "{title}" מהרשימות הפעילות וההיסטוריה. המשימה נשמרת במסד הנתונים לתיעוד אך לא תוצג עוד לעובדים.',
+    confirmDelete:               'מחק',
+    cancelDelete:                'ביטול',
+    failedToDelete:              'מחיקת המשימה נכשלה.',
   },
 
   inventory: {

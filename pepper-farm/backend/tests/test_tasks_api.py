@@ -590,3 +590,112 @@ def test_worker_cannot_delete_checklist_item():
         assert res.status_code == 403
     finally:
         app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
+# Delete / cancel task (US42 / BSPMT7-491)
+# ------------------------------------------------------------------ #
+
+def test_manager_can_delete_task():
+    """DELETE /api/tasks/{id} as a manager soft-deletes (status -> cancelled)."""
+    from services import task_service
+
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, status="todo")
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        with patch.object(task_service, "_to_response", return_value=_fake_response()):
+            res = client.delete("/api/tasks/5")
+        assert res.status_code == 200
+        # The task is marked cancelled, not removed from the DB.
+        assert task.Status == "cancelled"
+        mock_db.delete.assert_not_called()
+        mock_db.commit.assert_called_once()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_worker_cannot_delete_task():
+    """DELETE /api/tasks/{id} as a worker is blocked by require_role (403)."""
+    app.dependency_overrides[get_db] = lambda: MagicMock()
+    app.dependency_overrides[get_current_user] = fake_worker
+    try:
+        res = client.delete("/api/tasks/5")
+        assert res.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_manager_can_delete_done_task():
+    """A completed task created by the manager can be soft-deleted (US42 updated rule)."""
+    from services import task_service
+
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, status="done")  # CreatedByUserId=1 == fake_manager
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        with patch.object(task_service, "_to_response", return_value=_fake_response()):
+            res = client.delete("/api/tasks/5")
+        assert res.status_code == 200
+        # Soft-deleted: status flipped to cancelled, row not removed.
+        assert task.Status == "cancelled"
+        mock_db.delete.assert_not_called()
+        mock_db.commit.assert_called_once()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_manager_cannot_delete_another_managers_task():
+    """A manager may only delete tasks they created; others return 403."""
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, status="todo")
+    task.CreatedByUserId = 999  # created by a different manager (fake_manager is user_id=1)
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        res = client.delete("/api/tasks/5")
+        assert res.status_code == 403
+        # Status is untouched and nothing is committed.
+        assert task.Status == "todo"
+        mock_db.commit.assert_not_called()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_delete_missing_task_returns_404():
+    """Deleting a non-existent task returns 404."""
+    mock_db = MagicMock()
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        res = client.delete("/api/tasks/999")
+        assert res.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_patch_status_cancelled_is_rejected():
+    """PATCH cannot be used to cancel a task; status=cancelled is rejected (400)."""
+    mock_db = MagicMock()
+    task = make_mock_task(task_id=5, status="todo")
+    mock_db.query.return_value.filter.return_value.first.return_value = task
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        res = client.patch("/api/tasks/5", json={"status": "cancelled"})
+        assert res.status_code == 400
+        # Status is untouched and no commit happened.
+        assert task.Status == "todo"
+    finally:
+        app.dependency_overrides.clear()

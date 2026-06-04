@@ -19,16 +19,22 @@ import { createTask, getTasks, syncChecklistItems, updateTask } from '@/services
 import { getAllUsers, UserData } from '@/services/users';
 import { getZones, type ZoneSummary } from '@/services/zones';
 import { EMPTY_TASK_FILTERS, filterTasks, type TaskFilters as TaskFilterState } from '@/components/tasks/filterTasks';
+import { useTaskDelete } from '@/components/tasks/useTaskDelete';
 import { useLanguage } from '@/context/LanguageContext';
+import { getCurrentUserId } from '@/lib/auth';
 
 /* -------------------------------------------------------------------------- */
 /* History tab content                                                          */
 /* -------------------------------------------------------------------------- */
 
 function TaskHistoryContent() {
+  const { t } = useLanguage();
+  const tk = t.tasks;
+  const currentUserId = useMemo(() => getCurrentUserId(), []);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const del = useTaskDelete((id) => setTasks((prev) => prev.filter((tt) => tt.id !== id)));
 
   useEffect(() => {
     getCompletedTasks()
@@ -64,10 +70,23 @@ function TaskHistoryContent() {
                   <span className="font-medium text-[var(--color-foreground)]">{task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
+              {/* Soft-delete from history (US42): only tasks the current manager created. */}
+              {currentUserId != null && task.createdByUserId === currentUserId && (
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => del.requestDelete(task)}
+                    className="px-3 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    {tk.deleteButton}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {del.dialog}
     </div>
   );
 }
@@ -119,6 +138,8 @@ function ManagerTasksPageContent() {
     router.replace(`/manager/tasks?${params.toString()}`);
   };
 
+  const currentUserId = useMemo(() => getCurrentUserId(), []);
+
   const sourceAlertId = useMemo(() => {
     const raw = searchParams.get('alertId');
     return raw ? Number(raw) : null;
@@ -149,6 +170,8 @@ function ManagerTasksPageContent() {
   const [taskFilters,    setTaskFilters]    = useState<TaskFilterState>(EMPTY_TASK_FILTERS);
   const [alertSuccessId, setAlertSuccessId] = useState<number | null>(null);
 
+  const del = useTaskDelete((id) => setTasks((prev) => prev.filter((tt) => tt.id !== id)));
+
   // Auto-open form when navigating from an alert
   useEffect(() => {
     if (sourceAlertId) {
@@ -166,7 +189,9 @@ function ManagerTasksPageContent() {
         getAllUsers(token),
         getZones(),
       ]);
-      setTasks(fetchedTasks);
+      // Active tab shows only open work; completed tasks live in the History tab,
+      // cancelled tasks are excluded everywhere.
+      setTasks(fetchedTasks.filter((t) => t.status === 'todo' || t.status === 'in_progress'));
       setWorkers(fetchedWorkers.filter((u) => u.roleName === 'Worker'));
       setZones(fetchedZones);
     } catch {
@@ -359,7 +384,13 @@ function ManagerTasksPageContent() {
       ) : filteredTasks.length === 0 ? (
         <EmptyState title={tk.noTasksMatchFilter} description={tk.clearFilters} />
       ) : (
-        <TaskList tasks={filteredTasks} workers={workers} onEdit={setEditingTask} />
+        <TaskList
+          tasks={filteredTasks}
+          workers={workers}
+          onEdit={setEditingTask}
+          onDelete={del.requestDelete}
+          currentUserId={currentUserId}
+        />
       )}
 
       {editingTask && (
@@ -388,6 +419,8 @@ function ManagerTasksPageContent() {
           />
         </Modal>
       )}
+
+      {del.dialog}
     </div>
   </>
 );
