@@ -278,6 +278,7 @@ export interface TasksDictionary {
   errTitleRequired:         string;
   errTypeRequired:          string;
   errDueDatePast:           string;
+  errDueDateRequired:       string;
   // Card
   editButton:               string;
   typeLabel:                string;
@@ -1600,7 +1601,7 @@ const en: Dictionary = {
     formDescription:     'Description',
     formTaskType:        'Task Type *',
     formPriority:        'Priority',
-    formDueDate:         'Due Date',
+    formDueDate:         'Due Date *',
     formZone:            'Farm Zone',
     formAssignTo:        'Assign to Worker',
     formSelectType:      'Select a type...',
@@ -1614,6 +1615,7 @@ const en: Dictionary = {
     errTitleRequired:    'Title is required.',
     errTypeRequired:     'Task type is required.',
     errDueDatePast:      'Due date cannot be in the past.',
+    errDueDateRequired:  'Due date and time are required.',
     editButton:          'Edit',
     typeLabel:           'Type',
     assignedTo:          'Assigned to',
@@ -2846,7 +2848,7 @@ const he: Dictionary = {
     formDescription:     'תיאור',
     formTaskType:        'סוג משימה *',
     formPriority:        'עדיפות',
-    formDueDate:         'תאריך יעד',
+    formDueDate:         'תאריך יעד *',
     formZone:            'אזור חווה',
     formAssignTo:        'הקצה לעובד',
     formSelectType:      'בחר סוג...',
@@ -2860,6 +2862,7 @@ const he: Dictionary = {
     errTitleRequired:    'יש להזין כותרת.',
     errTypeRequired:     'יש לבחור סוג משימה.',
     errDueDatePast:      'תאריך היעד לא יכול להיות בעבר.',
+    errDueDateRequired:  'יש להזין תאריך ושעת יעד.',
     editButton:          'עריכה',
     typeLabel:           'סוג',
     assignedTo:          'מוקצה ל',

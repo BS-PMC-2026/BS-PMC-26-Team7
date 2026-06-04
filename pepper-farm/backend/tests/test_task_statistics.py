@@ -424,6 +424,7 @@ def test_completed_at_cleared_on_reopen(db):
     dto_create = __import__("schemas.task", fromlist=["CreateTaskRequest"]).CreateTaskRequest(
         title="Reopenable", taskType="inspection", priority="medium",
         assignedToUserId=WORKER_A_ID,
+        dueDate=datetime.now() + timedelta(days=7),  # DueDate required as of BSPMT7-449
     )
     from services.task_service import create_task, update_task
     task_resp, _ = create_task(db, MANAGER_ID, dto_create)
