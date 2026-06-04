@@ -160,13 +160,11 @@ describe('Dashboard – Farm Map legend changes by active filter', () => {
     });
 
     const btn = screen.getByTestId('filter-pepper');
-    // Before click: should NOT have the active (primary-color) background
-    expect(btn.className).not.toContain('bg-[var(--color-primary)]');
+    expect(btn.className).not.toContain('bg-green-700');
 
     fireEvent.click(btn);
-    // After click: should have the active (primary-color) background
     await waitFor(() => {
-      expect(btn.className).toContain('bg-[var(--color-primary)]');
+      expect(btn.className).toContain('bg-green-700');
     });
   });
 

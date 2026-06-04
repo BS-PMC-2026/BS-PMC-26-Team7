@@ -3,7 +3,6 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import models  # noqa: F401 — register all ORM models with Base.metadata
 from unittest.mock import patch
 
 import pytest
@@ -104,16 +103,13 @@ def _seed_db(db):
 @pytest.fixture(autouse=True)
 def setup_db():
     app.dependency_overrides[get_db] = override_get_db
-    Base.metadata.drop_all(bind=engine)   # clean slate (in case a previous run left tables)
-    Base.metadata.create_all(bind=engine) # create ALL tables (all models are now registered)
+    Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    try:
-        _seed_db(db)
-        yield
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-        app.dependency_overrides.pop(get_db, None)
+    _seed_db(db)
+    db.close()
+    yield
+    Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.pop(get_db, None)
 
 
 # ── Authentication / Authorization ───────────────────────────────────────────
@@ -216,8 +212,6 @@ def test_send_newsletter_only_opted_in_customers_emailed():
     # Only alice (consent=True) should be emailed; bob (consent=False) should not.
     assert "alice@example.com" in sent_to
     assert "bob@example.com" not in sent_to
-    # The endpoint queues sends via BackgroundTasks and returns sentCount=0 immediately.
-    # Verify via totalRecipients that exactly one recipient was resolved.
     assert data["totalRecipients"] == 1
 
 

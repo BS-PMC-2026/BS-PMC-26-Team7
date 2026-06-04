@@ -10,11 +10,7 @@ router = APIRouter(prefix="/api/plants", tags=["Plants"])
 
 
 @router.post("", response_model=PlantResponse, status_code=201)
-def create_plant_endpoint(
-    data: PlantCreate,
-    db: Session = Depends(get_db),
-    _user=Depends(require_any_role("FarmManager", "Worker")),
-):
+def create_plant_endpoint(data: PlantCreate, db: Session = Depends(get_db)):
     try:
         result, error = create_plant(db, data)
         if error:

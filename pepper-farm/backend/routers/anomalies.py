@@ -16,7 +16,6 @@ from models.sensor import SensorAlert, SensorAssignment, SensorReading, Recurren
 from models.farm_zone import FarmZone
 from models.plant import Plant
 from models.pepper_variety import PepperVariety
-from utils.jwt import require_role
 
 router = APIRouter(prefix="/api/manager/anomalies", tags=["Anomalies"])
 
@@ -84,10 +83,7 @@ class ResolvedAlertResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.get("/summary", response_model=AnomalySummaryResponse)
-def get_anomaly_summary(
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def get_anomaly_summary(db: Session = Depends(get_db)):
     """
     Returns top-level KPI counts for the manager dashboard:
     - Total unresolved alerts
@@ -144,7 +140,6 @@ def get_recent_alerts(
     zone_id: Optional[int] = Query(default=None, ge=1),
     recurring: Optional[bool] = Query(default=None, description="If true, return only recurring alerts"),
     db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
 ):
     """
     Returns paginated sensor alerts enriched with zone, plant, and pepper variety names.
@@ -223,7 +218,6 @@ def get_recent_alerts(
 def get_anomaly_trends(
     days: int = Query(default=7, ge=1, le=30),
     db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
 ):
     """
     Returns daily alert counts for the last N days.
@@ -264,10 +258,7 @@ def get_anomaly_trends(
 
 
 @router.get("/by-zone", response_model=list[ZoneHealthResponse])
-def get_zone_health(
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def get_zone_health(db: Session = Depends(get_db)):
     """
     Returns all zones that have at least one unresolved alert,
     with a health level: 'high' | 'medium' | 'normal'.
@@ -402,21 +393,14 @@ class RecurrenceConfigUpdate(BaseModel):
 
 
 @router.get("/recurrence-config", response_model=RecurrenceConfigResponse)
-def get_recurrence_config_endpoint(
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def get_recurrence_config_endpoint(db: Session = Depends(get_db)):
     """Returns the current global recurrence detection thresholds."""
     min_count, window_hours = get_recurrence_config(db)
     return RecurrenceConfigResponse(minCount=min_count, windowHours=window_hours)
 
 
 @router.patch("/recurrence-config", response_model=RecurrenceConfigResponse)
-def update_recurrence_config(
-    payload: RecurrenceConfigUpdate,
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def update_recurrence_config(payload: RecurrenceConfigUpdate, db: Session = Depends(get_db)):
     """Updates global recurrence detection thresholds (RECUR-03, RECUR-04)."""
     cfg = db.query(RecurrenceConfig).filter(RecurrenceConfig.ConfigId == 1).first()
     if not cfg:
@@ -440,11 +424,7 @@ resolve_router = APIRouter(prefix="/api/sensor-alerts", tags=["Anomalies"])
 
 
 @resolve_router.patch("/{alert_id}/resolve", response_model=ResolvedAlertResponse)
-def resolve_alert(
-    alert_id: int,
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
     """
     Marks a sensor alert as resolved. Idempotent — resolving an already-resolved
     alert returns the existing record unchanged.

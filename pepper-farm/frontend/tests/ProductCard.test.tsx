@@ -1,21 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import React from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import { ProductResponse } from '@/services/productService';
-import { LanguageProvider } from '@/context/LanguageContext';
-
-// next/navigation is already mocked globally in jest.setup.ts
-// Override to ensure useRouter is available for this component
-jest.mock('next/navigation', () => ({
-  redirect:        jest.fn(),
-  useRouter:       () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
-  usePathname:     () => '/',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-function renderCard(ui: React.ReactElement) {
-  return render(<LanguageProvider>{ui}</LanguageProvider>);
-}
 
 const baseProduct: ProductResponse = {
   ProductId: 1,
@@ -37,18 +22,18 @@ const baseProduct: ProductResponse = {
 
 describe('ProductCard', () => {
   it('renders product name and price without discount', () => {
-    renderCard(<ProductCard product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
     expect(screen.getByText('Jalapeño Sauce')).toBeInTheDocument();
     expect(screen.getByText('$25.00')).toBeInTheDocument();
   });
 
   it('renders category badge when provided', () => {
-    renderCard(<ProductCard product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
     expect(screen.getByText('Sauce')).toBeInTheDocument();
   });
 
   it('does not render discount badge when discount is not active', () => {
-    renderCard(<ProductCard product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
     expect(screen.queryByText(/OFF/i)).not.toBeInTheDocument();
   });
 
@@ -61,7 +46,7 @@ describe('ProductCard', () => {
       DiscountActive: true,
       DiscountIsCurrentlyValid: true,
     };
-    renderCard(<ProductCard product={discountedProduct} />);
+    render(<ProductCard product={discountedProduct} />);
     expect(screen.getByText(/20.*OFF/i)).toBeInTheDocument();
     expect(screen.getByText('$80.00')).toBeInTheDocument();
     expect(screen.getByText('$100.00')).toBeInTheDocument();
@@ -76,7 +61,7 @@ describe('ProductCard', () => {
       DiscountActive: true,
       DiscountIsCurrentlyValid: true,
     };
-    const { container } = renderCard(<ProductCard product={discountedProduct} />);
+    const { container } = render(<ProductCard product={discountedProduct} />);
     const strikethrough = container.querySelector('.line-through');
     expect(strikethrough).toBeInTheDocument();
     expect(strikethrough?.textContent).toContain('100.00');
@@ -92,7 +77,7 @@ describe('ProductCard', () => {
       DiscountIsCurrentlyValid: true,
       DiscountEndDate: null,
     };
-    renderCard(<ProductCard product={unlimitedProduct} />);
+    render(<ProductCard product={unlimitedProduct} />);
     expect(screen.getByText('Unlimited offer')).toBeInTheDocument();
   });
 
@@ -107,7 +92,7 @@ describe('ProductCard', () => {
       DiscountIsCurrentlyValid: true,
       DiscountEndDate: futureDate,
     };
-    renderCard(<ProductCard product={timedProduct} />);
+    render(<ProductCard product={timedProduct} />);
     expect(screen.getByText(/Ends/i)).toBeInTheDocument();
   });
 
@@ -121,24 +106,24 @@ describe('ProductCard', () => {
       DiscountIsCurrentlyValid: false,
       DiscountEndDate: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
     };
-    renderCard(<ProductCard product={expiredProduct} />);
+    render(<ProductCard product={expiredProduct} />);
     expect(screen.queryByText(/OFF/i)).not.toBeInTheDocument();
     expect(screen.getByText('$100.00')).toBeInTheDocument();
   });
 
   it('shows out-of-stock badge when AllocatedQuantity is 0', () => {
     const outOfStockProduct: ProductResponse = { ...baseProduct, AllocatedQuantity: 0 };
-    renderCard(<ProductCard product={outOfStockProduct} />);
+    render(<ProductCard product={outOfStockProduct} />);
     expect(screen.getAllByText(/out of stock/i).length).toBeGreaterThan(0);
   });
 
   it('shows edit button when showEditButton is true', () => {
-    renderCard(<ProductCard product={baseProduct} showEditButton />);
+    render(<ProductCard product={baseProduct} showEditButton />);
     expect(screen.getByRole('link', { name: /edit/i })).toBeInTheDocument();
   });
 
   it('does not show edit button by default', () => {
-    renderCard(<ProductCard product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
     expect(screen.queryByRole('link', { name: /edit/i })).not.toBeInTheDocument();
   });
 
@@ -153,7 +138,7 @@ describe('ProductCard', () => {
       DiscountIsCurrentlyValid: true, // backend says valid, but start is in the future
       DiscountStartDate: futureStart,
     };
-    renderCard(<ProductCard product={notStartedProduct} />);
+    render(<ProductCard product={notStartedProduct} />);
     // Frontend safety check should block the discount display
     expect(screen.queryByText(/OFF/i)).not.toBeInTheDocument();
   });
@@ -167,7 +152,7 @@ describe('ProductCard', () => {
       DiscountActive: true,
       DiscountIsCurrentlyValid: true,
     };
-    renderCard(<ProductCard product={unlimitedProduct} />);
+    render(<ProductCard product={unlimitedProduct} />);
     expect(screen.getByText(/25.*OFF/i)).toBeInTheDocument();
     expect(screen.getByText('Unlimited offer')).toBeInTheDocument();
   });

@@ -13,7 +13,6 @@ import {
 import FarmMap, { MapFilter } from '@/components/map/FarmMap';
 import Alert from '@/components/ui/Alert';
 import TaskProgressBar from '@/components/tasks/TaskProgressBar';
-import WeatherCard from '@/components/weather/WeatherCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { getManagerDashboardData, ManagerDashboardData } from '@/lib/managerDashboardApi';
 import { groupDashboardTasks, isTaskOpen } from '@/lib/taskUrgency';
@@ -363,11 +362,6 @@ export default function ManagerPage() {
                   <StatTile label={d.relativeHumidity} value={metricValue(avgHumidity, '%')} icon={<Droplets className="h-4 w-4" />} tone="blue" />
                 </div>
               </DashboardCard>
-            </section>
-
-            {/* ── Weather card (US36) ── */}
-            <section className="mt-5">
-              <WeatherCard />
             </section>
 
             <section className="mt-5 rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm">

@@ -588,11 +588,6 @@ def assign_overdue_spray_task(
 
     from services.task_service import create_task as _create_task
 
-    # DueDate is required for task creation (BSPMT7-449). The zone is already
-    # overdue, so default to a short 1-day deadline when the manager did not
-    # supply one explicitly.
-    due_date = data.dueDate or (now + timedelta(days=1))
-
     task_request = CreateTaskRequest(
         title=f"Spray {alert.ZoneName}",
         taskType="spray",
@@ -600,7 +595,7 @@ def assign_overdue_spray_task(
         priority="high",
         assignedToUserId=data.assignedToUserId,
         zoneId=alert.ZoneId,
-        dueDate=due_date,
+        dueDate=data.dueDate,
         checklistItems=[],
     )
     task_resp, error = _create_task(db, manager_user_id, task_request)

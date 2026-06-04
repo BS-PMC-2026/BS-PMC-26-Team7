@@ -32,10 +32,6 @@ WORKER_ROLE_ID  = 2
 MANAGER_ID      = 10
 WORKER_ID       = 20
 
-# A valid (future) due date for tests that only need creation to succeed.
-# DueDate is required as of BSPMT7-449.
-FUTURE_DUE = datetime.now(timezone.utc) + timedelta(days=7)
-
 
 @pytest.fixture()
 def db():
@@ -72,8 +68,8 @@ def test_get_all_tasks_empty(db):
 # 11. Get all tasks returns created tasks
 # ------------------------------------------------------------------ #
 def test_get_all_tasks_returns_tasks(db):
-    dto1 = CreateTaskRequest(title="Task One", taskType="irrigation", priority="low", dueDate=FUTURE_DUE)
-    dto2 = CreateTaskRequest(title="Task Two", taskType="harvesting", priority="high", dueDate=FUTURE_DUE)
+    dto1 = CreateTaskRequest(title="Task One", taskType="irrigation", priority="low")
+    dto2 = CreateTaskRequest(title="Task Two", taskType="harvesting", priority="high")
     create_task(db, MANAGER_ID, dto1)
     create_task(db, MANAGER_ID, dto2)
 
@@ -89,8 +85,8 @@ def test_get_all_tasks_returns_tasks(db):
 # 12. Get all tasks returns newest first
 # ------------------------------------------------------------------ #
 def test_get_all_tasks_ordered_newest_first(db):
-    dto1 = CreateTaskRequest(title="First Created", taskType="planting", priority="medium", dueDate=FUTURE_DUE)
-    dto2 = CreateTaskRequest(title="Second Created", taskType="inspection", priority="medium", dueDate=FUTURE_DUE)
+    dto1 = CreateTaskRequest(title="First Created", taskType="planting", priority="medium")
+    dto2 = CreateTaskRequest(title="Second Created", taskType="inspection", priority="medium")
     create_task(db, MANAGER_ID, dto1)
     create_task(db, MANAGER_ID, dto2)
 
@@ -104,7 +100,7 @@ def test_get_all_tasks_ordered_newest_first(db):
 # 13. Get all tasks includes assigned worker
 # ------------------------------------------------------------------ #
 def test_get_all_tasks_includes_assignee(db):
-    dto = CreateTaskRequest(title="Assigned Task", taskType="irrigation", priority="critical", assignedToUserId=WORKER_ID, dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Assigned Task", taskType="irrigation", priority="critical", assignedToUserId=WORKER_ID)
     create_task(db, MANAGER_ID, dto)
 
     result = get_all_tasks(db)
@@ -117,7 +113,7 @@ def test_get_all_tasks_includes_assignee(db):
 # 14. Created task has default status "todo"
 # ------------------------------------------------------------------ #
 def test_created_task_default_status(db):
-    dto = CreateTaskRequest(title="Status Check", taskType="other", priority="low", dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Status Check", taskType="other", priority="low")
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert error is None
@@ -147,7 +143,6 @@ def test_get_all_tasks_includes_checklist_items(db):
         title="Inspect greenhouse",
         taskType="inspection",
         priority="medium",
-        dueDate=FUTURE_DUE,
         checklistItems=[
             ChecklistItemIn(title="Check humidity"),
             ChecklistItemIn(title="Check temperature"),
@@ -171,14 +166,12 @@ def test_get_all_tasks_multiple_tasks_checklist_items_not_mixed(db):
         title="Task A",
         taskType="irrigation",
         priority="low",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Step A1"), ChecklistItemIn(title="Step A2")],
     )
     dto_b = CreateTaskRequest(
         title="Task B",
         taskType="inspection",
         priority="high",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Step B1")],
     )
     create_task(db, MANAGER_ID, dto_a)
@@ -201,7 +194,6 @@ def test_get_tasks_by_user_includes_checklist_items(db):
         taskType="harvesting",
         priority="critical",
         assignedToUserId=WORKER_ID,
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Pick row A"), ChecklistItemIn(title="Pick row B")],
     )
     create_task(db, MANAGER_ID, dto)

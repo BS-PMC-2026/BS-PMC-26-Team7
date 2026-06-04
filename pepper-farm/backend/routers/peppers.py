@@ -7,17 +7,12 @@ from pathlib import Path
 from uuid import uuid4
 import traceback
 from services.pepper_service import create_pepper, get_all_peppers, get_pepper_by_id, update_pepper , delete_pepper
-from utils.jwt import require_role
 
 router = APIRouter(prefix="/api/peppers", tags=["Peppers"])
 
 
 @router.post("", response_model=PepperResponse, status_code=201)
-def create_pepper_endpoint(
-    pepper: PepperCreate,
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def create_pepper_endpoint(pepper: PepperCreate, db: Session = Depends(get_db)):
     try:
         created = create_pepper(db, pepper)
         return created
@@ -53,10 +48,7 @@ def create_pepper_endpoint(
 
 
 @router.post("/upload-image")
-async def upload_pepper_image(
-    file: UploadFile = File(...),
-    _user=Depends(require_role("FarmManager")),
-):
+async def upload_pepper_image(file: UploadFile = File(...)):
     allowed_types = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 
     if file.content_type not in allowed_types:
@@ -95,12 +87,7 @@ def get_pepper_endpoint(pepper_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{pepper_id}", response_model=PepperResponse)
-def update_pepper_endpoint(
-    pepper_id: int,
-    pepper: PepperUpdate,
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def update_pepper_endpoint(pepper_id: int, pepper: PepperUpdate, db: Session = Depends(get_db)):
     try:
         updated = update_pepper(db, pepper_id, pepper)
         if updated is None:
@@ -130,11 +117,7 @@ def update_pepper_endpoint(
     
     
 @router.delete("/{pepper_id}")
-def delete_pepper_endpoint(
-    pepper_id: int,
-    db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
-):
+def delete_pepper_endpoint(pepper_id: int, db: Session = Depends(get_db)):
     try:
         deleted = delete_pepper(db, pepper_id)
 

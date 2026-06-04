@@ -21,7 +21,6 @@ from types import SimpleNamespace
 
 from main import app
 from database import get_db
-from utils.jwt import get_current_user
 from schemas.pepper import PepperCreate
 from services.pepper_service import create_pepper
 
@@ -79,8 +78,6 @@ def client():
         yield mock_db
 
     app.dependency_overrides[get_db] = override_get_db
-    # BSPMT7-465: pepper writes now require FarmManager — authenticate as one.
-    app.dependency_overrides[get_current_user] = lambda: {"user_id": 1, "role": "FarmManager"}
     with TestClient(app) as c:
         yield c, mock_db
     app.dependency_overrides.clear()

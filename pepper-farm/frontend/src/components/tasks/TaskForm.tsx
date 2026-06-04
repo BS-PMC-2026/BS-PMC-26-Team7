@@ -83,9 +83,7 @@ export default function TaskForm({
     const next: FormErrors = {};
     if (!form.title.trim()) next.title = tk.errTitleRequired;
     if (!form.taskType)      next.taskType = tk.errTypeRequired;
-    if (!form.dueDate) {
-      next.dueDate = tk.errDueDateRequired;
-    } else {
+    if (form.dueDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (new Date(form.dueDate) < today) next.dueDate = tk.errDueDatePast;
@@ -226,7 +224,7 @@ export default function TaskForm({
       <Input
         id="dueDate"
         label={tk.formDueDate}
-        type="datetime-local"
+        type="date"
         value={form.dueDate}
         onChange={(e) => handleChange('dueDate', e.target.value)}
         error={errors.dueDate}
