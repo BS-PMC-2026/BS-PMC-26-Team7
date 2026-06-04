@@ -31,7 +31,7 @@ def register(
     )
     db.add(user)
     db.commit()
-    db.refresh(user)  # load auto-generated UserId and lazy relationships
+    db.refresh(user)
 
     # US40: persist email consent choice from the registration checkbox.
     # Wrapped in try/except so registration never fails when the migration

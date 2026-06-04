@@ -24,9 +24,6 @@ import {
   Droplets,
   ShieldAlert,
   Mail,
-  Tag,
-  Package,
-  UserCheck,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -360,15 +357,6 @@ export default function ManagerNavbar() {
 
         {/* Newsletter */}
         <NavLinkDirect href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
-
-        {/* US41: Orders */}
-        <NavLinkDirect href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
-
-        {/* US41: Coupons */}
-        <NavLinkDirect href="/manager/coupons" label={t.store.coupons} icon={<Tag size={14} />} active={pathname.startsWith('/manager/coupons')} scrolled={scrolled} />
-
-        {/* US41: Employee Discounts */}
-        <NavLinkDirect href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={14} />} active={pathname.startsWith('/manager/employee-discounts')} scrolled={scrolled} />
 
         {/* Users */}
         <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />

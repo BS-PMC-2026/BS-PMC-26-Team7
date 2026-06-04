@@ -146,10 +146,7 @@ describe('US32 — Overdue Spray Alerts section', () => {
     await waitFor(() =>
       expect(screen.getByTestId('overdue-alerts-list')).toBeInTheDocument(),
     );
-    // "Critical" may appear in both the severity badge and a select <option>.
-    // Assert that at least one visible (non-option) element carries the label.
-    const criticalElements = screen.getAllByText('Critical');
-    expect(criticalElements.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Critical')).toBeInTheDocument();
   });
 
   it('shows "ACTIVE" badge on unresolved alert', async () => {

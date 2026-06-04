@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, LogOut, ShoppingCart, X } from 'lucide-react';
+import { Bell, LogOut, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import {
   getMyNotifications,
@@ -11,7 +11,6 @@ import {
   markAllNotificationsRead,
 } from '@/services/notificationsService';
 import type { AppNotification } from '@/services/notificationsService';
-import { getCart } from '@/services/cartService';
 
 /* Minimal visitor header — shows notification bell for in-app messages (Fix D). */
 
@@ -23,11 +22,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
   const [unread,      setUnread]      = useState(0);
   const [notifs,      setNotifs]      = useState<AppNotification[]>([]);
   const [loading,     setLoading]     = useState(false);
-  const [cartCount,   setCartCount]   = useState(0);
-
-  useEffect(() => {
-    getCart().then(c => setCartCount(c.items.reduce((s, i) => s + i.quantity, 0))).catch(() => {});
-  }, []);
 
   // Poll unread count every 60 s
   useEffect(() => {
@@ -75,16 +69,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
           🌶️ PepperFarm
         </Link>
         <div className="flex-1" />
-
-        {/* Cart icon with item count */}
-        <Link href="/cart" className="relative flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer text-gray-500 hover:bg-gray-100 transition" data-testid="visitor-cart-icon">
-          <ShoppingCart size={15} />
-          {cartCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center" data-testid="cart-badge">
-              {cartCount > 99 ? '99+' : cartCount}
-            </span>
-          )}
-        </Link>
 
         {/* In-app notification bell (Fix D — visitor gets one bell) */}
         <div className="relative">
@@ -134,11 +118,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-
-        {/* My Orders */}
-        <Link href="/profile/orders" className="text-[11px] text-gray-500 hover:text-[var(--color-primary)] no-underline transition whitespace-nowrap">
-          My Orders
-        </Link>
 
         {/* Logout */}
         <button onClick={handleLogout} aria-label="Sign out" className="text-gray-400 hover:text-red-500 transition">

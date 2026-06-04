@@ -42,10 +42,6 @@ MANAGER_ID      = 10
 WORKER_ID       = 20
 ANOTHER_MANAGER_ID = 30
 
-# A valid (future) due date used by tests that just need creation to succeed.
-# DueDate is required as of BSPMT7-449.
-FUTURE_DUE = datetime.now(timezone.utc) + timedelta(days=7)
-
 
 @pytest.fixture()
 def db():
@@ -74,7 +70,7 @@ def db():
 # 1. Valid task creation (unassigned)
 # ------------------------------------------------------------------ #
 def test_create_task_valid(db):
-    dto = CreateTaskRequest(title="Water zone A", taskType="irrigation", priority="medium", dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Water zone A", taskType="irrigation", priority="medium")
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert error is None
@@ -143,37 +139,10 @@ def test_create_task_due_date_today(db):
 
 
 # ------------------------------------------------------------------ #
-# 6b. Due date is required (BSPMT7-449)
-# ------------------------------------------------------------------ #
-def test_create_task_missing_due_date_returns_error(db):
-    dto = CreateTaskRequest(title="No deadline", taskType="inspection", priority="low")
-    result, error = create_task(db, MANAGER_ID, dto)
-
-    assert result is None
-    assert error == "DueDate is required."
-
-
-# ------------------------------------------------------------------ #
-# 6c. Time component of the due date is preserved (BSPMT7-449)
-# ------------------------------------------------------------------ #
-def test_create_task_preserves_due_date_time(db):
-    due = (datetime.now(timezone.utc) + timedelta(days=3)).replace(
-        hour=14, minute=30, second=0, microsecond=0
-    )
-    dto = CreateTaskRequest(title="Timed task", taskType="irrigation", priority="medium", dueDate=due)
-    result, error = create_task(db, MANAGER_ID, dto)
-
-    assert error is None
-    assert result is not None
-    assert result.dueDate.hour == 14
-    assert result.dueDate.minute == 30
-
-
-# ------------------------------------------------------------------ #
 # 7. Assigned user does not exist
 # ------------------------------------------------------------------ #
 def test_create_task_assignee_not_found(db):
-    dto = CreateTaskRequest(title="Task", taskType="harvesting", priority="high", assignedToUserId=9999, dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Task", taskType="harvesting", priority="high", assignedToUserId=9999)
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert result is None
@@ -184,7 +153,7 @@ def test_create_task_assignee_not_found(db):
 # 8. Assigned user is not a Worker
 # ------------------------------------------------------------------ #
 def test_create_task_assignee_not_worker(db):
-    dto = CreateTaskRequest(title="Task", taskType="inspection", priority="medium", assignedToUserId=ANOTHER_MANAGER_ID, dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Task", taskType="inspection", priority="medium", assignedToUserId=ANOTHER_MANAGER_ID)
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert result is None
@@ -195,7 +164,7 @@ def test_create_task_assignee_not_worker(db):
 # 9. Valid assignment to a Worker
 # ------------------------------------------------------------------ #
 def test_create_task_valid_worker_assignment(db):
-    dto = CreateTaskRequest(title="Water zone B", taskType="irrigation", priority="critical", assignedToUserId=WORKER_ID, dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="Water zone B", taskType="irrigation", priority="critical", assignedToUserId=WORKER_ID)
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert error is None
@@ -208,7 +177,7 @@ def test_create_task_valid_worker_assignment(db):
 # ------------------------------------------------------------------ #
 def test_create_task_without_checklist_returns_empty_list(db):
     """A task created without checklistItems exposes an empty list (no crash)."""
-    dto = CreateTaskRequest(title="No checklist", taskType="inspection", priority="low", dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="No checklist", taskType="inspection", priority="low")
     result, error = create_task(db, MANAGER_ID, dto)
 
     assert error is None
@@ -221,7 +190,6 @@ def test_create_task_with_checklist_persists_items_in_order(db):
         title="Inspect greenhouse",
         taskType="inspection",
         priority="medium",
-        dueDate=FUTURE_DUE,
         checklistItems=[
             ChecklistItemIn(title="Check humidity"),
             ChecklistItemIn(title="Check temperature"),
@@ -245,7 +213,6 @@ def test_add_checklist_item_appends_after_existing(db):
         title="Harvest",
         taskType="harvesting",
         priority="high",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Pick row A")],
     )
     created, _ = create_task(db, MANAGER_ID, dto)
@@ -270,7 +237,6 @@ def test_update_checklist_item_toggles_completion(db):
         title="Two-step",
         taskType="inspection",
         priority="medium",
-        dueDate=FUTURE_DUE,
         checklistItems=[
             ChecklistItemIn(title="Step 1"),
             ChecklistItemIn(title="Step 2"),
@@ -291,7 +257,7 @@ def test_update_checklist_item_toggles_completion(db):
 
 def test_update_checklist_item_not_found(db):
     """update_checklist_item returns an error when the item id does not match."""
-    dto = CreateTaskRequest(title="t", taskType="other", priority="low", dueDate=FUTURE_DUE)
+    dto = CreateTaskRequest(title="t", taskType="other", priority="low")
     created, _ = create_task(db, MANAGER_ID, dto)
 
     result, error = update_checklist_item(
@@ -307,7 +273,6 @@ def test_delete_checklist_item_removes_row(db):
         title="Removable",
         taskType="other",
         priority="low",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Doomed")],
     )
     created, _ = create_task(db, MANAGER_ID, dto)
@@ -330,7 +295,6 @@ def test_update_checklist_item_updates_title(db):
         title="Rename step",
         taskType="inspection",
         priority="medium",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Old title")],
     )
     created, _ = create_task(db, MANAGER_ID, dto)
@@ -350,7 +314,6 @@ def test_update_checklist_item_empty_title_returns_error(db):
         title="t",
         taskType="other",
         priority="low",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Original")],
     )
     created, _ = create_task(db, MANAGER_ID, dto)
@@ -370,7 +333,6 @@ def test_create_task_checklist_items_have_correct_positions(db):
         title="Ordered task",
         taskType="inspection",
         priority="medium",
-        dueDate=FUTURE_DUE,
         checklistItems=[
             ChecklistItemIn(title="First"),
             ChecklistItemIn(title="Second"),
@@ -389,14 +351,12 @@ def test_checklist_items_belong_to_correct_task(db):
         title="Task A",
         taskType="inspection",
         priority="low",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Item A")],
     )
     dto_b = CreateTaskRequest(
         title="Task B",
         taskType="inspection",
         priority="low",
-        dueDate=FUTURE_DUE,
         checklistItems=[ChecklistItemIn(title="Item B")],
     )
     task_a, _ = create_task(db, MANAGER_ID, dto_a)
