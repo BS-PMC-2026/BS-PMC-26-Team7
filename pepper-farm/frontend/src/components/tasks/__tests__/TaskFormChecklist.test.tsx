@@ -140,6 +140,9 @@ describe('TaskForm – checklist section', () => {
     fireEvent.change(screen.getByLabelText(/Task Type/i), {
       target: { value: 'irrigation' },
     });
+    fireEvent.change(screen.getByLabelText(/Due Date/i), {
+      target: { value: '2030-12-31T10:00' },
+    });
 
     // Add checklist item
     const addInput = screen.getByPlaceholderText('e.g. Check humidity');
