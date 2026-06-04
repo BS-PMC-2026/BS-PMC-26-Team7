@@ -21,6 +21,7 @@ from services.sensor_service import (
     get_sensor_readings_from_db,
     sync_sensor_readings,
 )
+from utils.jwt import require_role
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensors"])
 
@@ -37,12 +38,18 @@ class _ExportEmailRequest(BaseModel):
 
 
 @router.get("", response_model=list[SensorResponse])
-def list_sensors(db: Session = Depends(get_db)):
+def list_sensors(
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
+):
     return db.query(Sensor).order_by(Sensor.SensorId.asc()).all()
 
 
 @router.post("/export/email")
-def send_export_email(request: _ExportEmailRequest):
+def send_export_email(
+    request: _ExportEmailRequest,
+    _user=Depends(require_role("FarmManager")),
+):
     smtp_host     = os.getenv("SMTP_HOST", "")
     smtp_port     = int(os.getenv("SMTP_PORT", "587"))
     smtp_user     = os.getenv("SMTP_USER", "")
@@ -142,7 +149,11 @@ def refresh_sensor_live(sensor_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{sensor_id}/live")
-def get_sensor_live_data(sensor_id: int, db: Session = Depends(get_db)):
+def get_sensor_live_data(
+    sensor_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
+):
     sensor = db.query(Sensor).filter(Sensor.SensorId == sensor_id).first()
 
     if not sensor:
@@ -216,6 +227,7 @@ def get_sensor_alerts(
     startDate: datetime | None = None,
     endDate: datetime | None = None,
     db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
 ):
     query = (
         db.query(SensorAlertModel)
@@ -230,7 +242,11 @@ def get_sensor_alerts(
 
 
 @router.get("/{sensor_id}/latest", response_model=SensorReadingResponse)
-def get_latest_reading(sensor_id: int, db: Session = Depends(get_db)):
+def get_latest_reading(
+    sensor_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
+):
     reading = get_latest_sensor_reading(db, sensor_id)
     if not reading:
         raise HTTPException(status_code=404, detail="No readings found for this sensor.")
@@ -243,6 +259,7 @@ def get_readings(
     startDate: datetime | None = None,
     endDate: datetime | None = None,
     db: Session = Depends(get_db),
+    _user=Depends(require_role("FarmManager")),
 ):
     return get_sensor_readings_from_db(
         db=db,
