@@ -45,9 +45,19 @@ jest.mock('framer-motion', () => {
   };
 });
 
+jest.mock('@/services/notificationsService', () => ({
+  getUnreadCount:            jest.fn().mockResolvedValue(0),
+  markAllNotificationsRead:  jest.fn().mockResolvedValue(undefined),
+  getMyNotifications:        jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('@/services/cartService', () => ({
+  getCart: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock('lucide-react', () => {
   const icons = [
-    'LayoutDashboard','ClipboardList','ShoppingBag','Sprout','ChevronDown',
+    'LayoutDashboard','ClipboardList','ShoppingBag','ShoppingCart','Sprout','ChevronDown',
     'Leaf','LogOut','MapPin','Droplets','Bell','X','ClipboardCheck','ShieldAlert',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};

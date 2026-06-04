@@ -11,9 +11,18 @@ from sqlalchemy.exc import OperationalError
 
 from main import app
 from database import get_db
+from utils.jwt import get_current_user
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _auth_as_manager():
+    """BSPMT7-465: manager anomaly endpoints now require FarmManager — auth as one."""
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": 1, "role": "FarmManager"}
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 # ------------------------------------------------------------------ #

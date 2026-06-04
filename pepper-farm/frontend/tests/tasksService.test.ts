@@ -156,6 +156,18 @@ test('createTask trims whitespace from title', async () => {
   expect(body.title).toBe('Water zone A');
 });
 
+test('createTask forwards a datetime-local dueDate value unchanged', async () => {
+  (fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => mockTask,
+  });
+
+  await createTask({ ...baseFormData, dueDate: '2030-12-31T10:30' });
+
+  const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+  expect(body.dueDate).toBe('2030-12-31T10:30');
+});
+
 test('createTask converts empty assignedToUserId to null', async () => {
   (fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
@@ -193,9 +205,9 @@ test('createTask forwards checklist item titles, trimmed, dropping empties', asy
   await createTask({
     ...baseFormData,
     checklistItems: [
-      { title: '  Check humidity  ' },
-      { title: '' },
-      { title: 'Log results' },
+      { title: '  Check humidity  ', isCompleted: false },
+      { title: '', isCompleted: false },
+      { title: 'Log results', isCompleted: false },
     ],
   });
 

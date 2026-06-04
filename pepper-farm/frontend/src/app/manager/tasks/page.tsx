@@ -232,7 +232,7 @@ function ManagerTasksPageContent() {
         taskType: editingTask.taskType,
         priority: editingTask.priority,
         assignedToUserId: editingTask.assignedToUserId ? String(editingTask.assignedToUserId) : '',
-        dueDate: editingTask.dueDate ? editingTask.dueDate.slice(0, 10) : '',
+        dueDate: editingTask.dueDate ? editingTask.dueDate.slice(0, 16) : '',
         zoneCode: editingTask.zoneCode ?? '',
         checklistItems: (editingTask.checklistItems ?? []).map((item) => ({
           itemId: item.itemId,
