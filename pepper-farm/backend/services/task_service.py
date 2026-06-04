@@ -37,10 +37,12 @@ def create_task(db: Session, created_by_user_id: int, data: CreateTaskRequest) -
     if data.priority not in ALLOWED_PRIORITIES:
         return None, f"Invalid priority '{data.priority}'. Allowed values: low, medium, high, critical."
 
-    if data.dueDate:
-        today = datetime.now(timezone.utc).date()
-        if data.dueDate.date() < today:
-            return None, "DueDate cannot be in the past."
+    if not data.dueDate:
+        return None, "DueDate is required."
+
+    today = datetime.now(timezone.utc).date()
+    if data.dueDate.date() < today:
+        return None, "DueDate cannot be in the past."
 
     if data.assignedToUserId is not None:
         assignee = db.query(User).filter(User.UserId == data.assignedToUserId).first()
