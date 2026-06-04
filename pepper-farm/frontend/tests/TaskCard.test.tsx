@@ -290,4 +290,34 @@ describe('TaskCard', () => {
     fireEvent.click(startButton);
     expect(onStatusChange).toHaveBeenCalledWith(task, 'in_progress');
   });
+
+  // ---- Delete action (US42) ----
+
+  it('does not render a Delete button when onDelete is not provided', () => {
+    render(<TaskCard task={baseTask} workers={[]} onEdit={jest.fn()} />);
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument();
+  });
+
+  it('renders a Delete button when onDelete is provided (manager view)', () => {
+    render(<TaskCard task={baseTask} workers={[]} onDelete={jest.fn()} />);
+    expect(screen.getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('calls onDelete with the task when Delete is clicked', () => {
+    const onDelete = jest.fn();
+    render(<TaskCard task={baseTask} workers={[]} onDelete={onDelete} />);
+    fireEvent.click(screen.getByText('Delete'));
+    expect(onDelete).toHaveBeenCalledWith(baseTask);
+  });
+
+  it('renders a Delete button for done tasks (US42 updated rule)', () => {
+    const task = { ...baseTask, status: 'done' as const };
+    render(<TaskCard task={task} workers={[]} onDelete={jest.fn()} />);
+    expect(screen.getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('hides Delete when canDelete is false (task not created by current manager)', () => {
+    render(<TaskCard task={baseTask} workers={[]} onDelete={jest.fn()} canDelete={false} />);
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument();
+  });
 });
