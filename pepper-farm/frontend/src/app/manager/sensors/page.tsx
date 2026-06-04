@@ -374,9 +374,13 @@ function SensorDashboardPage() {
 
       // Send email
       if (opts.delivery === 'email') {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const res = await fetch(`/api/sensors/export/email`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ to: opts.email, attachments }),
         });
         if (!res.ok) {

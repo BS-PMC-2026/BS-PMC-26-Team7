@@ -9,7 +9,10 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 @router.get("/workers", response_model=list[WorkerResponse])
-def list_workers(db: Session = Depends(get_db)):
+def list_workers(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
     users = get_all_users(db)
     return [
         WorkerResponse(
