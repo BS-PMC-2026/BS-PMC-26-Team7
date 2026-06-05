@@ -20,7 +20,7 @@ from services.email_unsubscribe import (
     get_frontend_base_url,
     get_or_create_token,
 )
-from services.product_service import create_product, get_product_by_id, get_products, update_product
+from services.product_service import create_product, get_product_by_id, get_products, update_product , delete_product
 from utils.jwt import require_role
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
@@ -381,3 +381,31 @@ def update_product_endpoint(
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Unexpected server error.")
+
+
+@router.delete("/{product_id}")
+def delete_product_endpoint(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    try:
+        return delete_product(db, product_id)
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except OperationalError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection timeout. Please try again.",
+        )
+
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Unexpected server error.",
+        )
