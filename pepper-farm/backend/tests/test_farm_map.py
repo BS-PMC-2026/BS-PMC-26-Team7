@@ -44,11 +44,13 @@ def _mock_zone(
     soil_type: str | None = "Loam",
     irrigation: str | None = "Drip",
     notes: str | None = None,
+    zone_type: str | None = "GROWING_GREENHOUSE",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         ZoneId=zone_id,
         ZoneCode=zone_code,
         ZoneName=zone_name,
+        ZoneType=zone_type,
         PepperId=pepper_id,
         AreaSquareMeters=area,
         Description=description,

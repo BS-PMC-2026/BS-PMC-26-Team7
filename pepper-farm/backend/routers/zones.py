@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/zones", tags=["Zones"])
 def list_zones(db: Session = Depends(get_db)):
     zones = db.query(FarmZone).filter(FarmZone.IsActive == True).order_by(FarmZone.ZoneCode).all()
     return [
-        {"ZoneId": z.ZoneId, "ZoneCode": z.ZoneCode, "ZoneName": z.ZoneName}
+        {"ZoneId": z.ZoneId, "ZoneCode": z.ZoneCode, "ZoneName": z.ZoneName, "ZoneType": z.ZoneType}
         for z in zones
     ]
 
@@ -30,6 +30,7 @@ def get_zone_by_code(zone_code: str, db: Session = Depends(get_db)):
         "ZoneId": zone.ZoneId,
         "ZoneName": zone.ZoneName,
         "ZoneCode": zone.ZoneCode,
+        "ZoneType": zone.ZoneType,
         "AreaSquareMeters": float(zone.AreaSquareMeters) if zone.AreaSquareMeters else None,
         "Description": zone.Description,
         "SoilType": zone.SoilType,

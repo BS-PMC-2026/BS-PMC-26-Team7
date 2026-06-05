@@ -82,7 +82,7 @@ def update_plant_location_endpoint(
     current_user: dict = Depends(require_any_role("FarmManager", "Worker")),
 ):
     try:
-        plant, error = update_plant_location(db, plant_id, data.zoneId)
+        plant, error = update_plant_location(db, plant_id, data.zoneId, data.transferredAt)
         if error:
             if "not found" in error:
                 raise HTTPException(status_code=404, detail=error)

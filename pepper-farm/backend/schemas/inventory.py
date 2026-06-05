@@ -57,6 +57,8 @@ class PlantSummary(BaseModel):
     Status: Optional[str] = None
     ZoneId: Optional[int] = None
     ZoneName: Optional[str] = None
+    PlantedAt: Optional[datetime] = None
+    TransferredAt: Optional[datetime] = None
 
 
 class InventoryByVariety(BaseModel):

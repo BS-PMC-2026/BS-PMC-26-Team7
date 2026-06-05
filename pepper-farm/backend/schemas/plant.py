@@ -52,6 +52,7 @@ class PlantCreate(BaseModel):
     
 class UpdatePlantLocationRequest(BaseModel):
     zoneId: int | None = None
+    transferredAt: Optional[datetime] = None
 
     @field_validator("zoneId")
     @classmethod
@@ -78,6 +79,7 @@ class PlantResponse(BaseModel):
     PepperId: int
     ZoneId: Optional[int] = None
     PlantedAt: Optional[datetime] = None
+    TransferredAt: Optional[datetime] = None
     Status: Optional[str] = None
     Notes: Optional[str] = None
     IsActive: bool

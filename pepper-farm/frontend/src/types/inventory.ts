@@ -28,6 +28,8 @@ export type PlantSummary = {
   Status: string | null;
   ZoneId: number | null;
   ZoneName: string | null;
+  PlantedAt: string | null;
+  TransferredAt: string | null;
 };
 
 export type InventoryByVariety = {
