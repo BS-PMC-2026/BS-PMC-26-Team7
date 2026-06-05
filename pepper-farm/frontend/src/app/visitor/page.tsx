@@ -21,6 +21,8 @@ export default function VisitorPage() {
   const [isLoading,  setIsLoading] = useState(true);
   const [loadError,  setLoadError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [heatFilter, setHeatFilter] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -54,6 +56,29 @@ export default function VisitorPage() {
   useEffect(() => {
     loadPeppers();
   }, [loadPeppers]);
+
+  const filteredPeppers = peppers.filter((pepper) => {
+  const matchesSearch =
+    pepper.PepperName?.toLowerCase().includes(searchTerm.toLowerCase());
+
+  let matchesHeat = true;
+
+  const scoville = pepper.HeatLevelScovilleMax || 0;
+
+  if (heatFilter === 'Mild')
+    matchesHeat = scoville < 5000;
+
+  if (heatFilter === 'Medium')
+    matchesHeat = scoville >= 5000 && scoville < 50000;
+
+  if (heatFilter === 'Hot')
+    matchesHeat = scoville >= 50000 && scoville < 300000;
+
+  if (heatFilter === 'Extreme')
+    matchesHeat = scoville >= 300000;
+
+  return matchesSearch && matchesHeat;
+});
 
   return (
     <div className="min-h-screen bg-[var(--color-muted)]">
@@ -125,6 +150,25 @@ export default function VisitorPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mb-6 flex flex-col md:flex-row gap-4">
+          <input
+          type="text"
+          placeholder="Search pepper varieties..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+          />
+          <select
+          value={heatFilter}
+          onChange={(e) => setHeatFilter(e.target.value)}
+          className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white">
+            <option value="">All Heat Levels</option>
+            <option value="Mild">Mild</option>
+            <option value="Medium">Medium</option>
+            <option value="Hot">Hot</option>
+            <option value="Extreme">Extreme</option>
+            </select>
+          </div>
         {loadError && <Alert variant="info" className="mb-6">{loadError}</Alert>}
 
         {isLoading ? (
@@ -143,13 +187,19 @@ export default function VisitorPage() {
           </div>
         ) : peppers.length === 0 ? (
           <EmptyState icon="🌶️" title={vi.noPepperVariants} description={vi.checkBackLater} />
+          ) : filteredPeppers.length === 0 ? (
+          <EmptyState
+          icon="🔍"
+          title="No pepper varieties found"
+          description="Try a different search term"
+          />
         ) : (
           <>
             <p className="text-xs text-[var(--color-muted-foreground)] mb-4" dir="ltr">
-              {peppers.length} {peppers.length === 1 ? t.common.variety : t.common.varieties}
+             {filteredPeppers.length} {peppers.length === 1 ? t.common.variety : t.common.varieties}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {peppers.map((pepper) => (
+              {filteredPeppers.map((pepper) => (
                 <PepperCard key={pepper.PepperId} pepper={pepper} />
               ))}
             </div>
