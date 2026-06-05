@@ -129,3 +129,27 @@ def update_product(db: Session, product_id: int, product_data: ProductCreate) ->
     db.refresh(product)
 
     return get_product_by_id(db, product.ProductId)
+
+def delete_product(db: Session, product_id: int):
+    product = (
+        db.query(Product)
+        .filter(Product.ProductId == product_id)
+        .first()
+    )
+
+    if not product:
+        raise ValueError("Product not found.")
+
+    inventory = (
+        db.query(Inventory)
+        .filter(Inventory.ProductId == product_id)
+        .first()
+    )
+
+    if inventory:
+        db.delete(inventory)
+
+    db.delete(product)
+    db.commit()
+
+    return {"message": "Product deleted successfully."}

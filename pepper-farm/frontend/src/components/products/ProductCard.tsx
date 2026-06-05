@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { ProductResponse } from '@/services/productService';
+import { ProductResponse , deleteProduct } from '@/services/productService';
 import { addToCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -78,6 +78,23 @@ export default function ProductCard({ product, showEditButton = false }: Product
   function handleBuyNow() {
     router.push(`/checkout?productId=${product.ProductId}&qty=1`);
   }
+  async function handleDelete() {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this product?'
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteProduct(product.ProductId);
+
+    alert('Product deleted successfully.');
+
+    window.location.reload();
+  } catch {
+    alert('Failed to delete product.');
+  }
+}
 
   return (
     <Card
@@ -161,13 +178,22 @@ export default function ProductCard({ product, showEditButton = false }: Product
         </div>
 
         {showEditButton && (
-          <Link
-            href={`/manager/products/${product.ProductId}/edit`}
-            className="mt-2 w-full text-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
-          >
-            {pr.editProduct}
-          </Link>
-        )}
+  <div className="mt-2 flex gap-2">
+    <Link
+      href={`/manager/products/${product.ProductId}/edit`}
+      className="flex-1 text-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+    >
+      {pr.editProduct}
+    </Link>
+
+    <button
+      onClick={handleDelete}
+      className="flex-1 rounded-md border border-red-500 text-red-600 px-3 py-1.5 text-xs font-medium hover:bg-red-50 transition"
+    >
+      Delete
+    </button>
+  </div>
+)}
 
         {!showEditButton && (
           <div className="flex gap-2 mt-2">
