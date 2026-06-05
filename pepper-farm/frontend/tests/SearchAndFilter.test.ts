@@ -1,5 +1,3 @@
-import { describe, test, expect } from 'vitest';
-
 describe('Search And Filter Features', () => {
 
   test('filters products by name', () => {
