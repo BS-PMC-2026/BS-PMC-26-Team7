@@ -35,7 +35,8 @@ function TaskHistoryContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const del = useTaskDelete((id) => setTasks((prev) => prev.filter((tt) => tt.id !== id)));
-
+  const [searchTerm, setSearchTerm] = useState('');
+  
   useEffect(() => {
     getCompletedTasks()
       .then(setTasks)
@@ -43,16 +44,36 @@ function TaskHistoryContent() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredTasks = tasks.filter((task) => {
+  const title = task.title?.toLowerCase() || '';
+  const description = task.description?.toLowerCase() || '';
+  const search = searchTerm.toLowerCase();
+
+  return (
+    title.includes(search) ||
+    description.includes(search)
+  );
+});
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-4">
+  <input
+    type="text"
+    placeholder="Search completed tasks..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+  />
+</div>
       {error && <Alert className="mb-4">{error}</Alert>}
       {loading ? (
         <p className="text-center text-[var(--color-muted-foreground)] py-10">Loading completed tasks...</p>
-      ) : tasks.length === 0 ? (
+      ) : filteredTasks.length === 0 ? (
         <EmptyState title="No completed tasks found" description="Completed tasks will appear here." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-2">
-          {tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <div key={task.id} className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm p-5 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between mb-3">
                 <span className="px-3 py-1 rounded-full bg-[var(--color-secondary-light)] text-[var(--color-primary)] text-xs font-semibold">COMPLETED</span>
@@ -178,7 +199,7 @@ function ManagerTasksPageContent() {
       setShowCreateForm(true);
     }
   }, [sourceAlertId]);
-
+  
   const loadData = useCallback(async () => {
     setIsLoadingTasks(true);
     setLoadError(null);
@@ -267,8 +288,22 @@ function ManagerTasksPageContent() {
       }
     : undefined;
 
-  const filteredTasks = useMemo(() => filterTasks(tasks, taskFilters), [tasks, taskFilters]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const filteredTasks = useMemo(() => {
+  const filtered = filterTasks(tasks, taskFilters);
 
+  return filtered.filter((task) => {
+    const title = task.title?.toLowerCase() || '';
+    const description = task.description?.toLowerCase() || '';
+    const search = searchTerm.toLowerCase();
+
+    return (
+      title.includes(search) ||
+      description.includes(search)
+    );
+  });
+}, [tasks, taskFilters, searchTerm]);
+  
   if (activeTab === 'history') {
     return (
       <>
@@ -359,7 +394,17 @@ function ManagerTasksPageContent() {
       )}
 
       {loadError && <Alert className="mb-4">{loadError}</Alert>}
-
+      {!isLoadingTasks && tasks.length > 0 && (
+  <div className="mb-4">
+    <input
+      type="text"
+      placeholder="Search tasks..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+    />
+  </div>
+)}    
       {!isLoadingTasks && tasks.length > 0 && (
         <TaskFilters
           className="mb-4"
