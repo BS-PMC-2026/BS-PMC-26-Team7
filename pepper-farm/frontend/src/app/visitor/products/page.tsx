@@ -32,6 +32,9 @@ export default function VisitorProductsPage() {
   const [subLoading,      setSubLoading]      = useState(false);
   const [subMsg,          setSubMsg]          = useState('');
   const [subErr,          setSubErr]          = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sortBy, setSortBy] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -69,6 +72,41 @@ export default function VisitorProductsPage() {
     loadProducts();
   }, [loadProducts]);
 
+  const categories = [
+  ...new Set(products.map((p) => p.Category).filter(Boolean)),
+];
+
+const filteredProducts = products
+  .filter((product) => {
+    const name = product.ProductName?.toLowerCase() || '';
+    const description = product.ProductDescription?.toLowerCase() || '';
+
+    const matchesSearch =
+      name.includes(searchTerm.toLowerCase()) ||
+      description.includes(searchTerm.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === '' ||
+      product.Category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  })
+  .sort((a, b) => {
+    if (sortBy === 'name') {
+      return a.ProductName.localeCompare(b.ProductName);
+    }
+
+    if (sortBy === 'priceLow') {
+      return a.Price - b.Price;
+    }
+
+    if (sortBy === 'priceHigh') {
+      return b.Price - a.Price;
+    }
+
+    return 0;
+  });
+
   return (
     <div className="min-h-screen bg-[var(--color-muted)]">
       <div className="bg-white border-b border-[var(--color-border)]">
@@ -101,6 +139,39 @@ export default function VisitorProductsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="mb-6 flex flex-col md:flex-row gap-4">
+  <input
+    type="text"
+    placeholder="Search products..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+  />
+
+  <select
+    value={selectedCategory}
+    onChange={(e) => setSelectedCategory(e.target.value)}
+    className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+  >
+    <option value="">All Categories</option>
+
+    {categories.map((category) => (
+      <option key={category} value={category ?? ''}>
+        {category}
+      </option>
+    ))}
+  </select>
+  <select
+  value={sortBy}
+  onChange={(e) => setSortBy(e.target.value)}
+  className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+>
+  <option value="">Sort By</option>
+  <option value="name">Name A-Z</option>
+  <option value="priceLow">Price Low to High</option>
+  <option value="priceHigh">Price High to Low</option>
+</select>
+</div>
         {loadError && (
           <Alert variant="info" className="mb-6">
             {loadError}
@@ -130,13 +201,20 @@ export default function VisitorProductsPage() {
             title={vi.noProductsAvailable}
             description={vi.checkBackLater}
           />
+          ) : filteredProducts.length === 0 ? (
+  <EmptyState
+    icon="🔍"
+    title="No products found"
+    description="Try changing the search, category, or sorting."
+  />
+          
         ) : (
           <>
             <p className="text-xs text-[var(--color-muted-foreground)] mb-4" dir="ltr">
-              {products.length} {products.length === 1 ? t.common.product : t.common.products}
+              {filteredProducts.length} {products.length === 1 ? t.common.product : t.common.products}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard key={product.ProductId} product={product} />
               ))}
             </div>
