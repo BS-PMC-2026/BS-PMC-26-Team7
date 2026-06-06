@@ -377,6 +377,8 @@ export default function FarmMap({
             const { fill: overlayFill, pulse } = getZoneOverlay(
               section.id, activeFilter, tasks, zoneHealth, plants
             );
+            // sectionColors from parent overrides the computed fill (used by Worker Dashboard)
+            const effectiveFill = (sectionColors && sectionColors[section.id]) ?? overlayFill;
 
             // Production keeps a dark fill; all others are white
             const bgColor   = isProduction ? '#3d4a4d' : '#ffffff';
@@ -413,12 +415,12 @@ export default function FarmMap({
                 }}
               >
                 {/* Translucent filter/alert overlay — only for non-production zones */}
-                {overlayFill && !isProduction && (
+                {effectiveFill && !isProduction && (
                   <div
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundColor: overlayFill,
+                      backgroundColor: effectiveFill,
                       pointerEvents: 'none',
                     }}
                   />

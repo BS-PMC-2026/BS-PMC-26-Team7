@@ -55,7 +55,7 @@ def update_plant_status_endpoint(
     plant_id: int,
     data: UpdatePlantStatusRequest,
     db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
+    _user=Depends(require_any_role("FarmManager", "Worker")),
 ):
     try:
         plant, error = update_plant_status(db, plant_id, data.Status)

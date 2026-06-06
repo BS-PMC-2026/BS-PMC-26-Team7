@@ -14,6 +14,7 @@ from routers.coupons import router as coupons_router
 from routers.employee_discount import router as employee_discount_router
 from routers.orders import router as orders_router
 from routers.analytics import router as analytics_router
+from routers.worker_dashboard import router as worker_dashboard_router
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -110,6 +111,7 @@ app.include_router(coupons_router)
 app.include_router(employee_discount_router)
 app.include_router(orders_router)
 app.include_router(analytics_router)
+app.include_router(worker_dashboard_router)
 
 app.include_router(weather.router)
 

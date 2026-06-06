@@ -2,13 +2,12 @@
  * Tests for US31 — Worker spray-restrictions map (SpraySafetyMapSection).
  *
  * The route /worker/spray-restrictions was converted to a redirect; the actual
- * map UI now lives in SpraySafetyMapSection which is embedded in
- * /worker/spray-report. We import the component directly to preserve test
+ * map UI now lives in the worker dashboard Sprays mode. We import the component directly to preserve test
  * coverage over the map functionality, and also verify that the old route
  * redirects correctly.
  *
  * Covers:
- *  - /worker/spray-restrictions redirects to /worker/spray-report
+ *  - /worker/spray-restrictions redirects to /worker
  *  - Component renders for worker
  *  - Loading skeleton shown while fetching
  *  - SprayZoneMap renders with data
@@ -27,7 +26,7 @@ const mockRedirect = jest.fn();
 jest.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-  usePathname: () => '/worker/spray-report',
+  usePathname: () => '/worker',
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -112,10 +111,10 @@ describe('WorkerSprayRestrictionsPage route', () => {
     mockRedirect.mockClear();
   });
 
-  it('redirects to /worker/spray-report', () => {
+  it('redirects to /worker', () => {
     WorkerSprayRestrictionsPage();
 
-    expect(mockRedirect).toHaveBeenCalledWith('/worker/spray-report');
+    expect(mockRedirect).toHaveBeenCalledWith('/worker');
   });
 });
 

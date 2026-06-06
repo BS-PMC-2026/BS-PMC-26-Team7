@@ -94,11 +94,8 @@ BS-PMC-26-Team7/
 | `/manager/products/[id]/edit` | `src/app/manager/products/[productId]/edit/page.tsx` | **US38** Edit product — same discount controls; existing discount dates loaded and displayed in local time | `GET /api/products/{id}`, `PUT /api/products/{id}` | discount fields section |
 | `/manager/reports` | `src/app/manager/reports/page.tsx` | Reports & export | `/api/tasks/report`, `/api/inventory/report` | ExportModal |
 | `/manager/users` | `src/app/manager/users/page.tsx` | User role management | `/api/users/*` | UserRoleTable |
-| `/worker` | `src/app/worker/page.tsx` | Worker dashboard | `/api/tasks/my` | Task summary |
-| `/worker/my-tasks` | `src/app/worker/my-tasks/page.tsx` | Personal task list | `/api/tasks/my`, checklist endpoints | TaskCard, TaskForm |
-| `/worker/spray-report` | `src/app/worker/spray-report/page.tsx` | Spray reporting | `/api/spray-reports/*` | SprayReport form |
+| `/worker` | `src/app/worker/page.tsx` | **US37** Worker Dashboard — three-column layout: task panel with overdue/due-soon/normal urgency groups + modal, farm map with Tasks/Sprays/Planting mode selector (sectionColors fill override), notifications panel (unread-only, per-item dismiss via `PUT /read`), analytics row. Planting mode includes an inline Plants Registry: map popups show plant ID/code/status, workers can update plant status, add plants to Nursery, and transfer healthy Nursery plants to greenhouses. Sprays mode shows a spray overview above the map, an entry-status legend strip between map and Zone Entry Details, and the collapsible Zone Entry Details table. | `/api/tasks/my`, `/api/notifications`, `PUT /api/notifications/{id}/read`, `PUT /api/notifications/mark-all-read`, `/api/spray-reports/restricted-zones`, `/api/worker/analytics`, `GET /api/inventory/by-variety`, `GET /api/zones`, `POST /api/plants`, `PUT /api/plants/{id}/status`, `PUT /api/plants/{id}/location` | FarmMap (`sectionColors` prop), TaskDetailModal, Plants Registry |
 | `/worker/inventory` | `src/app/worker/inventory/page.tsx` | View inventory | `/api/inventory/*` | InventoryReport (read-only) |
-| `/worker/plants` | `src/app/worker/plants/page.tsx` | View plants | `/api/plants/*` | Plant list |
 | `/visitor/products` | `src/app/visitor/products/page.tsx` | **US38** Public product catalog — shows discount badge, strikethrough original price, discounted price, expiry or "unlimited offer" label for each active discount | `GET /api/products` | ProductCard |
 | `/worker/products` | `src/app/worker/products/page.tsx` | **US38** Worker product catalog — same discount display as visitor catalog | `GET /api/products` | ProductCard |
 | `/profile` | `src/app/profile/page.tsx` | **US40** Email subscription toggle for authenticated users — shows current consent status, checkbox to enable/disable marketing emails | `GET/PUT /api/email-consent/me` | ProfilePage (inline) |
@@ -135,6 +132,7 @@ BS-PMC-26-Team7/
 | Sensor Alerts | `routers/anomalies.py` | — | `models/sensor_alert.py` | — | `/api/sensor-alerts` |
 | Spray Reports / Map | `routers/spray.py` | `services/spray_service.py` | `models/spray.py` | `schemas/spray.py` | `/api/spray-reports` |
 | Health | `main.py` | — | — | — | `/api/health` |
+| Worker Analytics | `routers/worker_dashboard.py` | `services/worker_dashboard_service.py` | `models/task.py` | `schemas/worker_dashboard.py` | `/api/worker` |
 
 ---
 
@@ -143,9 +141,34 @@ BS-PMC-26-Team7/
 <!-- AUTO-GENERATED-START:endpoints -->
 | Method | Path | Router File | Purpose |
 |---|---|---|---|
+| GET | `/api/analytics/product-statistics` | `pepper-farm/backend/routers/analytics.py` |  |
+| GET | `/api/analytics/task-statistics` | `pepper-farm/backend/routers/analytics.py` |  |
 | POST | `/api/auth/login` | `pepper-farm/backend/routers/auth.py` |  |
 | POST | `/api/auth/register` | `pepper-farm/backend/routers/auth.py` |  |
 | POST | `/api/auth/token` | `pepper-farm/backend/routers/auth.py` |  |
+| DELETE | `/api/cart/clear` | `pepper-farm/backend/routers/cart.py` |  |
+| DELETE | `/api/cart/items/{cart_item_id}` | `pepper-farm/backend/routers/cart.py` |  |
+| PUT | `/api/cart/items/{cart_item_id}` | `pepper-farm/backend/routers/cart.py` |  |
+| POST | `/api/cart/items` | `pepper-farm/backend/routers/cart.py` |  |
+| GET | `/api/cart` | `pepper-farm/backend/routers/cart.py` |  |
+| POST | `/api/chatbot` | `pepper-farm/backend/routers/chatbot.py` |  |
+| POST | `/api/checkout/pay` | `pepper-farm/backend/routers/checkout.py` |  |
+| POST | `/api/checkout/preview` | `pepper-farm/backend/routers/checkout.py` |  |
+| POST | `/api/coupons/validate` | `pepper-farm/backend/routers/coupons.py` |  |
+| DELETE | `/api/coupons/{coupon_id}` | `pepper-farm/backend/routers/coupons.py` |  |
+| PUT | `/api/coupons/{coupon_id}` | `pepper-farm/backend/routers/coupons.py` |  |
+| GET | `/api/coupons` | `pepper-farm/backend/routers/coupons.py` |  |
+| POST | `/api/coupons` | `pepper-farm/backend/routers/coupons.py` |  |
+| GET | `/api/email-consent/me` | `pepper-farm/backend/routers/email_consent.py` |  |
+| PUT | `/api/email-consent/me` | `pepper-farm/backend/routers/email_consent.py` |  |
+| GET | `/api/email-consent/unsubscribe` | `pepper-farm/backend/routers/email_consent.py` |  |
+| GET | `/api/emails/logs` | `pepper-farm/backend/routers/emails.py` |  |
+| POST | `/api/emails/send-newsletter` | `pepper-farm/backend/routers/emails.py` |  |
+| DELETE | `/api/employee-discounts/overrides/{override_id}` | `pepper-farm/backend/routers/employee_discount.py` |  |
+| GET | `/api/employee-discounts/overrides` | `pepper-farm/backend/routers/employee_discount.py` |  |
+| POST | `/api/employee-discounts/overrides` | `pepper-farm/backend/routers/employee_discount.py` |  |
+| GET | `/api/employee-discounts/settings` | `pepper-farm/backend/routers/employee_discount.py` |  |
+| PUT | `/api/employee-discounts/settings` | `pepper-farm/backend/routers/employee_discount.py` |  |
 | GET | `/api/health/db` | `pepper-farm/backend/main.py` |  |
 | GET | `/api/inventory/by-variety` | `pepper-farm/backend/routers/inventory.py` |  |
 | GET | `/api/inventory/report` | `pepper-farm/backend/routers/inventory.py` |  |
@@ -160,6 +183,28 @@ BS-PMC-26-Team7/
 | GET | `/api/manager/anomalies/stream` | `pepper-farm/backend/routers/anomalies.py` |  |
 | GET | `/api/manager/anomalies/summary` | `pepper-farm/backend/routers/anomalies.py` |  |
 | GET | `/api/manager/anomalies/trends` | `pepper-farm/backend/routers/anomalies.py` |  |
+| POST | `/api/manager/weather/ai-recommendation` | `pepper-farm/backend/routers/weather.py` |  |
+| GET | `/api/manager/weather` | `pepper-farm/backend/routers/weather.py` |  |
+| POST | `/api/newsletter-templates/upload-image` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| GET | `/api/newsletter-templates/{template_id}/preview` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| POST | `/api/newsletter-templates/{template_id}/send` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| DELETE | `/api/newsletter-templates/{template_id}` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| GET | `/api/newsletter-templates/{template_id}` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| PUT | `/api/newsletter-templates/{template_id}` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| GET | `/api/newsletter-templates` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| POST | `/api/newsletter-templates` | `pepper-farm/backend/routers/newsletter_templates.py` |  |
+| POST | `/api/notifications/announce` | `pepper-farm/backend/routers/notifications.py` |  |
+| POST | `/api/notifications/broadcast` | `pepper-farm/backend/routers/notifications.py` |  |
+| PUT | `/api/notifications/mark-all-read` | `pepper-farm/backend/routers/notifications.py` |  |
+| GET | `/api/notifications/unread-count` | `pepper-farm/backend/routers/notifications.py` |  |
+| PUT | `/api/notifications/{notification_id}/read` | `pepper-farm/backend/routers/notifications.py` |  |
+| GET | `/api/notifications` | `pepper-farm/backend/routers/notifications.py` |  |
+| GET | `/api/orders/all` | `pepper-farm/backend/routers/orders.py` |  |
+| GET | `/api/orders/{order_id}` | `pepper-farm/backend/routers/orders.py` |  |
+| GET | `/api/orders` | `pepper-farm/backend/routers/orders.py` |  |
+| POST | `/api/payments/paypal/capture-order` | `pepper-farm/backend/routers/payments.py` |  |
+| GET | `/api/payments/paypal/config` | `pepper-farm/backend/routers/payments.py` |  |
+| POST | `/api/payments/paypal/create-order` | `pepper-farm/backend/routers/payments.py` |  |
 | POST | `/api/peppers/upload-image` | `pepper-farm/backend/routers/peppers.py` |  |
 | DELETE | `/api/peppers/{pepper_id}` | `pepper-farm/backend/routers/peppers.py` |  |
 | GET | `/api/peppers/{pepper_id}` | `pepper-farm/backend/routers/peppers.py` |  |
@@ -167,9 +212,11 @@ BS-PMC-26-Team7/
 | GET | `/api/peppers` | `pepper-farm/backend/routers/peppers.py` |  |
 | POST | `/api/peppers` | `pepper-farm/backend/routers/peppers.py` |  |
 | PUT | `/api/plants/{plant_id}/location` | `pepper-farm/backend/routers/plants.py` |  |
+| PUT | `/api/plants/{plant_id}/status` | `pepper-farm/backend/routers/plants.py` |  |
 | GET | `/api/plants/{plant_id}` | `pepper-farm/backend/routers/plants.py` |  |
 | GET | `/api/plants` | `pepper-farm/backend/routers/plants.py` |  |
 | POST | `/api/plants` | `pepper-farm/backend/routers/plants.py` |  |
+| DELETE | `/api/products/{product_id}` | `pepper-farm/backend/routers/products.py` |  |
 | GET | `/api/products/{product_id}` | `pepper-farm/backend/routers/products.py` |  |
 | PUT | `/api/products/{product_id}` | `pepper-farm/backend/routers/products.py` |  |
 | GET | `/api/products` | `pepper-farm/backend/routers/products.py` |  |
@@ -184,16 +231,16 @@ BS-PMC-26-Team7/
 | GET | `/api/sensors/{sensor_id}/readings` | `pepper-farm/backend/routers/sensors.py` |  |
 | POST | `/api/sensors/{sensor_id}/refresh` | `pepper-farm/backend/routers/sensors.py` |  |
 | GET | `/api/sensors` | `pepper-farm/backend/routers/sensors.py` |  |
-| GET | `/api/spray-reports/alerts` | `pepper-farm/backend/routers/spray.py` | **US30** List all spray alerts (FarmManager only) |
-| PATCH | `/api/spray-reports/alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` | **US30** Mark a spray alert as read (FarmManager only) |
-| GET | `/api/spray-reports/alerts/{alert_id}` | `pepper-farm/backend/routers/spray.py` | **US30** Get a single spray alert by ID (FarmManager only) |
-| GET | `/api/spray-reports/overdue-alerts` | `pepper-farm/backend/routers/spray.py` | **US32** List overdue spray alerts (FarmManager only); `?active_only=true` filters resolved |
-| PATCH | `/api/spray-reports/overdue-alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` | **US32** Mark an overdue alert as read (FarmManager only) |
-| POST | `/api/spray-reports/overdue-alerts/{alert_id}/assign` | `pepper-farm/backend/routers/spray.py` | **US32** Assign spray task to worker from overdue alert (FarmManager only) |
-| POST | `/api/spray-reports/overdue-check/run` | `pepper-farm/backend/routers/spray.py` | **US32** Manually trigger overdue zone check (FarmManager only) |
+| PATCH | `/api/spray-reports/alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` |  |
+| GET | `/api/spray-reports/alerts/{alert_id}` | `pepper-farm/backend/routers/spray.py` |  |
+| GET | `/api/spray-reports/alerts` | `pepper-farm/backend/routers/spray.py` |  |
+| POST | `/api/spray-reports/overdue-alerts/{alert_id}/assign` | `pepper-farm/backend/routers/spray.py` |  |
+| PATCH | `/api/spray-reports/overdue-alerts/{alert_id}/read` | `pepper-farm/backend/routers/spray.py` |  |
+| GET | `/api/spray-reports/overdue-alerts` | `pepper-farm/backend/routers/spray.py` |  |
+| POST | `/api/spray-reports/overdue-check/run` | `pepper-farm/backend/routers/spray.py` |  |
 | GET | `/api/spray-reports/pesticides` | `pepper-farm/backend/routers/spray.py` |  |
-| GET | `/api/spray-reports/public-restricted-zones` | `pepper-farm/backend/routers/spray.py` | **US31** Public (unauthenticated) spray restriction map — visitor safety, no JWT required |
-| GET | `/api/spray-reports/restricted-zones` | `pepper-farm/backend/routers/spray.py` | **US31** Authenticated restricted zone map (FarmManager, Worker, Visitor) — used by `/worker/spray-restrictions` |
+| GET | `/api/spray-reports/public-restricted-zones` | `pepper-farm/backend/routers/spray.py` |  |
+| GET | `/api/spray-reports/restricted-zones` | `pepper-farm/backend/routers/spray.py` |  |
 | GET | `/api/spray-reports/zone-map` | `pepper-farm/backend/routers/spray.py` |  |
 | POST | `/api/spray-reports` | `pepper-farm/backend/routers/spray.py` |  |
 | GET | `/api/tasks/completed` | `pepper-farm/backend/routers/tasks.py` |  |
@@ -202,6 +249,7 @@ BS-PMC-26-Team7/
 | DELETE | `/api/tasks/{task_id}/checklist/{item_id}` | `pepper-farm/backend/routers/tasks.py` |  |
 | PATCH | `/api/tasks/{task_id}/checklist/{item_id}` | `pepper-farm/backend/routers/tasks.py` |  |
 | POST | `/api/tasks/{task_id}/checklist` | `pepper-farm/backend/routers/tasks.py` |  |
+| DELETE | `/api/tasks/{task_id}` | `pepper-farm/backend/routers/tasks.py` |  |
 | PATCH | `/api/tasks/{task_id}` | `pepper-farm/backend/routers/tasks.py` |  |
 | GET | `/api/tasks` | `pepper-farm/backend/routers/tasks.py` |  |
 | POST | `/api/tasks` | `pepper-farm/backend/routers/tasks.py` |  |
@@ -209,6 +257,7 @@ BS-PMC-26-Team7/
 | GET | `/api/users/workers` | `pepper-farm/backend/routers/users.py` |  |
 | PUT | `/api/users/{user_id}/role` | `pepper-farm/backend/routers/users.py` |  |
 | GET | `/api/users` | `pepper-farm/backend/routers/users.py` |  |
+| GET | `/api/worker/analytics` | `pepper-farm/backend/routers/worker_dashboard.py` |  |
 | GET | `/api/zones/{zone_code}` | `pepper-farm/backend/routers/zones.py` |  |
 | GET | `/api/zones` | `pepper-farm/backend/routers/zones.py` |  |
 <!-- AUTO-GENERATED-END:endpoints -->
@@ -220,8 +269,19 @@ BS-PMC-26-Team7/
 <!-- AUTO-GENERATED-START:models -->
 | Model | Table | File | Key Fields | Relationships |
 |---|---|---|---|---|
+| `CartItem` | `CartItems` | `pepper-farm/backend/models/cart.py` |  |  |
+| `Coupon` | `Coupons` | `pepper-farm/backend/models/coupon.py` |  |  |
+| `CouponRedemption` | `CouponRedemptions` | `pepper-farm/backend/models/coupon.py` |  |  |
+| `EmailLog` | `EmailLogs` | `pepper-farm/backend/models/email_log.py` |  |  |
+| `EmployeeDiscountSetting` | `EmployeeDiscountSettings` | `pepper-farm/backend/models/employee_discount.py` |  |  |
+| `EmployeeDiscountProductOverride` | `EmployeeDiscountProductOverrides` | `pepper-farm/backend/models/employee_discount.py` |  |  |
 | `FarmZone` | `FarmZones` | `pepper-farm/backend/models/farm_zone.py` |  |  |
 | `Inventory` | `Inventory` | `pepper-farm/backend/models/inventory.py` |  |  |
+| `NewsletterTemplate` | `NewsletterTemplates` | `pepper-farm/backend/models/newsletter_template.py` |  |  |
+| `Notification` | `Notifications` | `pepper-farm/backend/models/notification.py` |  |  |
+| `Order` | `Orders` | `pepper-farm/backend/models/order.py` |  |  |
+| `OrderItem` | `OrderItems` | `pepper-farm/backend/models/order.py` |  |  |
+| `PaymentRecord` | `PaymentRecords` | `pepper-farm/backend/models/payment.py` |  |  |
 | `PepperEditLog` | `PepperEditLog` | `pepper-farm/backend/models/pepper_edit_log.py` |  |  |
 | `PepperVariety` | `PepperVarieties` | `pepper-farm/backend/models/pepper_variety.py` |  |  |
 | `Plant` | `Plants` | `pepper-farm/backend/models/plant.py` |  |  |
@@ -235,8 +295,8 @@ BS-PMC-26-Team7/
 | `RecurrenceConfig` | `RecurrenceConfig` | `pepper-farm/backend/models/sensor.py` |  |  |
 | `Pesticide` | `Pesticides` | `pepper-farm/backend/models/spray.py` |  |  |
 | `SprayReport` | `SprayReports` | `pepper-farm/backend/models/spray.py` |  |  |
-| `SprayAlert` | `SprayAlerts` | `pepper-farm/backend/models/spray.py` | SprayAlertId, SprayReportId, ZoneId, Severity (`high\|medium\|low`), IsRead, CreatedAt | FK → SprayReports, FarmZones, Users |
-| `OverdueSprayAlert` | `OverdueSprayAlerts` | `pepper-farm/backend/models/spray.py` | OverdueAlertId, ZoneId, ZoneCode, ZoneName, LastSprayedAtUtc, OverdueSinceUtc, SprayIntervalDays, Severity (`high\|medium\|low`), IsRead, IsResolved, ResolvedAtUtc, AssignedTaskId | FK → FarmZones, Tasks |
+| `SprayAlert` | `SprayAlerts` | `pepper-farm/backend/models/spray.py` |  |  |
+| `OverdueSprayAlert` | `OverdueSprayAlerts` | `pepper-farm/backend/models/spray.py` |  |  |
 | `Task` | `Tasks` | `pepper-farm/backend/models/task.py` |  |  |
 | `TaskChecklistItem` | `TaskChecklistItems` | `pepper-farm/backend/models/task.py` |  |  |
 | `User` | `Users` | `pepper-farm/backend/models/user.py` |  |  |
@@ -271,14 +331,27 @@ BS-PMC-26-Team7/
 | `ATOMATION_BEARER_TOKEN` | pepper-farm/backend/services/atomation_service.py |  |
 | `ATOMATION_EMAIL` | pepper-farm/backend/services/atomation_service.py |  |
 | `ATOMATION_PASSWORD` | pepper-farm/backend/services/atomation_service.py |  |
+| `BACKEND_BASE_URL` | pepper-farm/backend/routers/newsletter_templates.py |  |
 | `DATABASE_URL` | pepper-farm/backend/database.py |  |
+| `FARM_LATITUDE` | pepper-farm/backend/services/weather_service.py |  |
+| `FARM_LONGITUDE` | pepper-farm/backend/services/weather_service.py |  |
+| `FRONTEND_BASE_URL` | pepper-farm/backend/services/email_unsubscribe.py |  |
 | `NEXT_PUBLIC_API_BASE_URL` | pepper-farm/frontend/next.config.ts, pepper-farm/frontend/src/lib/constants.ts |  |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | pepper-farm/frontend/src/app/checkout/page.tsx |  |
+| `NEXT_PUBLIC_PAYPAL_CURRENCY` | pepper-farm/backend/routers/payments.py, pepper-farm/frontend/src/app/checkout/page.tsx |  |
+| `OPENAI_API_KEY` | pepper-farm/backend/services/chatbot_service.py, pepper-farm/backend/services/weather_service.py |  |
+| `OPENAI_MODEL` | pepper-farm/backend/services/chatbot_service.py, pepper-farm/backend/services/weather_service.py |  |
+| `OPEN_METEO_BASE_URL` | pepper-farm/backend/services/weather_service.py |  |
+| `PAYPAL_API_BASE` | pepper-farm/backend/services/paypal_service.py |  |
+| `PAYPAL_CLIENT_ID` | pepper-farm/backend/routers/payments.py, pepper-farm/backend/services/paypal_service.py |  |
+| `PAYPAL_CLIENT_SECRET` | pepper-farm/backend/services/paypal_service.py |  |
+| `PAYPAL_MODE` | pepper-farm/backend/routers/payments.py |  |
 | `SECRET_KEY` | pepper-farm/backend/utils/jwt.py |  |
-| `SMTP_FROM` | pepper-farm/backend/routers/sensors.py |  |
-| `SMTP_HOST` | pepper-farm/backend/routers/sensors.py |  |
-| `SMTP_PASSWORD` | pepper-farm/backend/routers/sensors.py |  |
-| `SMTP_PORT` | pepper-farm/backend/routers/sensors.py |  |
-| `SMTP_USER` | pepper-farm/backend/routers/sensors.py |  |
+| `SMTP_FROM` | pepper-farm/backend/routers/sensors.py, pepper-farm/backend/services/email_service.py |  |
+| `SMTP_HOST` | pepper-farm/backend/routers/sensors.py, pepper-farm/backend/services/email_service.py |  |
+| `SMTP_PASSWORD` | pepper-farm/backend/routers/sensors.py, pepper-farm/backend/services/email_service.py |  |
+| `SMTP_PORT` | pepper-farm/backend/routers/sensors.py, pepper-farm/backend/services/email_service.py |  |
+| `SMTP_USER` | pepper-farm/backend/routers/sensors.py, pepper-farm/backend/services/email_service.py |  |
 <!-- AUTO-GENERATED-END:envvars -->
 
 ---
@@ -367,6 +440,18 @@ BS-PMC-26-Team7/
 
 27. **US32: Overdue alerts are polled every 60 s by `AnomalyNotificationContext`.**  
     `getOverdueSprayAlerts()` is polled on `overduePollRef`. New unresolved+unread overdue alerts trigger a toast. `overdueAlerts`, `overdueUnreadCount`, and `acknowledgeOverdueAlert` are exposed from the context. The overdue alerts UI is in the Spray Map page at `id="overdue-spray-alerts"`, manager-only (FarmManager role gate on all endpoints).
+
+28. **Worker Planting mode shares read/write plant registry actions with FarmManagers.**  
+    The worker dashboard uses `GET /api/inventory/by-variety` for the Plants Registry and map popup plant lists, so that endpoint must allow both `FarmManager` and `Worker`. Workers may create plants in Nursery (`POST /api/plants`), update plant status (`PUT /api/plants/{plant_id}/status`), and transfer healthy Nursery plants to greenhouse/germination zones (`PUT /api/plants/{plant_id}/location`). Full warehouse inventory management (`/api/inventory`, `/api/inventory/{id}`, `/api/inventory/report`) remains FarmManager-only.
+
+29. **Worker plant workflows live only on `/worker`.**  
+    The old `/worker/plants/add` and `/worker/plants/update-location` pages were removed. Do not add worker plant navigation back as separate pages unless the dashboard workflow is intentionally split again.
+
+30. **Worker task workflows live only on `/worker`.**  
+    The old `/worker/my-tasks` page was removed. The dashboard task panel and task detail modal are the worker task surface for status changes and checklist completion. Task notification links should point to `/worker`, not `/worker/my-tasks`.
+
+31. **Worker spray reporting lives only on `/worker`.**  
+    The old `/worker/spray-report` page was removed. The worker dashboard Sprays map opens a popup with the shared `SprayReportForm`; clicking "Create spray report" preselects the clicked sprayable zone. Do not add worker spray-report navigation back as a separate page unless the dashboard workflow is intentionally split again.
 
 47. **US41: PayPal Sandbox (real PayPal, not mock):**
     - **Credit card = mock only**: Validates card fields + Luhn, stores only last 4 digits + brand. Never calls any real card gateway. Mock-decline card: `4000 0000 0000 0002`. `PaymentMethod="credit_card"` in DB.
@@ -482,7 +567,7 @@ BS-PMC-26-Team7/
 
 | Area | Type | Files | Run Command |
 |---|---|---|---|
-| Backend — auth | Unit/API | `tests/test_auth_api.py`, `test_login_api.py`, `test_swagger_token.py` | `cd pepper-farm/backend && pytest` |
+| Backend — auth | Unit/API | `tests/test_auth_api.py`, `test_login_api.py`, `test_swagger_token.py`, `test_role_authorization_api.py` (covers Worker access to plant registry/status endpoints) | `cd pepper-farm/backend && pytest` |
 | Backend — tasks | Unit/API | `tests/test_tasks_api.py`, `test_task_service.py`, `test_get_tasks.py`, `test_completed_tasks.py`, `test_task_report.py` | same |
 | Backend — sensors | Unit/API | `tests/test_sensors_api.py`, `test_sensor_service.py`, `test_sensor_readings_api.py`, `test_sensor_auto_sync_service.py`, `test_atomation_service.py` | same |
 | Backend — anomalies | Unit/API | `tests/test_anomalies_api.py`, `test_anomaly_detection_service.py`, `test_recurrence_detection_service.py` | same |
@@ -593,6 +678,6 @@ Files a new agent should read first when starting work:
 
 ## 14. Last Updated
 
-- **Generated:** 2026-06-02 (US41 fix — models/__init__.py registers all ORM models; conftest.py ensures registration before create_all; auth_service db.refresh; email/newsletter log tests patch SessionLocal; setup_db fixtures use drop_all+create_all+finally pattern)
+- **Generated:** 2026-06-06 (Worker dashboard plant registry/map updates — Worker access to inventory-by-variety and plant status/location actions; spray map overview/entry legend layout documented; auto-generated endpoint/model/env sections refreshed)
 - **Method:** Manual initial creation based on full codebase scan; AUTO-GENERATED sections can be refreshed by running `python scripts/generate_project_context.py` from the repo root.
 - **To update:** Run `npm run context:update` or `python scripts/generate_project_context.py`. The script rewrites only content between `<!-- AUTO-GENERATED-START:* -->` and `<!-- AUTO-GENERATED-END:* -->` markers. All other sections are left untouched.
