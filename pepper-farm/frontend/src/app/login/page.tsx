@@ -3,7 +3,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 relative">
+    <main className="app-page-bg flex flex-col items-center justify-center relative">
       <div className="absolute top-4 right-4">
         <LanguageSwitcher />
       </div>

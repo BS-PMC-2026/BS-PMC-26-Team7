@@ -11,10 +11,10 @@ export default function WorkerLayout({ children }: { children: ReactNode }) {
       <WorkerNotificationProvider>
         <WorkerNavbar />
         <div
+          className="app-page-bg"
           style={{
             paddingTop: '64px',
             minHeight: '100vh',
-            backgroundColor: 'var(--background)',
           }}
         >
           {children}

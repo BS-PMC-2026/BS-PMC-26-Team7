@@ -11,10 +11,10 @@ export default function ManagerLayout({ children }: { children: ReactNode }) {
       <AnomalyNotificationProvider>
         <ManagerNavbar />
         <div
+          className="app-page-bg"
           style={{
             paddingTop: '64px',
             minHeight: '100vh',
-            backgroundColor: 'var(--background)',
           }}
         >
           {children}

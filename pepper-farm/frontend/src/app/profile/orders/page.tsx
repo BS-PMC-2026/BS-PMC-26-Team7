@@ -45,7 +45,7 @@ export default function MyOrdersPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <button
           onClick={() => router.back()}

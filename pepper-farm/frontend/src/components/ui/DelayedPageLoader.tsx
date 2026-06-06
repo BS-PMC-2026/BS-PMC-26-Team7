@@ -22,7 +22,7 @@ export default function DelayedPageLoader({ delayMs = 1000 }: DelayedPageLoaderP
   return (
     <main
       dir={dir}
-      className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-6"
+      className="app-page-bg flex items-center justify-center px-6"
       aria-live="polite"
       aria-busy="true"
     >

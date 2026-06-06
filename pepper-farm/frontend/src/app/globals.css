@@ -8,7 +8,7 @@
 
 @theme {
   /* ── Core Surfaces ─────────────────────────────────────── */
-  --color-background:       #F5F2EB;   /* warm beige — page background   */
+  --color-background:       #F6F8F4;   /* unified app background          */
   --color-foreground:       #1A2E22;   /* deep forest — primary text      */
   --color-surface:          #FFFFFF;   /* pure white — cards, panels      */
   --color-surface-tint:     #E8F3EC;   /* soft green tint — sections      */
@@ -104,7 +104,7 @@
 /* ── CSS Custom Properties (for non-Tailwind usage) ──────────── */
 :root {
   /* Core */
-  --background:          #F5F2EB;
+  --background:          #F6F8F4;
   --foreground:          #1A2E22;
   --surface:             #FFFFFF;
   --surface-tint:        #E8F3EC;
@@ -152,6 +152,11 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.app-page-bg {
+  min-height: 100vh;
+  background-color: #F6F8F4;
 }
 
 /* ── Utility: Heat Badge ─────────────────────────────────────── */

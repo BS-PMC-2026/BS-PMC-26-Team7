@@ -147,7 +147,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Page content pushed below header */}
-      <div style={{ paddingTop: '48px', minHeight: '100vh' }}>
+      <div className="app-page-bg" style={{ paddingTop: '48px', minHeight: '100vh' }}>
         {children}
       </div>
     </>

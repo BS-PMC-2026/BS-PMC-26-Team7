@@ -65,7 +65,7 @@ export default function VisitorSprayRestrictionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]" data-testid="visitor-spray-restrictions-page">
+    <div className="app-page-bg" data-testid="visitor-spray-restrictions-page">
       {/* Header */}
       <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-7xl mx-auto px-6 py-10">

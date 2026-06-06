@@ -95,7 +95,7 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+      <div className="app-page-bg flex items-center justify-center">
         <p className="text-sm text-gray-500">{t.common.loading}</p>
       </div>
     );
@@ -103,7 +103,7 @@ export default function CartPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+      <div className="app-page-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 text-sm mb-3">{error}</p>
           <button onClick={() => loadCart()} className="text-sm text-[var(--color-primary)] underline">
@@ -117,7 +117,7 @@ export default function CartPage() {
   const isEmpty = !cart || cart.items.length === 0;
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Back to products */}
         <Link

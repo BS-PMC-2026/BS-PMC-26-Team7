@@ -453,6 +453,9 @@ BS-PMC-26-Team7/
 31. **Worker spray reporting lives only on `/worker`.**  
     The old `/worker/spray-report` page was removed. The worker dashboard Sprays map opens a popup with the shared `SprayReportForm`; clicking "Create spray report" preselects the clicked sprayable zone. Do not add worker spray-report navigation back as a separate page unless the dashboard workflow is intentionally split again.
 
+32. **US47 design: all pages use the unified worker-style background.**  
+    The shared app background is `#F6F8F4`, exposed through `--background`, `--color-background`, and the `.app-page-bg` utility in `src/app/globals.css`. Root/role layouts and page-level wrappers should use this shared background. Do not add page-level `bg-gray-50`, `bg-[var(--color-muted)]`, or one-off background colours to full-page wrappers; reserve those fills for cards, tables, skeletons, hover states, and small panels.
+
 47. **US41: PayPal Sandbox (real PayPal, not mock):**
     - **Credit card = mock only**: Validates card fields + Luhn, stores only last 4 digits + brand. Never calls any real card gateway. Mock-decline card: `4000 0000 0000 0002`. `PaymentMethod="credit_card"` in DB.
     - **PayPal = real PayPal Sandbox**: Uses PayPal Orders API v2. No mock/fake PayPal flow. `paymentMethod="paypal"` in DB. Credentials: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` (backend-only). Frontend uses `NEXT_PUBLIC_PAYPAL_CLIENT_ID` only. Sandbox: `https://api-m.sandbox.paypal.com`.

@@ -294,7 +294,7 @@ function CheckoutPageInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+      <div className="app-page-bg flex items-center justify-center">
         <p className="text-sm text-gray-500">{t.common.loading}</p>
       </div>
     );
@@ -302,14 +302,14 @@ function CheckoutPageInner() {
 
   if (error && !preview) {
     return (
-      <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+      <div className="app-page-bg flex items-center justify-center">
         <p className="text-red-600 text-sm">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Back button */}
         <button
@@ -532,7 +532,7 @@ function CheckoutPageInner() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+      <div className="app-page-bg flex items-center justify-center">
         <p className="text-sm text-gray-500">Loading...</p>
       </div>
     }>

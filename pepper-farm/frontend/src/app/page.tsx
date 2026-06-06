@@ -30,7 +30,7 @@ export default function LandingPage() {
   }, [scrollYProgress]);
 
   return (
-    <div className="min-h-screen bg-[#f0fdf4] overflow-x-hidden" style={{ fontFamily: 'Raleway, sans-serif' }}>
+    <div className="app-page-bg overflow-x-hidden" style={{ fontFamily: 'Raleway, sans-serif' }}>
 
       {/* Scroll progress bar */}
       <motion.div

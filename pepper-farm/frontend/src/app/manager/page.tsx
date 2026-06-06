@@ -165,7 +165,7 @@ export default function ManagerPage() {
   }, [activeFilter, t.map]);
 
   return (
-    <main className="min-h-screen bg-[#F6F8F4]" dir={dir}>
+    <main className="app-page-bg" dir={dir}>
       <div className="border-b border-[var(--color-border)] bg-white/85">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div>

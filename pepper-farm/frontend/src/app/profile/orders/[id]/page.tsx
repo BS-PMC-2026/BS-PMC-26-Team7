@@ -46,13 +46,13 @@ export default function OrderDetailPage() {
   }, [params?.id]);
 
   if (loading) return (
-    <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+    <div className="app-page-bg flex items-center justify-center">
       <p className="text-sm text-gray-400">{t.common.loading}</p>
     </div>
   );
 
   if (error || !order) return (
-    <div className="min-h-screen bg-[var(--color-muted)] flex items-center justify-center">
+    <div className="app-page-bg flex items-center justify-center">
       <div className="text-center">
         <p className="text-red-500 text-sm mb-4">{error ?? 'Order not found.'}</p>
         <Link href="/profile/orders" className="text-sm text-[var(--color-primary)] underline">← Back to My Orders</Link>
@@ -63,7 +63,7 @@ export default function OrderDetailPage() {
   const payMethod = order.paymentMethod === 'paypal' ? 'PayPal' : 'Mock Credit Card';
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Link href="/profile/orders" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4 transition">
           ← My Orders
