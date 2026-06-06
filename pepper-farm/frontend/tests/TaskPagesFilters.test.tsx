@@ -43,6 +43,20 @@ jest.mock('@/services/peppers', () => ({
   getAllPeppers: jest.fn().mockResolvedValue([]),
 }));
 
+jest.mock('@/context/WorkerNotificationContext', () => ({
+  useWorkerNotification: () => ({
+    unreadCount: 0,
+    clearUnread: jest.fn(),
+    newTasks: [],
+    activeTasks: [],
+    appNotifs: [],
+    appUnreadCount: 0,
+    loadAppNotifs: jest.fn().mockResolvedValue(undefined),
+    dismissAppNotif: jest.fn().mockResolvedValue(undefined),
+    markAllAppNotifsRead: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 // Worker Dashboard additionally needs these to avoid real network calls
 jest.mock('@/services/workerDashboard', () => ({
   getWorkerAnalytics: jest.fn().mockResolvedValue({
