@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import Button from "@/components/ui/Button";
 
 /** Convert any FastAPI/Pydantic error shape into a displayable string. */
 function normalizeApiError(detail: unknown, fallback: string): string {
@@ -107,12 +108,9 @@ export default function RegisterForm() {
         <div className="text-4xl mb-4">✅</div>
         <h2 className="text-xl font-bold text-green-700 mb-2">{t.auth.registrationSuccess}</h2>
         <p className="text-gray-500 mb-6">{t.auth.accountCreatedAsVisitor}</p>
-        <button
-          onClick={() => router.push("/login")}
-          className="bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700 transition"
-        >
+        <Button onClick={() => router.push("/login")} variant="primary" size="md" className="w-full">
           {t.auth.goToLogin}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -189,13 +187,9 @@ export default function RegisterForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
-      >
+      <Button type="submit" disabled={loading} variant="primary" size="md" className="w-full">
         {loading ? t.auth.registering : t.auth.register}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-gray-500">
         {t.auth.haveAccount}{" "}

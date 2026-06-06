@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import FarmMap, { type FarmSection } from '@/components/map/FarmMap';
 import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
 import SprayReportForm from '@/components/spray/SprayReportForm';
 import TaskProgressBar from '@/components/tasks/TaskProgressBar';
 import { useLanguage } from '@/context/LanguageContext';
@@ -694,7 +695,7 @@ export default function WorkerDashboard() {
                             <button
                               type="button"
                               onClick={() => openRegistryTransferFromMap(p, pepperName ?? p.PlantCode)}
-                              className="whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-green-700"
+                              className="whitespace-nowrap rounded bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
                             >
                               Transfer
                             </button>
@@ -789,14 +790,16 @@ export default function WorkerDashboard() {
                 <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
                   🔄 {peppers.find((pp) => pp.PepperId === selectedTransferPlant!.PepperId)?.PepperName ?? selectedTransferPlant!.PlantCode}
                 </div>
-                <button
+                <Button
                   data-testid="transfer-plant-button"
                   onClick={() => handleTransferPlant(section)}
                   disabled={transferring}
-                  className="w-full rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                  variant="secondary"
+                  size="md"
+                  className="w-full"
                 >
                   {transferring ? wk.transferring : wk.transferPlantHere}
-                </button>
+                </Button>
               </>
             ) : !selectedTransferPlant && (
               <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
@@ -1311,7 +1314,7 @@ export default function WorkerDashboard() {
                                                                     setTransferRegDate(new Date().toISOString().slice(0, 10));
                                                                     setTransferRegError(null);
                                                                   }}
-                                                                  className="whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-green-700"
+                                                                  className="whitespace-nowrap rounded bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
                                                                 >
                                                                   Transfer →
                                                                 </button>
@@ -1573,7 +1576,7 @@ export default function WorkerDashboard() {
                 <button
                   type="submit"
                   disabled={transferRegLoading || !transferRegZoneId || !transferRegDate}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
+                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
                 >
                   {transferRegLoading ? wk.transferring : wk.confirmTransfer}
                 </button>

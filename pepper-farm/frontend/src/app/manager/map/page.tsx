@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import FarmMap, { FarmSection } from '@/components/map/FarmMap';
+import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
 import { getAllPlants, PlantData, createPlant } from '@/services/plants';
 import { getAllPeppers } from '@/services/peppers';
@@ -141,10 +142,12 @@ export default function ManagerMapPage() {
                       {HINT_NURSERY_ONLY}
                     </p>
                   )}
-                  <button
+                  <Button
                     onClick={() => handleAssignToZone(section)}
                     disabled={!selectedPepper || saving || !isPlantable}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    variant="primary"
+                    size="md"
+                    className="w-full"
                   >
                     {saving
                       ? mp.planting
@@ -153,7 +156,7 @@ export default function ManagerMapPage() {
                         : isPlantable
                           ? mp.plantHere
                           : 'Nursery only — cannot plant here'}
-                  </button>
+                  </Button>
                 </div>
               );
             }}

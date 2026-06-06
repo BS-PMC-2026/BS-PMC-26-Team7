@@ -152,7 +152,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/visitor/products"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors duration-200 cursor-pointer shadow-lg shadow-green-200"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary-hover)] transition-colors duration-200 cursor-pointer shadow-lg"
             >
               <ShoppingBag className="w-4 h-4" />
               {la.shopPeppers}

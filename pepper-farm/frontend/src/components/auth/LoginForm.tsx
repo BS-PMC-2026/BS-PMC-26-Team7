@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ROLE_ROUTES } from "@/lib/constants";
 import { useLanguage } from "@/context/LanguageContext";
+import Button from "@/components/ui/Button";
 
 interface FormData {
   email:    string;
@@ -102,13 +103,9 @@ export default function LoginForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
-      >
+      <Button type="submit" disabled={loading} variant="primary" size="md" className="w-full">
         {loading ? t.auth.loggingIn : t.auth.login}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-gray-500">
         {t.auth.noAccount}{" "}

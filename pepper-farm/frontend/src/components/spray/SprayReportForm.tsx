@@ -5,6 +5,7 @@ import { ZoneSummary, getZones } from '@/services/zones';
 import { getPesticides, createSprayReport } from '@/services/spray';
 import { Pesticide, SafetyWarning } from '@/types/spray';
 import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 
 type ReportType = 'completed' | 'planned';
@@ -181,7 +182,7 @@ export default function SprayReportForm({ initialZoneCode = null, onSubmitted }:
             onClick={() => setReportType('completed')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition ${
               reportType === 'completed'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[var(--color-primary)] text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
@@ -192,7 +193,7 @@ export default function SprayReportForm({ initialZoneCode = null, onSubmitted }:
             onClick={() => setReportType('planned')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition ${
               reportType === 'planned'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[var(--color-primary)] text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
@@ -286,17 +287,19 @@ export default function SprayReportForm({ initialZoneCode = null, onSubmitted }:
         </p>
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={isSubmitting || isLoadingCatalogs}
-        className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
+        variant="primary"
+        size="md"
+        className="w-full"
       >
         {isSubmitting
           ? sp.submitting
           : reportType === 'completed'
             ? sp.submitSprayReport
             : sp.saveSprayPlan}
-      </button>
+      </Button>
 
       {/* Safety information block - shown after a successful submission */}
       {safetyWarning && (

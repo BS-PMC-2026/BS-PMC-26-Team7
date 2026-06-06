@@ -108,7 +108,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/register"
-              className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-150 cursor-pointer"
+              className="px-4 py-2 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors duration-150 cursor-pointer"
             >
               {la.getStarted}
             </Link>
@@ -193,7 +193,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   </Link>
                   <Link
                     href="/register"
-                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
+                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] cursor-pointer"
                   >
                     {la.register}
                   </Link>

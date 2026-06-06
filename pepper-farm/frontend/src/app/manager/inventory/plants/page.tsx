@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Alert from '@/components/ui/Alert';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import PageHeader from '@/components/ui/PageHeader';
@@ -405,17 +406,19 @@ export default function PlantsByVarietyPage() {
                                           </td>
                                           <td className="py-1 pr-4">
                                             {canTransfer && (
-                                              <button
+                                              <Button
                                                 onClick={() => {
                                                   setTransferModal({ plant: p, pepperName: r.PepperName });
                                                   setTransferZoneId('');
                                                   setTransferDate(new Date().toISOString().slice(0, 10));
                                                   setTransferError(null);
                                                 }}
-                                                className="px-2 py-0.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition whitespace-nowrap"
+                                                variant="primary"
+                                                size="sm"
+                                                className="whitespace-nowrap"
                                               >
                                                 Transfer →
-                                              </button>
+                                              </Button>
                                             )}
                                           </td>
                                         </tr>
@@ -575,13 +578,14 @@ export default function PlantsByVarietyPage() {
               >
                 {inv.cancel}
               </button>
-              <button
+              <Button
                 type="submit"
                 disabled={transferLoading || !transferZoneId || !transferDate}
-                className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                variant="primary"
+                size="md"
               >
                 {transferLoading ? 'Transferring…' : 'Confirm Transfer'}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
