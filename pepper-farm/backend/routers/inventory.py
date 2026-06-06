@@ -19,7 +19,7 @@ from services.inventory_service import (
     get_inventory_by_variety,
     get_inventory_report,
 )
-from utils.jwt import require_role
+from utils.jwt import require_role, require_any_role
 
 router = APIRouter(prefix="/api/inventory", tags=["Inventory"])
 
@@ -63,7 +63,7 @@ def create_inventory_endpoint(
 @router.get("/by-variety", response_model=List[InventoryByVariety])
 def inventory_by_variety_endpoint(
     db: Session = Depends(get_db),
-    _user=Depends(require_role("FarmManager")),
+    _user=Depends(require_any_role("FarmManager", "Worker")),
 ):
     try:
         return get_inventory_by_variety(db)

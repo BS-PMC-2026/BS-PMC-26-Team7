@@ -336,3 +336,69 @@ def test_post_spray_report_invalid_report_type_returns_422(client, db):
     response = client.post("/api/spray-reports", json=payload)
 
     assert response.status_code == 422
+
+
+# ------------------------------------------------------------------ #
+# 5. Non-sprayable zone enforcement
+# ------------------------------------------------------------------ #
+def test_post_spray_report_rejected_for_non_sprayable_zone(client, db):
+    """Backend must reject spray reports for zones outside GH-*, GERM-*, NURSERY."""
+    seed_user_with_role(db)
+    zone = seed_zone(db, code="FACTORY", name="Factory Building")
+    pesticide = seed_pesticide(db)
+
+    payload = {
+        "zoneId": zone.ZoneId,
+        "pesticideId": pesticide.PesticideId,
+        "reportType": "completed",
+    }
+    response = client.post("/api/spray-reports", json=payload)
+
+    assert response.status_code == 400
+    assert "non-agricultural" in response.json()["detail"].lower()
+
+
+def test_post_spray_report_rejected_for_shed_zone(client, db):
+    seed_user_with_role(db)
+    zone = seed_zone(db, code="SHED-MAIN", name="Main Shed")
+    pesticide = seed_pesticide(db)
+
+    payload = {
+        "zoneId": zone.ZoneId,
+        "pesticideId": pesticide.PesticideId,
+        "reportType": "completed",
+    }
+    response = client.post("/api/spray-reports", json=payload)
+
+    assert response.status_code == 400
+    assert "non-agricultural" in response.json()["detail"].lower()
+
+
+def test_post_spray_report_allowed_for_nursery_zone(client, db):
+    seed_user_with_role(db)
+    zone = seed_zone(db, code="NURSERY", name="Nursery")
+    pesticide = seed_pesticide(db)
+
+    payload = {
+        "zoneId": zone.ZoneId,
+        "pesticideId": pesticide.PesticideId,
+        "reportType": "completed",
+    }
+    response = client.post("/api/spray-reports", json=payload)
+
+    assert response.status_code == 201
+
+
+def test_post_spray_report_allowed_for_germination_zone(client, db):
+    seed_user_with_role(db)
+    zone = seed_zone(db, code="GERM-01", name="Germination 1")
+    pesticide = seed_pesticide(db)
+
+    payload = {
+        "zoneId": zone.ZoneId,
+        "pesticideId": pesticide.PesticideId,
+        "reportType": "completed",
+    }
+    response = client.post("/api/spray-reports", json=payload)
+
+    assert response.status_code == 201

@@ -88,10 +88,13 @@ _FM_W = {"FarmManager", "Worker"}
 PROTECTED_CASES = [
     # tasks
     ("GET", "/api/tasks", _FM, None),
+    # inventory
+    ("GET", "/api/inventory/by-variety", _FM_W, None),
     # users
     ("GET", "/api/users/workers", _FM, None),
     # plants (write) — Worker is allowed (legitimate add-plant flow)
     ("POST", "/api/plants", _FM_W, {}),
+    ("PUT", "/api/plants/1/status", _FM_W, {"Status": "Healthy"}),
     # peppers (writes)
     ("POST", "/api/peppers", _FM, {}),
     ("POST", "/api/peppers/upload-image", _FM, None),

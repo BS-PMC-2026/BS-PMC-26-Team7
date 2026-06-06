@@ -830,6 +830,61 @@ export interface WorkerDictionary {
   youHaveNoTasks:           string;
   sprayReport:              string;
   safetyMap:                string;
+  // US37 — Worker Dashboard additions
+  mapModeTasks:             string;
+  mapModeSprays:            string;
+  mapModePlanting:          string;
+  heroTasksSummary:         string;
+  heroSpraysSummary:        string;
+  heroPlantingSummary:      string;
+  notifications:            string;
+  noNotifications:          string;
+  markAllRead:              string;
+  analyticsTitle:           string;
+  openTasksCount:           string;
+  completedTasksCount:      string;
+  avgCompletionTime:        string;
+  fastestTask:              string;
+  slowestTask:              string;
+  hoursUnit:                string;
+  noAnalyticsData:          string;
+  showCompleted:            string;
+  hideCompleted:            string;
+  overdue:                  string;
+  dueSoon:                  string;
+  taskDetailTitle:          string;
+  checklistSection:         string;
+  completeTask:             string;
+  completing:               string;
+  failedToCompleteTask:     string;
+  overdueAttention:         string;
+  nearDueAttention:         string;
+  plantingNurseryOnly:      string;
+  plantingAllowedZones:     string;
+  plantingBlockedZones:     string;
+  workerUser:               string;
+  noDueDate:                string;
+  // US37 QA — nursery plant list + transfer
+  nurseryPlants:            string;
+  noNurseryPlants:          string;
+  selectForTransfer:        string;
+  cancelTransfer:           string;
+  transferPlantHere:        string;
+  transferring:             string;
+  // US37 QA — notification dismiss
+  dismissNotification:      string;
+  // US47 QA — no-new-notifications wording + spray popup + greenhouse plants
+  noNewNotifications:       string;
+  createSprayReport:        string;
+  notSprayableZone:         string;
+  plantsInZone:             string;
+  noPlantsInZone:           string;
+  sprayZoneOverview:        string;
+  cautionZones:             string;
+  plantsRegistry:           string;
+  transferSeedling:         string;
+  targetGreenhouse:         string;
+  confirmTransfer:          string;
 }
 
 export interface VisitorDictionary {
@@ -2042,6 +2097,58 @@ const en: Dictionary = {
     youHaveNoTasks:     'You have no tasks assigned.',
     sprayReport:        'Spray Report',
     safetyMap:          'Safety Map',
+    // US37 — Worker Dashboard additions
+    mapModeTasks:       'Tasks',
+    mapModeSprays:      'Sprays',
+    mapModePlanting:    'Planting',
+    heroTasksSummary:   'Zones highlighted in red have open tasks assigned to you. Click a zone to see task details.',
+    heroSpraysSummary:  'Zones highlighted in amber have active spray restrictions. Check with your manager before entering.',
+    heroPlantingSummary:'New plants must be started in the Nursery. Seedlings may be transferred to greenhouses only.',
+    notifications:      'Notifications',
+    noNotifications:    'No notifications',
+    markAllRead:        'Mark all read',
+    analyticsTitle:     'My Performance',
+    openTasksCount:     'Open Tasks',
+    completedTasksCount:'Completed Tasks',
+    avgCompletionTime:  'Avg. Completion',
+    fastestTask:        'Fastest Task',
+    slowestTask:        'Slowest Task',
+    hoursUnit:          'h',
+    noAnalyticsData:    'Complete tasks to see your stats.',
+    showCompleted:      'Show completed',
+    hideCompleted:      'Hide completed',
+    overdue:            'Overdue',
+    dueSoon:            'Due Soon',
+    taskDetailTitle:    'Task Details',
+    checklistSection:   'Checklist',
+    completeTask:       'Mark as Completed',
+    completing:         'Completing...',
+    failedToCompleteTask: 'Failed to complete task.',
+    overdueAttention:   'OVERDUE',
+    nearDueAttention:   'DUE SOON',
+    plantingNurseryOnly:'First planting allowed in Nursery only.',
+    plantingAllowedZones:'Transfers allowed to: Growing greenhouses, Visitor greenhouses.',
+    plantingBlockedZones:'Transfers blocked for: Center, Factory, Parking, Main Shed.',
+    workerUser:         'Worker',
+    noDueDate:          'No due date',
+    nurseryPlants:      'Plants in Nursery',
+    noNurseryPlants:    'No plants in nursery yet',
+    selectForTransfer:  'Select for transfer',
+    cancelTransfer:     'Cancel transfer',
+    transferPlantHere:  'Transfer here',
+    transferring:       'Transferring...',
+    dismissNotification:'Dismiss',
+    noNewNotifications: 'No new notifications',
+    createSprayReport:  'Create spray report',
+    notSprayableZone:   'Cannot spray — not an agricultural zone',
+    plantsInZone:       'Plants in zone',
+    noPlantsInZone:     'No plants in this zone yet',
+    sprayZoneOverview:  'Spray Zone Overview',
+    cautionZones:       'Caution',
+    plantsRegistry:     'Plants Registry',
+    transferSeedling:   'Transfer Seedling',
+    targetGreenhouse:   'Target Greenhouse',
+    confirmTransfer:    'Confirm Transfer',
   },
 
   visitor: {
@@ -3296,6 +3403,58 @@ const he: Dictionary = {
     youHaveNoTasks:     'אין לך משימות מוקצות.',
     sprayReport:        'דיווח ריסוס',
     safetyMap:          'מפת בטיחות',
+    // US37 — Worker Dashboard additions
+    mapModeTasks:       'משימות',
+    mapModeSprays:      'ריסוסים',
+    mapModePlanting:    'שתילה',
+    heroTasksSummary:   'אזורים מסומנים באדום יש בהם משימות פתוחות המוקצות לך. לחץ על אזור לפרטים.',
+    heroSpraysSummary:  'אזורים בצהוב יש בהם הגבלות ריסוס פעילות. בדוק עם המנהל לפני הכניסה.',
+    heroPlantingSummary:'שתילה ראשונה מותרת במשתלה בלבד. ניתן להעביר שתילים לחממות גידול בלבד.',
+    notifications:      'התראות',
+    noNotifications:    'אין התראות',
+    markAllRead:        'סמן הכל כנקרא',
+    analyticsTitle:     'הביצועים שלי',
+    openTasksCount:     'משימות פתוחות',
+    completedTasksCount:'משימות שהושלמו',
+    avgCompletionTime:  'ממוצע השלמה',
+    fastestTask:        'המהיר ביותר',
+    slowestTask:        'האיטי ביותר',
+    hoursUnit:          'ש׳',
+    noAnalyticsData:    'השלם משימות כדי לראות את הסטטיסטיקות שלך.',
+    showCompleted:      'הצג שהושלמו',
+    hideCompleted:      'הסתר שהושלמו',
+    overdue:            'באיחור',
+    dueSoon:            'קרוב לתאריך יעד',
+    taskDetailTitle:    'פרטי משימה',
+    checklistSection:   'רשימת פעולות',
+    completeTask:       'סמן כהושלם',
+    completing:         'מסמן...',
+    failedToCompleteTask: 'השלמת המשימה נכשלה.',
+    overdueAttention:   'באיחור',
+    nearDueAttention:   'קרוב לתאריך',
+    plantingNurseryOnly:'שתילה ראשונה מותרת במשתלה בלבד.',
+    plantingAllowedZones:'העברה מותרת ל: חממות גידול, חממות מבקרים.',
+    plantingBlockedZones:'העברה אסורה ל: מרכז, מפעל, חניה, מחסן ראשי.',
+    workerUser:         'עובד',
+    noDueDate:          'ללא תאריך יעד',
+    nurseryPlants:      'צמחים במשתלה',
+    noNurseryPlants:    'אין צמחים במשתלה עדיין',
+    selectForTransfer:  'בחר להעברה',
+    cancelTransfer:     'בטל העברה',
+    transferPlantHere:  'העבר לכאן',
+    transferring:       'מעביר...',
+    dismissNotification:'סגור',
+    noNewNotifications: 'אין התראות חדשות',
+    createSprayReport:  'צור דוח ריסוס',
+    notSprayableZone:   'לא ניתן לרסס — אינו אזור חקלאי',
+    plantsInZone:       'צמחים באזור',
+    noPlantsInZone:     'אין צמחים באזור זה עדיין',
+    sprayZoneOverview:  'סקירת אזורי ריסוס',
+    cautionZones:       'זהירות',
+    plantsRegistry:     'מרשם הצמחים',
+    transferSeedling:   'העבר שתיל',
+    targetGreenhouse:   'חממת יעד',
+    confirmTransfer:    'אשר העברה',
   },
 
   visitor: {

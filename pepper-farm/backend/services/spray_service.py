@@ -124,6 +124,15 @@ def create_spray_report(
     if not pesticide.IsActive:
         return None, "Pesticide is not active."
 
+    # Sprayable zone check — rule 14: only GH-*, GERM-*, NURSERY zones
+    zone_code = (zone.ZoneCode or "").strip().upper()
+    if not (
+        zone_code.startswith("GH-")
+        or zone_code.startswith("GERM-")
+        or zone_code == "NURSERY"
+    ):
+        return None, "Spray reports cannot be created for non-agricultural zones."
+
     # 'planned' reports must come with a future plannedAtUtc.
     now = datetime.utcnow()
     if data.reportType == "planned":

@@ -207,9 +207,7 @@ describe('WorkerNavbar language integration', () => {
     renderWorkerNavbar();
     await waitFor(() => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('My Tasks')).toBeInTheDocument();
       expect(screen.getByText('Products')).toBeInTheDocument();
-      expect(screen.getByText('Spray Report')).toBeInTheDocument();
     });
   });
 
@@ -237,14 +235,10 @@ describe('WorkerNavbar language integration', () => {
       const dashboardLink = screen.getByRole('link', { name: /Dashboard/i });
       expect(dashboardLink).toHaveAttribute('href', '/worker');
 
-      const myTasksLink = screen.getByRole('link', { name: /My Tasks/i });
-      expect(myTasksLink).toHaveAttribute('href', '/worker/my-tasks');
-
       const productsLink = screen.getByRole('link', { name: /Products/i });
       expect(productsLink).toHaveAttribute('href', '/worker/products');
 
-      const sprayLink = screen.getByRole('link', { name: /Spray Report/i });
-      expect(sprayLink).toHaveAttribute('href', '/worker/spray-report');
+      expect(screen.queryByRole('link', { name: /Spray Report/i })).not.toBeInTheDocument();
     });
   });
 

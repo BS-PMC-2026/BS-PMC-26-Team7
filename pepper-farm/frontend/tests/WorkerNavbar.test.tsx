@@ -1,6 +1,6 @@
 /**
  * Integration tests for WorkerNavbar
- * Covers: rendering, navigation links, Plants dropdown, bell panel,
+ * Covers: rendering, navigation links, bell panel,
  * notification badge, logout, and active-link highlighting.
  */
 import React from 'react';
@@ -57,8 +57,8 @@ jest.mock('@/services/cartService', () => ({
 
 jest.mock('lucide-react', () => {
   const icons = [
-    'LayoutDashboard','ClipboardList','ShoppingBag','ShoppingCart','Sprout','ChevronDown',
-    'Leaf','LogOut','MapPin','Droplets','Bell','X','ClipboardCheck','ShieldAlert',
+    'LayoutDashboard','ShoppingBag','ShoppingCart','Sprout','ChevronDown',
+    'Leaf','LogOut','MapPin','Bell','X','ClipboardCheck','ShieldAlert',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {
@@ -71,12 +71,18 @@ jest.mock('lucide-react', () => {
 jest.mock('@/components/LanguageSwitcher', () => () => React.createElement('div', { 'data-testid': 'language-switcher' }));
 
 const mockClearUnread = jest.fn();
+const mockLoadAppNotifs = jest.fn(() => new Promise<void>(() => {}));
+const mockMarkAllAppNotifsRead = jest.fn().mockResolvedValue(undefined);
 
 const defaultWorkerContext = {
   unreadCount: 0,
   clearUnread: mockClearUnread,
   newTasks:    [] as never[],
   activeTasks: [] as never[],
+  appNotifs: [] as never[],
+  appUnreadCount: 0,
+  loadAppNotifs: mockLoadAppNotifs,
+  markAllAppNotifsRead: mockMarkAllAppNotifsRead,
 };
 
 let workerContextValue = { ...defaultWorkerContext };
@@ -101,6 +107,8 @@ describe('WorkerNavbar — rendering', () => {
     workerContextValue = { ...defaultWorkerContext };
     mockPush.mockClear();
     mockClearUnread.mockClear();
+    mockLoadAppNotifs.mockClear();
+    mockMarkAllAppNotifsRead.mockClear();
   });
 
   it('renders the PepperFarm logo', () => {
@@ -116,14 +124,12 @@ describe('WorkerNavbar — rendering', () => {
   it('renders all primary nav links', () => {
     renderNavbar();
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /my tasks/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /products/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /spray report/i })).toBeInTheDocument();
   });
 
-  it('renders the Plants dropdown button', () => {
+  it('does not render the old Plants dropdown button', () => {
     renderNavbar();
-    expect(screen.getByRole('button', { name: /plants/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /plants/i })).not.toBeInTheDocument();
   });
 
   it('renders the bell (task notifications) button', () => {
@@ -155,9 +161,9 @@ describe('WorkerNavbar — nav link hrefs', () => {
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/worker');
   });
 
-  it('My Tasks links to /worker/my-tasks', () => {
+  it('does not render the old My Tasks route link', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /my tasks/i })).toHaveAttribute('href', '/worker/my-tasks');
+    expect(screen.queryByRole('link', { name: /my tasks/i })).not.toBeInTheDocument();
   });
 
   it('Products links to /worker/products', () => {
@@ -165,49 +171,9 @@ describe('WorkerNavbar — nav link hrefs', () => {
     expect(screen.getByRole('link', { name: /products/i })).toHaveAttribute('href', '/worker/products');
   });
 
-  it('Spray Report links to /worker/spray-report', () => {
+  it('does not render the old Spray Report route link', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /spray report/i })).toHaveAttribute('href', '/worker/spray-report');
-  });
-});
-
-describe('WorkerNavbar — Plants dropdown', () => {
-  beforeEach(() => { mockPathname = '/worker'; });
-
-  it('dropdown is hidden initially', () => {
-    renderNavbar();
-    expect(screen.queryByText('Register a new plant')).not.toBeInTheDocument();
-  });
-
-  it('opens the dropdown and shows sub-items on click', () => {
-    renderNavbar();
-    fireEvent.click(screen.getByRole('button', { name: /plants/i }));
-    expect(screen.getByRole('link', { name: /add plant/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /update location/i })).toBeInTheDocument();
-  });
-
-  it('sub-items link to correct hrefs', () => {
-    renderNavbar();
-    fireEvent.click(screen.getByRole('button', { name: /plants/i }));
-    expect(screen.getByRole('link', { name: /add plant/i })).toHaveAttribute('href', '/worker/plants/add');
-    expect(screen.getByRole('link', { name: /update location/i })).toHaveAttribute('href', '/worker/plants/update-location');
-  });
-
-  it('closes the dropdown on second click', () => {
-    renderNavbar();
-    const btn = screen.getByRole('button', { name: /plants/i });
-    fireEvent.click(btn);
-    expect(screen.getByRole('link', { name: /add plant/i })).toBeInTheDocument();
-    fireEvent.click(btn);
-    expect(screen.queryByRole('link', { name: /add plant/i })).not.toBeInTheDocument();
-  });
-
-  it('opening bell closes the Plants dropdown', () => {
-    renderNavbar();
-    fireEvent.click(screen.getByRole('button', { name: /plants/i }));
-    expect(screen.getByRole('link', { name: /add plant/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /task notifications/i }));
-    expect(screen.queryByRole('link', { name: /add plant/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /spray report/i })).not.toBeInTheDocument();
   });
 });
 
@@ -337,21 +303,9 @@ describe('WorkerNavbar — active link highlighting', () => {
     expect(screen.getByRole('link', { name: /dashboard/i }).className).toMatch(/bg-/);
   });
 
-  it('highlights My Tasks when pathname is /worker/my-tasks', () => {
-    mockPathname = '/worker/my-tasks';
+  it('does not render Spray Report navigation when pathname is the old restrictions redirect route', () => {
+    mockPathname = '/worker/spray-restrictions';
     renderNavbar();
-    expect(screen.getByRole('link', { name: /my tasks/i }).className).toMatch(/bg-/);
-  });
-
-  it('does not highlight Spray Report when on Dashboard', () => {
-    mockPathname = '/worker';
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /spray report/i }).className).toMatch(/opacity/);
-  });
-
-  it('highlights Spray Report when pathname is /worker/spray-report', () => {
-    mockPathname = '/worker/spray-report';
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /spray report/i }).className).toMatch(/bg-/);
+    expect(screen.queryByRole('link', { name: /spray report/i })).not.toBeInTheDocument();
   });
 });

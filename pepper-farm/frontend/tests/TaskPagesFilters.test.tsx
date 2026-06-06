@@ -43,6 +43,19 @@ jest.mock('@/services/peppers', () => ({
   getAllPeppers: jest.fn().mockResolvedValue([]),
 }));
 
+// Worker Dashboard additionally needs these to avoid real network calls
+jest.mock('@/services/workerDashboard', () => ({
+  getWorkerAnalytics: jest.fn().mockResolvedValue({
+    openTasksCount: 0, completedTasksCount: 0,
+    avgCompletionTimeHours: null, fastestCompletionTimeHours: null,
+    slowestCompletionTimeHours: null, fastestTaskTitle: null, slowestTaskTitle: null,
+  }),
+}));
+
+jest.mock('@/services/apiClient', () => ({
+  apiFetch: jest.fn().mockResolvedValue([]),
+}));
+
 const tasks: Task[] = [
   {
     id: 1,
@@ -112,16 +125,11 @@ describe('task page filters', () => {
     expect(screen.getByText('Showing 1 of 2')).toBeInTheDocument();
   });
 
-  it('filters worker tasks by type', async () => {
+  it('worker dashboard renders assigned tasks from getMyTasks', async () => {
     render(<WorkerPage />);
 
+    // Both assigned tasks should appear in the task panel
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
     expect(screen.getByText('Medium inspection task')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'inspection' } });
-
-    expect(screen.queryByText('High irrigation task')).not.toBeInTheDocument();
-    expect(screen.getByText('Medium inspection task')).toBeInTheDocument();
-    expect(screen.getByText('Showing 1 of 2')).toBeInTheDocument();
   });
 });
