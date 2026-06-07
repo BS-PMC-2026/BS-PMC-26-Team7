@@ -15,6 +15,7 @@ import {
 import type { AppNotification } from '@/services/notificationsService';
 import { getCart } from '@/services/cartService';
 import BackButton from '@/components/ui/BackButton';
+import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorLayout({ children }: { children: ReactNode }) {
   const { t, locale } = useLanguage();
@@ -131,7 +132,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
           <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
           <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
-          <VisitorNavLink href="/visitor" label={t.nav.dashboard} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
+          <VisitorNavLink href="/visitor" label={t.visitor.navPeppers} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={14} />} active={pathname.startsWith('/visitor/products')} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={14} />} active={pathname.startsWith('/visitor/map')} scrolled={scrolled} />
           </div>
@@ -246,6 +247,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
             >
               <div className="mx-auto max-w-7xl px-4 py-3">
                 <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                  <MobileVisitorNavLink href="/visitor" label={t.visitor.navPeppers} icon={<Leaf size={15} />} active={pathname === '/visitor'} />
                   <MobileVisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={15} />} active={pathname.startsWith('/visitor/products')} />
                   <MobileVisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={15} />} active={pathname.startsWith('/visitor/map')} />
                   <MobileVisitorNavLink href="/cart" label="Cart" icon={<ShoppingCart size={15} />} active={pathname.startsWith('/cart')} badge={cartCount} />
@@ -275,6 +277,11 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
         )}
         {children}
       </div>
+
+      {/* Visitor AI chatbot — mounted once in the layout so it appears on every
+          Visitor page (/visitor, /visitor/products, /visitor/map, /visitor/peppers/[id]).
+          It is fixed-positioned and flips side for RTL, so it never affects layout. */}
+      <ChatWidget />
     </>
   );
 }
