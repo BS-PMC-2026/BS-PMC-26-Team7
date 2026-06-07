@@ -9,7 +9,6 @@ import StatsSection       from '@/components/landing/StatsSection';
 import PeppersGridSection from '@/components/landing/PeppersGridSection';
 import FarmStorySection   from '@/components/landing/FarmStorySection';
 import MapTeaserSection   from '@/components/landing/MapTeaserSection';
-import FinalCTASection    from '@/components/landing/FinalCTASection';
 import Footer             from '@/components/landing/Footer';
 
 /**
@@ -49,8 +48,6 @@ export default function LandingPage() {
       <FarmStorySection />
 
       <MapTeaserSection />
-
-      <FinalCTASection />
 
       <Footer />
     </div>
