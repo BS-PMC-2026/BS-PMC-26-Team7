@@ -9,7 +9,6 @@ import PageHeader from '@/components/ui/PageHeader';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
-import { Map } from 'lucide-react';
 import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorPage() {
@@ -78,50 +77,24 @@ export default function VisitorPage() {
               title={vi.pepperVarietiesTitle}
               subtitle={vi.pepperVarietiesSubtitle}
             />
-            <div className="flex flex-wrap justify-end gap-3 mt-1">
-              {/* Spray-restriction safety is now shown inside the Farm Map itself,
-                  so the separate Safety / Spray Restrictions button was removed.
-                  The /visitor/spray-restrictions route still exists. */}
-              {isLoggedIn ? (
-                <>
-                  <Link
-                    href="/visitor/products"
-                    className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
-                  >
-                    {vi.products}
-                  </Link>
-                  <Link
-                    href="/visitor/map"
-                    className="inline-flex items-center gap-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
-                  >
-                    <Map size={14} />
-                    {vi.map}
-                  </Link>
-                  {/* Logout intentionally omitted here — the visitor layout header already provides it (no duplicate). */}
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/visitor/products"
-                    className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
-                  >
-                    {vi.products}
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
-                  >
-                    {vi.login}
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition"
-                  >
-                    {vi.register}
-                  </Link>
-                </>
-              )}
-            </div>
+            {/* Products / Farm Map now live only in the visitor navbar (no duplicate here).
+                Logged-out visitors still get Login / Register, which are not in the navbar. */}
+            {!isLoggedIn && (
+              <div className="flex flex-wrap justify-end gap-3 mt-1">
+                <Link
+                  href="/login"
+                  className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-secondary-light)] transition"
+                >
+                  {vi.login}
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition"
+                >
+                  {vi.register}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

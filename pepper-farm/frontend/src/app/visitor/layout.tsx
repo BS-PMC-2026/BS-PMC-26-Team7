@@ -131,7 +131,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
           <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
           <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
-          <VisitorNavLink href="/visitor" label={t.nav.dashboard} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
+          <VisitorNavLink href="/visitor" label={t.visitor.navPeppers} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={14} />} active={pathname.startsWith('/visitor/products')} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={14} />} active={pathname.startsWith('/visitor/map')} scrolled={scrolled} />
           </div>
@@ -246,6 +246,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
             >
               <div className="mx-auto max-w-7xl px-4 py-3">
                 <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                  <MobileVisitorNavLink href="/visitor" label={t.visitor.navPeppers} icon={<Leaf size={15} />} active={pathname === '/visitor'} />
                   <MobileVisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={15} />} active={pathname.startsWith('/visitor/products')} />
                   <MobileVisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={15} />} active={pathname.startsWith('/visitor/map')} />
                   <MobileVisitorNavLink href="/cart" label="Cart" icon={<ShoppingCart size={15} />} active={pathname.startsWith('/cart')} badge={cartCount} />

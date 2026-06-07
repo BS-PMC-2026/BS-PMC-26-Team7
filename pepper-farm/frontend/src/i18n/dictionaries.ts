@@ -927,6 +927,7 @@ export interface VisitorDictionary {
   mapRestrictedWarning:     string;
   mapCautionWarning:        string;
   mapSafeReentry:           string;
+  navPeppers:               string;
 }
 
 export interface LandingDictionary {
@@ -2211,6 +2212,7 @@ const en: Dictionary = {
     mapRestrictedWarning:    'This area was recently sprayed. Please do not enter.',
     mapCautionWarning:       'Please ask farm staff before entering this area.',
     mapSafeReentry:          'Safe to enter at',
+    navPeppers:              'Peppers',
   },
 
   landing: {
@@ -3537,6 +3539,7 @@ const he: Dictionary = {
     mapRestrictedWarning:    'אזור זה רוסס לאחרונה. אנא אל תיכנסו.',
     mapCautionWarning:       'אנא פנו לצוות החווה לפני הכניסה לאזור זה.',
     mapSafeReentry:          'בטוח להיכנס בשעה',
+    navPeppers:              'זני פלפל',
   },
 
   landing: {
