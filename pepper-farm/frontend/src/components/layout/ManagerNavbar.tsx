@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -97,8 +98,12 @@ export default function ManagerNavbar() {
     overdue: [],
     completed: [],
   });
+  const [canSlideTabs, setCanSlideTabs] = useState({ left: false, right: false });
+  const [inventoryMenuPosition, setInventoryMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   const navRef        = useRef<HTMLElement>(null);
+  const tabScrollerRef = useRef<HTMLDivElement>(null);
+  const inventoryButtonRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navGroups: NavGroup[] = [
     {
@@ -177,6 +182,40 @@ export default function ManagerNavbar() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  const updateInventoryMenuPosition = () => {
+    const rect = inventoryButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const menuWidth = 224;
+    setInventoryMenuPosition({
+      top: rect.bottom + 8,
+      left: Math.min(Math.max(8, rect.left), window.innerWidth - menuWidth - 8),
+    });
+  };
+
+  useEffect(() => {
+    const scroller = tabScrollerRef.current;
+    if (!scroller) return;
+
+    const updateSlideState = () => {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      const current = Math.abs(scroller.scrollLeft);
+      setCanSlideTabs({
+        left: current > 2,
+        right: current < maxScroll - 2,
+      });
+      if (openGroup === 'inventory') updateInventoryMenuPosition();
+    };
+
+    updateSlideState();
+    scroller.addEventListener('scroll', updateSlideState, { passive: true });
+    window.addEventListener('resize', updateSlideState);
+    return () => {
+      scroller.removeEventListener('scroll', updateSlideState);
+      window.removeEventListener('resize', updateSlideState);
+    };
+  }, [openGroup]);
+
   const scheduleClose = () => {
     closeTimerRef.current = setTimeout(() => setOpenGroup(null), 100);
   };
@@ -203,6 +242,21 @@ export default function ManagerNavbar() {
     router.push('/login');
   };
 
+  const slideManagerTabs = (direction: 'left' | 'right') => {
+    tabScrollerRef.current?.scrollBy({
+      left: direction === 'left' ? -220 : 220,
+      behavior: 'smooth',
+    });
+  };
+
+  const handleNavbarWheel = (event: React.WheelEvent<HTMLElement>) => {
+    const scroller = tabScrollerRef.current;
+    if (!scroller || window.innerWidth < 768) return;
+
+    event.preventDefault();
+    scroller.scrollLeft += Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+  };
+
   const linkColor = scrolled ? 'text-green-800' : 'text-white';
   const activeLinkColor = scrolled ? 'text-[var(--color-primary)]' : 'text-white';
   const activeBg = scrolled ? 'bg-[var(--color-secondary-light)]' : 'bg-white/10';
@@ -212,6 +266,7 @@ export default function ManagerNavbar() {
     <motion.header
       ref={navRef as React.RefObject<HTMLElement>}
       dir={dir}
+      onWheel={handleNavbarWheel}
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
           ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
@@ -267,124 +322,171 @@ export default function ManagerNavbar() {
 
         <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto navbar-scroll">
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
+          <button
+            type="button"
+            onClick={() => slideManagerTabs('left')}
+            aria-label="Show previous navigation tabs"
+            className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+              canSlideTabs.left
+                ? scrolled ? 'text-green-800 hover:bg-[var(--color-secondary-light)]' : 'text-white/70 hover:bg-white/10'
+                : scrolled ? 'text-green-900/25' : 'text-white/25'
+            }`}
+          >
+            <ChevronDown size={14} className="rotate-90" />
+          </button>
 
-        {/* Dashboard */}
-        <NavLinkDirect href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
+          <div
+            ref={tabScrollerRef}
+            className="flex items-center gap-1 flex-1 min-w-[8rem] overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth navbar-scroll"
+          >
+            {/* Dashboard */}
+            <NavLinkDirect className="shrink-0" href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
 
-        {/* Tasks */}
-        <NavLinkDirect href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
+            {/* Tasks */}
+            <NavLinkDirect className="shrink-0" href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
 
-        {/* Sensor Explorer */}
-        <NavLinkDirect href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
+            {/* Sensor Explorer */}
+            <NavLinkDirect className="shrink-0" href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
 
-        {/* Inventory dropdown */}
-        {navGroups.map((group) => {
-          const active = isGroupActive(group);
-          const open   = openGroup === group.id;
+            {/* Inventory dropdown */}
+            {navGroups.map((group) => {
+              const active = isGroupActive(group);
+              const open   = openGroup === group.id;
 
-          return (
-            <div
-              key={group.id}
-              className="relative"
-              onMouseEnter={() => { cancelClose(); setOpenGroup(group.id); setBellOpen(false); }}
-              onMouseLeave={scheduleClose}
-            >
-              <button
-                onClick={() => { setOpenGroup(open ? null : group.id); setBellOpen(false); }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
-                  active || open
-                    ? `${activeLinkColor} ${activeBg}`
-                    : `${linkColor} opacity-70 ${hoverBg}`
-                }`}
-              >
-                <span className="opacity-80">{group.icon}</span>
-                {group.label}
-                <motion.span
-                  animate={{ rotate: open ? 180 : 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="flex opacity-50"
+              return (
+                <div
+                  key={group.id}
+                  className="relative shrink-0"
+                  onMouseEnter={() => {
+                    cancelClose();
+                    setOpenGroup(group.id);
+                    setBellOpen(false);
+                    requestAnimationFrame(updateInventoryMenuPosition);
+                  }}
+                  onMouseLeave={scheduleClose}
                 >
-                  <ChevronDown size={12} />
-                </motion.span>
-              </button>
-
-              {active && (
-                <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
-              )}
-
-              <AnimatePresence>
-                {open && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                    onMouseEnter={cancelClose}
-                    onMouseLeave={scheduleClose}
-                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white shadow-xl overflow-hidden z-[100]"
-                    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+                  <button
+                    ref={group.id === 'inventory' ? inventoryButtonRef : undefined}
+                    onClick={() => {
+                      setOpenGroup(open ? null : group.id);
+                      setBellOpen(false);
+                      requestAnimationFrame(updateInventoryMenuPosition);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
+                      active || open
+                        ? `${activeLinkColor} ${activeBg}`
+                        : `${linkColor} opacity-70 ${hoverBg}`
+                    }`}
                   >
-                    <div className="p-1.5">
-                      {group.items.map((item) => {
-                        const itemActive =
-                          pathname === item.href ||
-                          pathname.startsWith(item.href + '/');
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
-                              itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
-                            }`}
-                          >
-                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
-                              {item.icon}
-                            </span>
-                            <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`}>
-                                {item.label}
-                              </span>
-                              {item.description && (
-                                <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">
-                                  {item.description}
-                                </span>
-                              )}
-                            </span>
-                            {itemActive && (
-                              <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+                    <span className="opacity-80">{group.icon}</span>
+                    {group.label}
+                    <motion.span
+                      animate={{ rotate: open ? 180 : 0 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="flex opacity-50"
+                    >
+                      <ChevronDown size={12} />
+                    </motion.span>
+                  </button>
 
-        {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
-        <NavLinkDirect href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
+                  {active && (
+                    <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
+                  )}
 
-        {/* Analytics */}
-        <NavLinkDirect href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
+                  {typeof document !== 'undefined' && createPortal(
+                    <AnimatePresence>
+                      {open && inventoryMenuPosition && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                          transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                          onMouseEnter={cancelClose}
+                          onMouseLeave={scheduleClose}
+                          className="fixed min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white shadow-xl overflow-hidden z-[10000]"
+                          style={{
+                            top: inventoryMenuPosition.top,
+                            left: inventoryMenuPosition.left,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+                          }}
+                        >
+                          <div className="p-1.5">
+                            {group.items.map((item) => {
+                              const itemActive =
+                                pathname === item.href ||
+                                pathname.startsWith(item.href + '/');
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
+                                    itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
+                                  }`}
+                                >
+                                  <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
+                                    {item.icon}
+                                  </span>
+                                  <span>
+                                    <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`}>
+                                      {item.label}
+                                    </span>
+                                    {item.description && (
+                                      <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">
+                                        {item.description}
+                                      </span>
+                                    )}
+                                  </span>
+                                  {itemActive && (
+                                    <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>,
+                    document.body,
+                  )}
+                </div>
+              );
+            })}
 
-        {/* Newsletter */}
-        <NavLinkDirect href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
+            {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
+            <NavLinkDirect className="shrink-0" href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
 
-        {/* US41: Orders */}
-        <NavLinkDirect href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
+            {/* Analytics */}
+            <NavLinkDirect className="shrink-0" href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
 
-        {/* US41: Coupons */}
-        <NavLinkDirect href="/manager/coupons" label={t.store.coupons} icon={<Tag size={14} />} active={pathname.startsWith('/manager/coupons')} scrolled={scrolled} />
+            {/* Newsletter */}
+            <NavLinkDirect className="shrink-0" href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
 
-        {/* US41: Employee Discounts */}
-        <NavLinkDirect href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={14} />} active={pathname.startsWith('/manager/employee-discounts')} scrolled={scrolled} />
+            {/* US41: Orders */}
+            <NavLinkDirect className="shrink-0" href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
 
-        {/* Users */}
-        <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
+            {/* US41: Coupons */}
+            <NavLinkDirect className="shrink-0" href="/manager/coupons" label={t.store.coupons} icon={<Tag size={14} />} active={pathname.startsWith('/manager/coupons')} scrolled={scrolled} />
+
+            {/* US41: Employee Discounts */}
+            <NavLinkDirect className="shrink-0" href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={14} />} active={pathname.startsWith('/manager/employee-discounts')} scrolled={scrolled} />
+
+            {/* Users */}
+            <NavLinkDirect className="shrink-0" href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => slideManagerTabs('right')}
+            aria-label="Show more navigation tabs"
+            className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+              canSlideTabs.right
+                ? scrolled ? 'text-green-800 hover:bg-[var(--color-secondary-light)]' : 'text-white/70 hover:bg-white/10'
+                : scrolled ? 'text-green-900/25' : 'text-white/25'
+            }`}
+          >
+            <ChevronDown size={14} className="-rotate-90" />
+          </button>
         </div>
 
         {/* Bell + notification panel */}
@@ -812,15 +914,17 @@ function NavLinkDirect({
   icon,
   active,
   scrolled,
+  className = '',
 }: {
   href: string;
   label: string;
   icon: React.ReactNode;
   active: boolean;
   scrolled: boolean;
+  className?: string;
 }) {
   return (
-    <div className="relative">
+    <div className={`relative ${className}`}>
       <Link
         href={href}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg no-underline text-sm font-medium transition-colors duration-150 whitespace-nowrap ${

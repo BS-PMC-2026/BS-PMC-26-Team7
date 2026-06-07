@@ -219,7 +219,7 @@ export default function WorkerNavbar() {
         {/* Divider */}
         <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto navbar-scroll">
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
         <NavLinkDirect href="/worker"              label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
         <NavLinkDirect href="/worker/products"     label={t.nav.products} icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
         </div>

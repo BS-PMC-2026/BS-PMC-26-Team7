@@ -144,7 +144,7 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
 
           <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-          <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto navbar-scroll">
+          <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
           <VisitorNavLink href="/visitor" label={t.nav.dashboard} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={14} />} active={pathname.startsWith('/visitor/products')} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={14} />} active={pathname.startsWith('/visitor/map')} scrolled={scrolled} />
