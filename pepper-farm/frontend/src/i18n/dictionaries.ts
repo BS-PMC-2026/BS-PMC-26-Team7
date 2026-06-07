@@ -928,6 +928,16 @@ export interface VisitorDictionary {
   mapCautionWarning:        string;
   mapSafeReentry:           string;
   navPeppers:               string;
+  productSearchPlaceholder:    string;
+  productsAllCategories:       string;
+  productsSortBy:              string;
+  productsSortName:            string;
+  productsSortPriceLow:        string;
+  productsSortPriceHigh:       string;
+  noProductsFound:             string;
+  noProductsFoundDesc:         string;
+  failedToUpdateSubscription:  string;
+  unsubscribeAvailableHint:    string;
 }
 
 export interface LandingDictionary {
@@ -2213,6 +2223,16 @@ const en: Dictionary = {
     mapCautionWarning:       'Please ask farm staff before entering this area.',
     mapSafeReentry:          'Safe to enter at',
     navPeppers:              'Peppers',
+    productSearchPlaceholder:   'Search products...',
+    productsAllCategories:      'All Categories',
+    productsSortBy:             'Sort By',
+    productsSortName:           'Name A-Z',
+    productsSortPriceLow:       'Price Low to High',
+    productsSortPriceHigh:      'Price High to Low',
+    noProductsFound:            'No products found',
+    noProductsFoundDesc:        'Try changing the search, category, or sorting.',
+    failedToUpdateSubscription: 'Failed to update subscription.',
+    unsubscribeAvailableHint:   'Unsubscribe is available in our emails.',
   },
 
   landing: {
@@ -3527,7 +3547,7 @@ const he: Dictionary = {
     farmMapSubtitle:         'פריסה אינטראקטיבית של מתקן החווה — לחץ על כל קטע לפרטים נוספים',
     safetyMap:               'בטיחות / ריסוס',
     searchPlaceholder:       'חיפוש זני פלפל...',
-    allHeatLevels:           'כל רמות החום',
+    allHeatLevels:           'כל רמות החריפות',
     heatMild:                'עדין',
     heatMedium:              'בינוני',
     heatHot:                 'חריף',
@@ -3540,6 +3560,16 @@ const he: Dictionary = {
     mapCautionWarning:       'אנא פנו לצוות החווה לפני הכניסה לאזור זה.',
     mapSafeReentry:          'בטוח להיכנס בשעה',
     navPeppers:              'זני פלפל',
+    productSearchPlaceholder:   'חיפוש מוצרים...',
+    productsAllCategories:      'כל הקטגוריות',
+    productsSortBy:             'מיון לפי',
+    productsSortName:           'שם A-Z',
+    productsSortPriceLow:       'מהזול ליקר',
+    productsSortPriceHigh:      'מהיקר לזול',
+    noProductsFound:            'לא נמצאו מוצרים',
+    noProductsFoundDesc:        'נסה לשנות את החיפוש, הקטגוריה או המיון.',
+    failedToUpdateSubscription: 'עדכון ההרשמה נכשל.',
+    unsubscribeAvailableHint:   'ניתן לבטל את ההרשמה דרך המיילים שלנו.',
   },
 
   landing: {

@@ -50,7 +50,7 @@ export default function VisitorProductsPage() {
       setSubscribed(updated.emailConsent);
       setSubMsg(t.consent.subscriptionUpdated);
     } catch (e) {
-      setSubErr(e instanceof Error ? e.message : 'Failed to update subscription.');
+      setSubErr(e instanceof Error ? e.message : vi.failedToUpdateSubscription);
     } finally {
       setSubLoading(false); }
   }
@@ -142,7 +142,8 @@ const filteredProducts = products
       <div className="mb-6 flex flex-col md:flex-row gap-4">
   <input
     type="text"
-    placeholder="Search products..."
+    placeholder={vi.productSearchPlaceholder}
+    aria-label={vi.productSearchPlaceholder}
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
@@ -150,10 +151,11 @@ const filteredProducts = products
 
   <select
     value={selectedCategory}
+    aria-label={vi.productsAllCategories}
     onChange={(e) => setSelectedCategory(e.target.value)}
     className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
   >
-    <option value="">All Categories</option>
+    <option value="">{vi.productsAllCategories}</option>
 
     {categories.map((category) => (
       <option key={category} value={category ?? ''}>
@@ -163,13 +165,14 @@ const filteredProducts = products
   </select>
   <select
   value={sortBy}
+  aria-label={vi.productsSortBy}
   onChange={(e) => setSortBy(e.target.value)}
   className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
 >
-  <option value="">Sort By</option>
-  <option value="name">Name A-Z</option>
-  <option value="priceLow">Price Low to High</option>
-  <option value="priceHigh">Price High to Low</option>
+  <option value="">{vi.productsSortBy}</option>
+  <option value="name">{vi.productsSortName}</option>
+  <option value="priceLow">{vi.productsSortPriceLow}</option>
+  <option value="priceHigh">{vi.productsSortPriceHigh}</option>
 </select>
 </div>
         {loadError && (
@@ -204,8 +207,8 @@ const filteredProducts = products
           ) : filteredProducts.length === 0 ? (
   <EmptyState
     icon="🔍"
-    title="No products found"
-    description="Try changing the search, category, or sorting."
+    title={vi.noProductsFound}
+    description={vi.noProductsFoundDesc}
   />
           
         ) : (
@@ -229,7 +232,7 @@ const filteredProducts = products
                 ✓ {t.consent.subscribed} — {t.consent.receiveNewsletterEmails.toLowerCase()}.
                 {' '}
                 <span className="text-xs text-[var(--color-muted-foreground)]">
-                  ({t.consent.unsubscribeFromNewsletter} is available in our emails.)
+                  ({vi.unsubscribeAvailableHint})
                 </span>
               </p>
             ) : (
