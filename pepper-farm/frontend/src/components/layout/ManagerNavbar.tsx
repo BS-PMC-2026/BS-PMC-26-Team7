@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
-  ClipboardList,
   Radio,
   Leaf,
   ShoppingBag,
@@ -22,12 +21,8 @@ import {
   CheckCircle2,
   X,
   ExternalLink,
-  Droplets,
   ShieldAlert,
-  Mail,
-  Tag,
   Package,
-  UserCheck,
   Menu,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
@@ -343,9 +338,6 @@ export default function ManagerNavbar() {
             {/* Dashboard */}
             <NavLinkDirect className="shrink-0" href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
 
-            {/* Tasks */}
-            <NavLinkDirect className="shrink-0" href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
-
             {/* Sensor Explorer */}
             <NavLinkDirect className="shrink-0" href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
 
@@ -453,23 +445,11 @@ export default function ManagerNavbar() {
               );
             })}
 
-            {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
-            <NavLinkDirect className="shrink-0" href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
-
             {/* Analytics */}
             <NavLinkDirect className="shrink-0" href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
 
-            {/* Newsletter */}
-            <NavLinkDirect className="shrink-0" href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
-
             {/* US41: Orders */}
             <NavLinkDirect className="shrink-0" href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
-
-            {/* US41: Coupons */}
-            <NavLinkDirect className="shrink-0" href="/manager/coupons" label={t.store.coupons} icon={<Tag size={14} />} active={pathname.startsWith('/manager/coupons')} scrolled={scrolled} />
-
-            {/* US41: Employee Discounts */}
-            <NavLinkDirect className="shrink-0" href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={14} />} active={pathname.startsWith('/manager/employee-discounts')} scrolled={scrolled} />
 
             {/* Users */}
             <NavLinkDirect className="shrink-0" href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
@@ -661,7 +641,7 @@ export default function ManagerNavbar() {
                       </button>
                     )}
                     <Link
-                      href="/manager/spray-map#spray-alerts"
+                      href="/manager?section=sprays&panel=alerts"
                       onClick={() => setBellOpen(false)}
                       className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
@@ -679,7 +659,7 @@ export default function ManagerNavbar() {
                           className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}
                         >
                           <Link
-                            href="/manager/spray-map#spray-alerts"
+                            href="/manager?section=sprays&panel=alerts"
                             onClick={() => {
                               setBellOpen(false);
                               if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
@@ -738,7 +718,7 @@ export default function ManagerNavbar() {
                         {t.notifications.clearGroup}
                       </button>
                     )}
-                    <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                    <Link href="/manager?section=sprays&panel=overdue" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
                       {t.common.viewAll} <ExternalLink size={9} />
                     </Link>
                   </div>
@@ -749,7 +729,7 @@ export default function ManagerNavbar() {
                     <div className="flex flex-col gap-0.5">
                       {recentOverdueAlerts.map((alert) => (
                         <div key={alert.OverdueAlertId} className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}>
-                          <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => { setBellOpen(false); if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); }} className="contents">
+                          <Link href="/manager?section=sprays&panel=overdue" onClick={() => { setBellOpen(false); if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); }} className="contents">
                             <span className={alert.Severity === 'high' ? 'mt-0.5 shrink-0 text-red-500' : 'mt-0.5 shrink-0 text-amber-500'}>
                               <ShieldAlert size={13} />
                             </span>
@@ -780,7 +760,7 @@ export default function ManagerNavbar() {
                         {t.notifications.clearGroup}
                       </button>
                     )}
-                    <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                    <Link href="/manager?section=tasks&tab=history" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
                       {t.common.viewHistory} <ExternalLink size={9} />
                     </Link>
                   </div>
@@ -791,7 +771,7 @@ export default function ManagerNavbar() {
                     <div className="flex flex-col gap-0.5">
                       {recentCompleted.map((task) => (
                         <div key={task.id} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors">
-                          <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="contents">
+                          <Link href="/manager?section=tasks&tab=history" onClick={() => setBellOpen(false)} className="contents">
                             <span className="mt-0.5 shrink-0 text-green-500">
                               <CheckCircle2 size={13} />
                             </span>
@@ -872,18 +852,13 @@ export default function ManagerNavbar() {
             <div className="mx-auto max-w-7xl px-4 py-3">
               <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
                 <MobileNavLink href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={15} />} active={pathname === '/manager'} />
-                <MobileNavLink href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={15} />} active={pathname.startsWith('/manager/tasks')} />
                 <MobileNavLink href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={15} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} />
                 <div className="px-3 pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">{t.nav.inventory}</div>
                 {navGroups[0].items.map((item) => (
                   <MobileNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} active={pathname === item.href || pathname.startsWith(item.href + '/')} inset />
                 ))}
-                <MobileNavLink href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={15} />} active={pathname.startsWith('/manager/spray-map')} />
                 <MobileNavLink href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={15} />} active={pathname.startsWith('/manager/reports')} />
-                <MobileNavLink href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={15} />} active={pathname.startsWith('/manager/newsletter')} />
                 <MobileNavLink href="/manager/orders" label="Orders" icon={<Package size={15} />} active={pathname.startsWith('/manager/orders')} />
-                <MobileNavLink href="/manager/coupons" label={t.store.coupons} icon={<Tag size={15} />} active={pathname.startsWith('/manager/coupons')} />
-                <MobileNavLink href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={15} />} active={pathname.startsWith('/manager/employee-discounts')} />
                 <MobileNavLink href="/manager/users" label={t.nav.users} icon={<Users size={15} />} active={pathname.startsWith('/manager/users')} />
                 <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
                   <LanguageSwitcher />

@@ -116,12 +116,9 @@ describe('ManagerNavbar — rendering', () => {
   it('renders all primary nav links', () => {
     renderNavbar();
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^tasks$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sensor explorer/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /analytics/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
-    // Spray alerts are accessed via Spray Map (#spray-alerts anchor), not a separate nav link
-    expect(screen.getByRole('link', { name: /spray map/i })).toBeInTheDocument();
   });
 
   it('renders the Inventory dropdown button', () => {
@@ -158,11 +155,6 @@ describe('ManagerNavbar — nav link hrefs', () => {
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/manager');
   });
 
-  it('Tasks links to /manager/tasks', () => {
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /^tasks$/i })).toHaveAttribute('href', '/manager/tasks');
-  });
-
   it('Sensor Explorer links to /manager/sensors', () => {
     renderNavbar();
     expect(screen.getByRole('link', { name: /sensor explorer/i })).toHaveAttribute('href', '/manager/sensors');
@@ -178,10 +170,6 @@ describe('ManagerNavbar — nav link hrefs', () => {
     expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute('href', '/manager/users');
   });
 
-  it('Spray Map links to /manager/spray-map', () => {
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /spray map/i })).toHaveAttribute('href', '/manager/spray-map');
-  });
 });
 
 describe('ManagerNavbar — Inventory dropdown', () => {
@@ -288,7 +276,7 @@ describe('ManagerNavbar — bell / notification panel', () => {
     expect(screen.getByTestId('spray-alert-item')).toBeInTheDocument();
   });
 
-  it('spray alert items link to /manager/spray-map#spray-alerts', () => {
+  it('spray alert items link to /manager?section=sprays&panel=alerts', () => {
     anomalyContextValue = {
       ...defaultAnomalyContext,
       sprayAlerts: [
@@ -308,15 +296,15 @@ describe('ManagerNavbar — bell / notification panel', () => {
     };
     renderNavbar();
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
-    expect(screen.getByTestId('spray-alert-item')).toHaveAttribute('href', '/manager/spray-map#spray-alerts');
+    expect(screen.getByTestId('spray-alert-item')).toHaveAttribute('href', '/manager?section=sprays&panel=alerts');
   });
 
-  it('spray alerts "View all" links to /manager/spray-map#spray-alerts', () => {
+  it('spray alerts "View all" links to /manager?section=sprays&panel=alerts', () => {
     renderNavbar();
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }));
     const allLinks = screen.getAllByRole('link');
     const sprayAnchorLink = allLinks.find(
-      (l) => l.getAttribute('href') === '/manager/spray-map#spray-alerts',
+      (l) => l.getAttribute('href') === '/manager?section=sprays&panel=alerts',
     );
     expect(sprayAnchorLink).toBeTruthy();
   });
@@ -411,18 +399,6 @@ describe('ManagerNavbar — active link highlighting', () => {
     mockPathname = '/manager';
     renderNavbar();
     expect(screen.getByRole('link', { name: /dashboard/i }).className).toMatch(/bg-/);
-  });
-
-  it('does not highlight Tasks when on Dashboard', () => {
-    mockPathname = '/manager';
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /^tasks$/i }).className).toMatch(/opacity/);
-  });
-
-  it('highlights Tasks when pathname is /manager/tasks', () => {
-    mockPathname = '/manager/tasks';
-    renderNavbar();
-    expect(screen.getByRole('link', { name: /^tasks$/i }).className).toMatch(/bg-/);
   });
 
   it('highlights Analytics when pathname is /manager/reports', () => {

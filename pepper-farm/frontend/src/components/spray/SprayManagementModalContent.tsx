@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import PageHeader from '@/components/ui/PageHeader';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import SprayZoneMap from '@/components/spray/SprayZoneMap';
 import TaskForm from '@/components/tasks/TaskForm';
-import { assignOverdueSprayTask, getOverdueSprayAlerts, getSprayAlerts, getZoneSprayMap } from '@/services/spray';
+import { assignOverdueSprayTask } from '@/services/spray';
 import { createTask } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { OverdueSprayAlert, ZoneSprayStatusData, ZoneSprayStatus, SprayAlert } from '@/types/spray';
 import { AlertTriangle, CheckCircle, RefreshCw, ShieldAlert, ShieldCheck, UserCheck } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import type { CreateTaskFormData } from '@/types/task';
 
 // ── Status pill helper ────────────────────────────────────────────────────────
@@ -85,93 +85,62 @@ function timeAgo(dateStr: string | null | undefined): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Modal content ─────────────────────────────────────────────────────────────
 
-export default function SprayMapPage() {
+interface SprayManagementModalContentProps {
+  zones: ZoneSprayStatusData[];
+  zonesLoading: boolean;
+  zonesError: string | null;
+  onRefreshZones: () => void;
+  scrollTarget: 'alerts' | 'overdue' | null;
+  onScrollTargetConsumed: () => void;
+}
+
+export default function SprayManagementModalContent({
+  zones,
+  zonesLoading,
+  zonesError,
+  onRefreshZones,
+  scrollTarget,
+  onScrollTargetConsumed,
+}: SprayManagementModalContentProps) {
   const { t } = useLanguage();
   const sp = t.spray;
-  const [zones,         setZones]         = useState<ZoneSprayStatusData[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState<string | null>(null);
-  const [lastFetch,     setLastFetch]     = useState<Date | null>(null);
+  const { sprayAlerts, overdueAlerts } = useAnomalyNotification();
 
-  const [sprayAlerts,   setSprayAlerts]   = useState<SprayAlert[]>([]);
-  const [alertsLoading, setAlertsLoading] = useState(true);
-  const [alertsError,   setAlertsError]   = useState<string | null>(null);
-
-  // US32: overdue spray alerts
-  const [overdueAlerts,       setOverdueAlerts]       = useState<OverdueSprayAlert[]>([]);
-  const [overdueLoading,      setOverdueLoading]      = useState(true);
-  const [overdueError,        setOverdueError]        = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!zonesLoading) setLastFetch(new Date());
+  }, [zonesLoading]);
 
   // US32: assign task modal state
-  const [assigningAlert,      setAssigningAlert]      = useState<OverdueSprayAlert | null>(null);
-  const [workers,             setWorkers]             = useState<UserData[]>([]);
-  const [selectedWorkerId,    setSelectedWorkerId]    = useState<number | ''>('');
-  const [assignLoading,       setAssignLoading]       = useState(false);
-  const [assignError,         setAssignError]         = useState<string | null>(null);
-  const [assignSuccess,       setAssignSuccess]       = useState<string | null>(null);
-  const [taskCreateLoading,   setTaskCreateLoading]   = useState(false);
-  const [taskCreateError,     setTaskCreateError]     = useState<string | null>(null);
-  const [taskCreateSuccess,   setTaskCreateSuccess]   = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getZoneSprayMap();
-      setZones(data);
-      setLastFetch(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load spray map.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadAlerts = useCallback(async () => {
-    setAlertsLoading(true);
-    setAlertsError(null);
-    try {
-      const data = await getSprayAlerts();
-      setSprayAlerts(data);
-    } catch (err) {
-      setAlertsError(err instanceof Error ? err.message : 'Failed to load spray alerts.');
-    } finally {
-      setAlertsLoading(false);
-    }
-  }, []);
-
-  const loadOverdueAlerts = useCallback(async () => {
-    setOverdueLoading(true);
-    setOverdueError(null);
-    try {
-      const data = await getOverdueSprayAlerts();
-      setOverdueAlerts(data);
-    } catch (err) {
-      setOverdueError(err instanceof Error ? err.message : 'Failed to load overdue alerts.');
-    } finally {
-      setOverdueLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { loadAlerts(); }, [loadAlerts]);
-  useEffect(() => { loadOverdueAlerts(); }, [loadOverdueAlerts]);
+  const [assigningAlert,        setAssigningAlert]        = useState<OverdueSprayAlert | null>(null);
+  const [workers,               setWorkers]               = useState<UserData[]>([]);
+  const [selectedWorkerId,      setSelectedWorkerId]      = useState<number | ''>('');
+  const [assignLoading,         setAssignLoading]         = useState(false);
+  const [assignError,           setAssignError]           = useState<string | null>(null);
+  const [assignSuccess,         setAssignSuccess]         = useState<string | null>(null);
+  const [assignedTaskOverrides, setAssignedTaskOverrides] = useState<Record<number, number>>({});
+  const [taskCreateLoading,     setTaskCreateLoading]     = useState(false);
+  const [taskCreateError,       setTaskCreateError]       = useState<string | null>(null);
+  const [taskCreateSuccess,     setTaskCreateSuccess]     = useState<string | null>(null);
 
   // Load workers list once for assign modal
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+    const token = localStorage.getItem('token') ?? '';
     getAllUsers(token)
       .then((users) => setWorkers(users.filter((u) => u.roleName === 'Worker' && u.isActive)))
       .catch(() => {/* silent — workers will be empty if fails */});
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    load();
-    loadAlerts();
-    loadOverdueAlerts();
-  }, [load, loadAlerts, loadOverdueAlerts]);
+  const displayOverdueAlerts = useMemo(
+    () => overdueAlerts.map((a) =>
+      assignedTaskOverrides[a.OverdueAlertId] != null
+        ? { ...a, AssignedTaskId: assignedTaskOverrides[a.OverdueAlertId] }
+        : a,
+    ),
+    [overdueAlerts, assignedTaskOverrides],
+  );
 
   const openAssignModal = useCallback((alert: OverdueSprayAlert) => {
     setAssigningAlert(alert);
@@ -196,13 +165,7 @@ export default function SprayMapPage() {
         assignedToUserId: Number(selectedWorkerId),
       });
       setAssignSuccess(sp.taskAssigned.replace('{id}', String(task.id)));
-      setOverdueAlerts((prev) =>
-        prev.map((a) =>
-          a.OverdueAlertId === assigningAlert.OverdueAlertId
-            ? { ...a, AssignedTaskId: task.id }
-            : a,
-        ),
-      );
+      setAssignedTaskOverrides((prev) => ({ ...prev, [assigningAlert.OverdueAlertId]: task.id }));
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : sp.failedToAssignTask);
     } finally {
@@ -247,51 +210,59 @@ export default function SprayMapPage() {
     description: '',
     checklistItems: [],
   };
+
   const [searchTerm, setSearchTerm] = useState('');
   const filteredSprayAlerts = sprayAlerts.filter((alert) => {
-  const search = searchTerm.toLowerCase();
+    const search = searchTerm.toLowerCase();
+    return (
+      alert.ZoneName?.toLowerCase().includes(search) ||
+      alert.ZoneCode?.toLowerCase().includes(search) ||
+      alert.PesticideName?.toLowerCase().includes(search) ||
+      alert.ReportStatus?.toLowerCase().includes(search)
+    );
+  });
+
+  // Deep-link scroll-to-section (modal content scrolls independently of the page,
+  // so the original id="..."/scroll-mt anchors don't apply — use refs instead).
+  const alertsRef  = useRef<HTMLElement | null>(null);
+  const overdueRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const target = scrollTarget === 'alerts' ? alertsRef.current : overdueRef.current;
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      onScrollTargetConsumed();
+    }
+  }, [scrollTarget, sprayAlerts.length, overdueAlerts.length, onScrollTargetConsumed]);
 
   return (
-    alert.ZoneName?.toLowerCase().includes(search) ||
-    alert.ZoneCode?.toLowerCase().includes(search) ||
-    alert.PesticideName?.toLowerCase().includes(search) ||
-    alert.ReportStatus?.toLowerCase().includes(search)
-  );
-});
-  return (
-    <div className="min-h-screen">
-      {/* Page header */}
-      <div className="border-b border-[var(--color-border)]/60">
-        <div className="max-w-7xl mx-auto px-6 py-10">
-          <div className="flex items-start justify-between">
-            <PageHeader
-              label={sp.safetyLabel}
-              title={sp.managerTitle}
-              subtitle={sp.managerSubtitle}
-            />
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-1.5 mt-1 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-white text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-50 transition"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              {sp.refresh}
-            </button>
-          </div>
+    <div>
+      <div className="flex items-start justify-between mb-6 gap-3">
+        <div>
+          <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">{sp.safetyLabel}</span>
+          <p className="text-sm text-[var(--color-muted-foreground)] mt-1">{sp.managerSubtitle}</p>
         </div>
+        <button
+          onClick={onRefreshZones}
+          disabled={zonesLoading}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-white text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-50 transition shrink-0"
+        >
+          <RefreshCw size={13} className={zonesLoading ? 'animate-spin' : ''} />
+          {sp.refresh}
+        </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <div className="space-y-6">
 
         {/* Error */}
-        {error && (
+        {zonesError && (
           <div className="rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)] px-4 py-3 text-sm">
-            {error}
+            {zonesError}
           </div>
         )}
 
         {/* Summary cards */}
-        {!loading && zones.length > 0 && (
+        {!zonesLoading && zones.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <SummaryCard label="Safe"          count={countByStatus('safe')}              style={STATUS_STYLE.safe} />
             <SummaryCard label="Unsafe (REI)"  count={countByStatus('unsafe')}            style={STATUS_STYLE.unsafe} />
@@ -302,7 +273,7 @@ export default function SprayMapPage() {
         )}
 
         {/* Attention-needed list */}
-        {!loading && attentionZones.length > 0 && (
+        {!zonesLoading && attentionZones.length > 0 && (
           <div className="bg-[var(--color-error-bg)] border border-[var(--color-border)] rounded-xl p-4">
             <h3 className="text-sm font-semibold text-[var(--color-error)] mb-3">
               ⚠️ Zones requiring attention ({attentionZones.length})
@@ -322,14 +293,14 @@ export default function SprayMapPage() {
         )}
 
         {/* Loading skeleton */}
-        {loading && (
+        {zonesLoading && (
           <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6 animate-pulse">
             <div className="h-64 bg-[var(--color-muted)] rounded-lg" />
           </div>
         )}
 
         {/* Map */}
-        {!loading && (
+        {!zonesLoading && (
           <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-[var(--color-foreground)]">
@@ -363,7 +334,7 @@ export default function SprayMapPage() {
               {taskCreateSuccess}
             </div>
           )}
-          {loading ? (
+          {zonesLoading ? (
             <div className="space-y-3 animate-pulse" data-testid="spray-task-form-loading">
               <div className="h-9 bg-[var(--color-muted)] rounded-lg" />
               <div className="h-20 bg-[var(--color-muted)] rounded-lg" />
@@ -382,7 +353,7 @@ export default function SprayMapPage() {
         </section>
 
         {/* Zone status table */}
-        {!loading && zones.length > 0 && (
+        {!zonesLoading && zones.length > 0 && (
           <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[var(--color-border)]">
               <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Zone Status Table</h2>
@@ -445,7 +416,7 @@ export default function SprayMapPage() {
         )}
 
         {/* Empty state */}
-        {!loading && zones.length === 0 && !error && (
+        {!zonesLoading && zones.length === 0 && !zonesError && (
           <div className="text-center py-16 text-[var(--color-muted-foreground)]">
             <p className="text-4xl mb-3">🗺️</p>
             <p className="font-medium">No zones found.</p>
@@ -454,7 +425,7 @@ export default function SprayMapPage() {
         )}
 
         {/* ── US30: Spray Alert History ───────────────────────────────────────── */}
-        <section id="spray-alerts" className="scroll-mt-20" data-testid="spray-alerts-section">
+        <section ref={alertsRef} data-testid="spray-alerts-section">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)]">Spray Alert History</h2>
@@ -463,39 +434,23 @@ export default function SprayMapPage() {
               </p>
             </div>
             <div className="mb-4">
-  <input
-    type="text"
-    placeholder="Search spray alerts..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
-  />
-</div>
-            {!alertsLoading && sprayAlerts.length > 0 && (
+              <input
+                type="text"
+                placeholder="Search spray alerts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+              />
+            </div>
+            {sprayAlerts.length > 0 && (
               <span className="text-xs text-[var(--color-muted-foreground)]">
                 {filteredSprayAlerts.filter((a) => !a.IsRead).length} unread of {filteredSprayAlerts.length}
               </span>
             )}
           </div>
 
-          {/* Alerts loading skeleton */}
-          {alertsLoading && (
-            <div className="space-y-2 animate-pulse" data-testid="spray-alerts-loading">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-16 rounded-xl bg-[var(--color-muted)] border border-[var(--color-border)]" />
-              ))}
-            </div>
-          )}
-
-          {/* Alerts error */}
-          {alertsError && (
-            <div className="rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)] px-4 py-3 text-sm" data-testid="spray-alerts-error">
-              {alertsError}
-            </div>
-          )}
-
           {/* Alerts table */}
-          {!alertsLoading && sprayAlerts.length > 0 && (
+          {sprayAlerts.length > 0 && (
             <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden" data-testid="spray-alerts-list">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -566,7 +521,7 @@ export default function SprayMapPage() {
           )}
 
           {/* Alerts empty state */}
-          {!alertsLoading && filteredSprayAlerts.length === 0 && !alertsError && (
+          {filteredSprayAlerts.length === 0 && (
             <div className="text-center py-12 text-[var(--color-muted-foreground)] bg-white rounded-2xl border border-[var(--color-border)]" data-testid="spray-alerts-empty">
               <p className="text-3xl mb-2">🛡️</p>
               <p className="font-medium text-sm">{sp.noSprayAlertsYet}</p>
@@ -576,7 +531,7 @@ export default function SprayMapPage() {
         </section>
 
         {/* ── US32: Overdue Spray Alerts ────────────────────────────────────── */}
-        <section id="overdue-spray-alerts" className="scroll-mt-20" data-testid="overdue-spray-alerts-section">
+        <section ref={overdueRef} data-testid="overdue-spray-alerts-section">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)] flex items-center gap-2">
@@ -587,31 +542,15 @@ export default function SprayMapPage() {
                 {sp.overdueSprayAlertsDesc}
               </p>
             </div>
-            {!overdueLoading && overdueAlerts.length > 0 && (
+            {displayOverdueAlerts.length > 0 && (
               <span className="text-xs text-[var(--color-muted-foreground)]">
-                {sp.activeCount.replace('{count}', String(overdueAlerts.filter((a) => !a.IsResolved).length))}
+                {sp.activeCount.replace('{count}', String(displayOverdueAlerts.filter((a) => !a.IsResolved).length))}
               </span>
             )}
           </div>
 
-          {/* Loading skeleton */}
-          {overdueLoading && (
-            <div className="space-y-2 animate-pulse" data-testid="overdue-alerts-loading">
-              {[0, 1].map((i) => (
-                <div key={i} className="h-16 rounded-xl bg-[var(--color-muted)] border border-[var(--color-border)]" />
-              ))}
-            </div>
-          )}
-
-          {/* Error */}
-          {overdueError && (
-            <div className="rounded-lg bg-[var(--color-error-bg)] border border-[var(--color-border)] text-[var(--color-error)] px-4 py-3 text-sm" data-testid="overdue-alerts-error">
-              {overdueError}
-            </div>
-          )}
-
           {/* Overdue alerts table */}
-          {!overdueLoading && overdueAlerts.length > 0 && (
+          {displayOverdueAlerts.length > 0 && (
             <div className="bg-white rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden" data-testid="overdue-alerts-list">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -626,7 +565,7 @@ export default function SprayMapPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {overdueAlerts.map((alert) => (
+                    {displayOverdueAlerts.map((alert) => (
                       <tr
                         key={alert.OverdueAlertId}
                         className={`hover:bg-[var(--color-muted)] transition-colors ${!alert.IsResolved && !alert.IsRead ? 'bg-[var(--color-warning-bg)]/40' : ''}`}
@@ -686,7 +625,7 @@ export default function SprayMapPage() {
           )}
 
           {/* Empty state */}
-          {!overdueLoading && overdueAlerts.length === 0 && !overdueError && (
+          {displayOverdueAlerts.length === 0 && (
             <div className="text-center py-12 text-[var(--color-muted-foreground)] bg-white rounded-2xl border border-[var(--color-border)]" data-testid="overdue-alerts-empty">
               <p className="text-3xl mb-2">✅</p>
               <p className="font-medium text-sm">{sp.allZonesUpToDate}</p>
@@ -695,9 +634,9 @@ export default function SprayMapPage() {
           )}
         </section>
 
-        {/* ── US32: Assign Task Modal ───────────────────────────────────────── */}
+        {/* ── US32: Assign Task Modal (z-[80]: stacks above the DashboardModal at z-[70]) ── */}
         {assigningAlert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="assign-modal">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40" data-testid="assign-modal">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4">
               <h3 className="text-base font-semibold text-[var(--color-foreground)] mb-1">
                 {sp.assignSprayTask}

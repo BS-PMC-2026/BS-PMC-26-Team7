@@ -1,17 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import ManagerTasksPage from '@/app/manager/tasks/page';
+import ManageTasksModalContent from '@/components/tasks/ManageTasksModalContent';
 import { cancelTask, getCompletedTasks, getTasks } from '@/services/tasks';
 import { getAllUsers } from '@/services/users';
 import { getZones } from '@/services/zones';
 import type { Task } from '@/types/task';
-
-const mockRouter = { replace: jest.fn(), push: jest.fn() };
-const mockSearchParams = { get: jest.fn().mockReturnValue(null), toString: () => '' };
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => mockRouter,
-  useSearchParams: () => mockSearchParams,
-}));
 
 // Current manager is user id 1 — matches createdByUserId on the fixtures below,
 // so Delete is offered (UI gate uses the JWT sub via getCurrentUserId).
@@ -98,11 +90,20 @@ const completedTask: Task = {
   completedAt: '2024-02-01T00:00:00Z',
 };
 
+function renderModal(activeTab: 'active' | 'history' = 'active') {
+  return render(
+    <ManageTasksModalContent
+      activeTab={activeTab}
+      onTabChange={() => {}}
+      alertPrefill={null}
+      onAlertPrefillConsumed={() => {}}
+    />,
+  );
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.setItem('token', 'token');
-  // Default to the Active tab; the History test overrides this.
-  mockSearchParams.get.mockImplementation(() => null);
   (getTasks as jest.Mock).mockResolvedValue(tasks);
   (getCompletedTasks as jest.Mock).mockResolvedValue([completedTask]);
   (getAllUsers as jest.Mock).mockResolvedValue([]);
@@ -112,7 +113,7 @@ beforeEach(() => {
 
 describe('manager task delete (US42)', () => {
   it('opens a confirmation dialog when Delete is clicked', async () => {
-    render(<ManagerTasksPage />);
+    renderModal('active');
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
 
     const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });
@@ -124,7 +125,7 @@ describe('manager task delete (US42)', () => {
   });
 
   it('soft-deletes the task and removes it from the list on confirm', async () => {
-    render(<ManagerTasksPage />);
+    renderModal('active');
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
@@ -143,7 +144,7 @@ describe('manager task delete (US42)', () => {
   });
 
   it('leaves the task unchanged when the dialog is cancelled', async () => {
-    render(<ManagerTasksPage />);
+    renderModal('active');
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
@@ -158,17 +159,14 @@ describe('manager task delete (US42)', () => {
     const doneTask: Task = { ...tasks[0], id: 7, title: 'Done active task', status: 'done' };
     (getTasks as jest.Mock).mockResolvedValue([...tasks, doneTask]);
 
-    render(<ManagerTasksPage />);
+    renderModal('active');
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
     // The done task must not appear in the Active list.
     expect(screen.queryByText('Done active task')).not.toBeInTheDocument();
   });
 
   it('soft-deletes a completed task from the History tab on confirm', async () => {
-    // Render on the History tab.
-    mockSearchParams.get.mockImplementation((key: string) => (key === 'tab' ? 'history' : null));
-
-    render(<ManagerTasksPage />);
+    renderModal('history');
     expect(await screen.findByText('Completed task X')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));

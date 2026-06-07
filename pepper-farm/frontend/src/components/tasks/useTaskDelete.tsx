@@ -14,7 +14,7 @@ import { useLanguage } from '@/context/LanguageContext';
  * cancelTask API. The hook owns the dialog state and renders the dialog; the
  * caller supplies `onDeleted` to drop the task from its own list on success.
  */
-export function useTaskDelete(onDeleted: (taskId: number) => void) {
+export function useTaskDelete(onDeleted: (taskId: number) => void, overlayClassName?: string) {
   const { t } = useLanguage();
   const tk = t.tasks;
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
@@ -50,6 +50,7 @@ export function useTaskDelete(onDeleted: (taskId: number) => void) {
 
   const dialog = deletingTask ? (
     <Modal
+      overlayClassName={overlayClassName}
       onClose={() => {
         if (isDeleting) return;
         close();
