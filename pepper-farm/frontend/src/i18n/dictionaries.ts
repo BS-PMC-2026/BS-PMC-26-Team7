@@ -921,6 +921,12 @@ export interface VisitorDictionary {
   heatHot:                  string;
   heatExtreme:              string;
   noResultsDesc:            string;
+  mapStatusOpen:            string;
+  mapStatusRestricted:      string;
+  mapStatusCaution:         string;
+  mapRestrictedWarning:     string;
+  mapCautionWarning:        string;
+  mapSafeReentry:           string;
 }
 
 export interface LandingDictionary {
@@ -2199,6 +2205,12 @@ const en: Dictionary = {
     heatHot:                 'Hot',
     heatExtreme:             'Extreme',
     noResultsDesc:           'Try a different search term',
+    mapStatusOpen:           'Open to visitors',
+    mapStatusRestricted:     'Restricted after spraying',
+    mapStatusCaution:        'Caution / Ask staff',
+    mapRestrictedWarning:    'This area was recently sprayed. Please do not enter.',
+    mapCautionWarning:       'Please ask farm staff before entering this area.',
+    mapSafeReentry:          'Safe to enter at',
   },
 
   landing: {
@@ -3519,6 +3531,12 @@ const he: Dictionary = {
     heatHot:                 'חריף',
     heatExtreme:             'חריף מאוד',
     noResultsDesc:           'נסה מונח חיפוש אחר',
+    mapStatusOpen:           'פתוח למבקרים',
+    mapStatusRestricted:     'מוגבל לאחר ריסוס',
+    mapStatusCaution:        'זהירות / שאל את הצוות',
+    mapRestrictedWarning:    'אזור זה רוסס לאחרונה. אנא אל תיכנסו.',
+    mapCautionWarning:       'אנא פנו לצוות החווה לפני הכניסה לאזור זה.',
+    mapSafeReentry:          'בטוח להיכנס בשעה',
   },
 
   landing: {

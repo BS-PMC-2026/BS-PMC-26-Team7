@@ -9,7 +9,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
-import { Map, ShieldAlert } from 'lucide-react';
+import { Map } from 'lucide-react';
 import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorPage() {
@@ -79,15 +79,9 @@ export default function VisitorPage() {
               subtitle={vi.pepperVarietiesSubtitle}
             />
             <div className="flex flex-wrap justify-end gap-3 mt-1">
-              {/* Always visible — public safety information, no login required */}
-              <Link
-                href="/visitor/spray-restrictions"
-                className="inline-flex items-center gap-1.5 border border-[var(--color-warning)] text-[var(--color-warning)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-warning-bg)] transition"
-              >
-                <ShieldAlert size={14} />
-                {vi.safetyMap}
-              </Link>
-
+              {/* Spray-restriction safety is now shown inside the Farm Map itself,
+                  so the separate Safety / Spray Restrictions button was removed.
+                  The /visitor/spray-restrictions route still exists. */}
               {isLoggedIn ? (
                 <>
                   <Link
