@@ -13,6 +13,7 @@ import {
   Bell,
   X,
   ClipboardCheck,
+  Menu,
 } from 'lucide-react';
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -86,6 +87,7 @@ export default function WorkerNavbar() {
   }
 
   const [bellOpen,  setBellOpen]  = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled,  setScrolled]  = useState(false);
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissedTaskIds, setDismissedTaskIds] = useState<number[]>([]);
@@ -144,11 +146,13 @@ export default function WorkerNavbar() {
 
   useEffect(() => {
     setBellOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   const handleBellClick = () => {
     const next = !bellOpen;
     setBellOpen(next);
+    setMobileMenuOpen(false);
     if (next) {
       clearUnread();
       // Fix A: load in-app notifications when bell opens so the panel shows real details
@@ -174,7 +178,7 @@ export default function WorkerNavbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-1">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 mr-3 no-underline">
@@ -189,7 +193,6 @@ export default function WorkerNavbar() {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
@@ -204,21 +207,34 @@ export default function WorkerNavbar() {
           </span>
         </Link>
 
-        {/* Divider */}
-        <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+        <button
+          type="button"
+          onClick={() => { setMobileMenuOpen((open) => !open); setBellOpen(false); }}
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          className={`ml-auto flex md:hidden items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+            mobileMenuOpen
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-green-900 hover:bg-[var(--color-secondary-light)]' : 'text-white/80 hover:bg-white/10'
+          }`}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
 
+        {/* Divider */}
+        <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto navbar-scroll">
         <NavLinkDirect href="/worker"              label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
         <NavLinkDirect href="/worker/products"     label={t.nav.products} icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
-
-        {/* Spacer */}
-        <div className="flex-1" />
+        </div>
 
         {/* US41 — cart icon with item count badge (worker has full cart access) */}
         <Link
           href="/cart"
           aria-label="Cart"
           data-testid="worker-cart-icon"
-          className={`relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
+          className={`relative hidden md:flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 shrink-0 ${
             pathname.startsWith('/cart')
               ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
               : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
@@ -236,7 +252,7 @@ export default function WorkerNavbar() {
         </Link>
 
         {/* Bell — unified: task notifications + in-app messages (Fix E: single bell) */}
-        <div className="relative">
+        <div className="relative hidden md:block shrink-0">
           <button
             onClick={handleBellClick}
             aria-label={t.notifications.taskNotifications}
@@ -287,7 +303,7 @@ export default function WorkerNavbar() {
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
                     {t.notifications.taskNotifications}
                     {visibleUnreadCount > 0 && (
                       <span className="ml-1.5 text-[10px] font-bold text-red-400">
@@ -456,7 +472,7 @@ export default function WorkerNavbar() {
         {/* My Orders */}
         <Link
           href="/profile/orders"
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+          className={`hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap shrink-0 ${
             pathname.startsWith('/profile/orders')
               ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
               : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)]' : 'text-white/60 hover:opacity-100 hover:bg-white/10 hover:text-white'
@@ -467,17 +483,19 @@ export default function WorkerNavbar() {
         </Link>
 
         {/* Language switcher */}
-        <LanguageSwitcher />
+        <div className="hidden md:block shrink-0">
+          <LanguageSwitcher />
+        </div>
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
+        <div className={`hidden md:block w-px h-4.5 mx-1 shrink-0 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           title={t.notifications.signOut}
           aria-label={t.notifications.signOut}
-          className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+          className={`hidden md:flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 shrink-0 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
@@ -486,6 +504,37 @@ export default function WorkerNavbar() {
           <LogOut size={14} />
         </button>
       </div>
+
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="md:hidden border-t border-white/10 bg-white/95 backdrop-blur-md shadow-xl"
+          >
+            <div className="mx-auto max-w-7xl px-4 py-3">
+              <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                <MobileNavLink href="/worker" label={t.nav.dashboard} icon={<LayoutDashboard size={15} />} active={pathname === '/worker'} />
+                <MobileNavLink href="/worker/products" label={t.nav.products} icon={<ShoppingBag size={15} />} active={pathname.startsWith('/worker/products')} />
+                <MobileNavLink href="/cart" label="Cart" icon={<ShoppingCart size={15} />} active={pathname.startsWith('/cart')} badge={cartCount} />
+                <MobileNavLink href="/profile/orders" label="My Orders" icon={<ShoppingBag size={15} />} active={pathname.startsWith('/profile/orders')} />
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+                  <LanguageSwitcher />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut size={15} />
+                    {t.notifications.signOut}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
@@ -504,12 +553,44 @@ function NavLinkDirect({ href, label, icon, active, scrolled }: { href: string; 
             ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
             : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
-        style={{ fontFamily: 'Raleway, sans-serif' }}
       >
         <span className="opacity-75">{icon}</span>
         {label}
       </Link>
       {active && <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />}
     </div>
+  );
+}
+
+function MobileNavLink({
+  href,
+  label,
+  icon,
+  active,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors ${
+        active
+          ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]'
+          : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+      }`}
+    >
+      <span className="opacity-75">{icon}</span>
+      <span>{label}</span>
+      {!!badge && badge > 0 && (
+        <span className="ml-auto min-w-[18px] rounded-full bg-green-600 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
   );
 }

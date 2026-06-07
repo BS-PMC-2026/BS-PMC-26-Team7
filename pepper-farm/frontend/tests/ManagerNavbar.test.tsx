@@ -53,7 +53,7 @@ jest.mock('lucide-react', () => {
     'Sprout','BarChart2','Users','Bell','LogOut','ChevronDown','AlertTriangle',
     'CheckCircle2','X','ExternalLink','Droplets','ShieldAlert','ShieldCheck','Clock',
     // US39/US41 icons added to ManagerNavbar
-    'Mail','Tag','Package','UserCheck',
+    'Mail','Tag','Package','UserCheck','Menu',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {

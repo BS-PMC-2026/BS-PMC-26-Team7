@@ -49,13 +49,11 @@ export default function FeatureRow({
       <div>
         <h3
           className="text-xl font-semibold text-white mb-2"
-          style={{ fontFamily: 'Lora, serif' }}
         >
           {title}
         </h3>
         <p
           className="text-green-100/90 leading-relaxed max-w-lg"
-          style={{ fontFamily: 'Raleway, sans-serif' }}
         >
           {body}
         </p>

@@ -39,7 +39,6 @@ export default function Footer({ links }: FooterProps) {
           </div>
           <span
             className="font-semibold text-green-900 text-sm"
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>

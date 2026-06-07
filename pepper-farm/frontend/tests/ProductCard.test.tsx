@@ -1,15 +1,17 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import { ProductResponse } from '@/services/productService';
 import { LanguageProvider } from '@/context/LanguageContext';
 
+const mockPush = jest.fn();
+
 // next/navigation is already mocked globally in jest.setup.ts
 // Override to ensure useRouter is available for this component
 jest.mock('next/navigation', () => ({
   redirect:        jest.fn(),
-  useRouter:       () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
-  usePathname:     () => '/',
+  useRouter:       () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
+  usePathname:     () => '/visitor/products',
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -36,6 +38,14 @@ const baseProduct: ProductResponse = {
 };
 
 describe('ProductCard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(window, 'localStorage', {
+      value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn() },
+      writable: true,
+    });
+  });
+
   it('renders product name and price without discount', () => {
     renderCard(<ProductCard product={baseProduct} />);
     expect(screen.getByText('Jalapeño Sauce')).toBeInTheDocument();
@@ -170,5 +180,17 @@ describe('ProductCard', () => {
     renderCard(<ProductCard product={unlimitedProduct} />);
     expect(screen.getByText(/25.*OFF/i)).toBeInTheDocument();
     expect(screen.getByText('Unlimited offer')).toBeInTheDocument();
+  });
+
+  it('redirects guests to login when adding to cart', () => {
+    renderCard(<ProductCard product={baseProduct} />);
+    fireEvent.click(screen.getByTestId('add-to-cart-btn'));
+    expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Fvisitor%2Fproducts');
+  });
+
+  it('redirects guests to login before buy now checkout', () => {
+    renderCard(<ProductCard product={baseProduct} />);
+    fireEvent.click(screen.getByTestId('buy-now-btn'));
+    expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Fcheckout%3FproductId%3D1%26qty%3D1');
   });
 });

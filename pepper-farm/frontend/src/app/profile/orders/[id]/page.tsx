@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { getOrder, Order } from '@/services/ordersService';
 import { useLanguage } from '@/context/LanguageContext';
+import BackButton from '@/components/ui/BackButton';
 
 function fmt(n: number) { return `₪${Number(n).toFixed(2)}`; }
 
@@ -31,7 +32,6 @@ function StatusBadge({ status }: { status: string }) {
 export default function OrderDetailPage() {
   const { t } = useLanguage();
   const params = useParams<{ id: string }>();
-  const router = useRouter();
 
   const [order,   setOrder]   = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export default function OrderDetailPage() {
     <div className="app-page-bg flex items-center justify-center">
       <div className="text-center">
         <p className="text-red-500 text-sm mb-4">{error ?? 'Order not found.'}</p>
-        <Link href="/profile/orders" className="text-sm text-[var(--color-primary)] underline">← Back to My Orders</Link>
+        <BackButton fallbackHref="/profile/orders" />
       </div>
     </div>
   );
@@ -65,12 +65,10 @@ export default function OrderDetailPage() {
   return (
     <div className="app-page-bg">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <Link href="/profile/orders" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4 transition">
-          ← My Orders
-        </Link>
+        <BackButton fallbackHref="/profile/orders" className="mb-4" />
 
         <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <h1 className="text-xl font-bold text-gray-900 font-mono">{order.orderNumber}</h1>
+          <h1 className="text-xl font-bold text-gray-900">{order.orderNumber}</h1>
           <StatusBadge status={order.status} />
         </div>
 
@@ -94,7 +92,7 @@ export default function OrderDetailPage() {
             {order.couponCode && (
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Coupon</p>
-                <p className="font-medium text-gray-800 font-mono">{order.couponCode}</p>
+                <p className="font-medium text-gray-800">{order.couponCode}</p>
               </div>
             )}
             {order.payment?.cardLast4 && (

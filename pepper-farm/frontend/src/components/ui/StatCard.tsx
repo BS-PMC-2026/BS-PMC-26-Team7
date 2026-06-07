@@ -35,10 +35,10 @@ export default function StatCard({ value, label, icon, delay = 0 }: StatCardProp
       <div className="w-10 h-10 rounded-full bg-[var(--color-secondary-light)] flex items-center justify-center text-[var(--color-primary)]">
         {icon}
       </div>
-      <span className="text-3xl font-bold text-[var(--color-foreground)]" style={{ fontFamily: 'Lora, serif' }}>
+      <span className="text-3xl font-bold text-[var(--color-foreground)]">
         {value}
       </span>
-      <span className="text-sm text-[var(--color-primary)] text-center" style={{ fontFamily: 'Raleway, sans-serif' }}>
+      <span className="text-sm text-[var(--color-primary)] text-center">
         {label}
       </span>
     </motion.div>

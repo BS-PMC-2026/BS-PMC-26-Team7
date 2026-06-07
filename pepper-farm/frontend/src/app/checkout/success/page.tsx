@@ -124,7 +124,7 @@ function SuccessPageInner() {
             {order.payment?.mockTransactionId && (
               <div>
                 <p className="text-xs text-gray-500 mb-0.5">{st.transactionId}</p>
-                <p className="text-xs font-mono text-gray-700 break-all" data-testid="transaction-id">
+                <p className="text-xs text-gray-700 break-all" data-testid="transaction-id">
                   {order.payment.mockTransactionId}
                 </p>
               </div>

@@ -263,7 +263,7 @@ export default function SprayZoneMap({ zones }: SprayZoneMapProps) {
               <span className="text-3xl">{STATUS_COLORS[selected.sprayStatus].emoji}</span>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{selected.zoneName}</h2>
-                <p className="text-xs text-gray-400 font-mono">{selected.zoneCode}</p>
+                <p className="text-xs text-gray-400">{selected.zoneCode}</p>
               </div>
             </div>
 

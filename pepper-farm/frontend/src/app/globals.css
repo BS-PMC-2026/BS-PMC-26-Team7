@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Raleway:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ============================================================
@@ -79,7 +79,7 @@
   --color-gradient-end:     #6FA36F;
 
   /* ── Typography ──────────────────────────────────────────── */
-  --font-heading: 'Lora', Georgia, serif;
+  --font-heading: 'Raleway', system-ui, sans-serif;
   --font-body:    'Raleway', system-ui, sans-serif;
 
   /* ── Shadows ─────────────────────────────────────────────── */
@@ -144,6 +144,7 @@
 /* ── Base Styles ─────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
+  font-family: var(--font-body);
 }
 
 body {
@@ -157,6 +158,23 @@ body {
 .app-page-bg {
   min-height: 100vh;
   background-color: #F6F8F4;
+  font-family: inherit;
+  overflow-x: clip;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+.navbar-scroll {
+  scrollbar-width: none;
+}
+
+.navbar-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes pepper-loader-spin {

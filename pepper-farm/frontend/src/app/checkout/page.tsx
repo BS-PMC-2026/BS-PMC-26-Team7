@@ -17,6 +17,7 @@ import { getCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
 import { useLoading } from '@/context/LoadingContext';
 import PepperSpinnerLoader from '@/components/ui/PepperSpinnerLoader';
+import BackButton from '@/components/ui/BackButton';
 
 declare global {
   interface Window {
@@ -186,6 +187,12 @@ function CheckoutPageInner() {
   const couponCode = params?.get('coupon') ?? undefined;
 
   const loadPreview = useCallback(async () => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('token')) {
+      const current = `/checkout${params?.toString() ? `?${params.toString()}` : ''}`;
+      startRouteLoader();
+      router.replace(`/login?redirect=${encodeURIComponent(current)}`);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -213,7 +220,7 @@ function CheckoutPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [couponCode, params]);
+  }, [couponCode, params, router, startRouteLoader]);
 
   useEffect(() => { loadPreview(); }, [loadPreview]);
 
@@ -329,14 +336,7 @@ function CheckoutPageInner() {
   return (
     <div className="app-page-bg">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Back button */}
-        <button
-          onClick={() => router.push('/cart')}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4 transition"
-          data-testid="back-to-cart"
-        >
-          ← {t.common.back ?? 'Back'}
-        </button>
+        <BackButton fallbackHref="/cart" className="mb-4" testId="back-to-cart" />
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">{st.checkout}</h1>
 
@@ -409,7 +409,7 @@ function CheckoutPageInner() {
                     maxLength={19}
                     placeholder="4111 1111 1111 1111"
                     data-testid="input-card-number"
-                    className={`w-full border rounded-md px-3 py-2 text-sm font-mono tracking-wider focus:outline-none focus:border-[var(--color-primary)] ${
+                    className={`w-full border rounded-md px-3 py-2 text-sm tracking-wider focus:outline-none focus:border-[var(--color-primary)] ${
                       cardErrs.cardNumber ? 'border-red-400' : 'border-gray-300'
                     }`}
                   />
@@ -432,7 +432,7 @@ function CheckoutPageInner() {
                         placeholder="MM"
                         maxLength={2}
                         data-testid="input-expiry-month"
-                        className={`w-full border rounded-md px-2 py-2 text-sm font-mono focus:outline-none focus:border-[var(--color-primary)] ${
+                        className={`w-full border rounded-md px-2 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] ${
                           cardErrs.expiry ? 'border-red-400' : 'border-gray-300'
                         }`}
                       />
@@ -444,7 +444,7 @@ function CheckoutPageInner() {
                         placeholder="YY"
                         maxLength={4}
                         data-testid="input-expiry-year"
-                        className={`w-full border rounded-md px-2 py-2 text-sm font-mono focus:outline-none focus:border-[var(--color-primary)] ${
+                        className={`w-full border rounded-md px-2 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] ${
                           cardErrs.expiry ? 'border-red-400' : 'border-gray-300'
                         }`}
                       />
@@ -463,7 +463,7 @@ function CheckoutPageInner() {
                       placeholder="123"
                       maxLength={4}
                       data-testid="input-cvv"
-                      className={`w-full border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:border-[var(--color-primary)] ${
+                      className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)] ${
                         cardErrs.cvv ? 'border-red-400' : 'border-gray-300'
                       }`}
                     />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -38,6 +38,7 @@ function isDiscountCurrentlyActive(product: ProductResponse): boolean {
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
   const { t } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
   const pr = t.products;
   const st = t.store;
   const outOfStock = product.AllocatedQuantity === 0;
@@ -60,7 +61,19 @@ export default function ProductCard({ product, showEditButton = false }: Product
 
   const isWorker = userRole === 'Worker';
 
+  function hasToken(): boolean {
+    return typeof window !== 'undefined' && Boolean(localStorage.getItem('token'));
+  }
+
+  function goToLoginAfter(path: string) {
+    router.push(`/login?redirect=${encodeURIComponent(path)}`);
+  }
+
   async function handleAddToCart() {
+    if (!hasToken()) {
+      goToLoginAfter(pathname || '/visitor/products');
+      return;
+    }
     setAddingToCart(true);
     setCartMsg(null);
     try {
@@ -76,7 +89,12 @@ export default function ProductCard({ product, showEditButton = false }: Product
   }
 
   function handleBuyNow() {
-    router.push(`/checkout?productId=${product.ProductId}&qty=1`);
+    const checkoutPath = `/checkout?productId=${product.ProductId}&qty=1`;
+    if (!hasToken()) {
+      goToLoginAfter(checkoutPath);
+      return;
+    }
+    router.push(checkoutPath);
   }
   async function handleDelete() {
   const confirmed = window.confirm(

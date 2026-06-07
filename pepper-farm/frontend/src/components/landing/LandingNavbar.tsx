@@ -75,7 +75,6 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>

@@ -27,6 +27,7 @@ import {
   Tag,
   Package,
   UserCheck,
+  Menu,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -86,6 +87,7 @@ export default function ManagerNavbar() {
 
   const [openGroup,  setOpenGroup]  = useState<string | null>(null);
   const [bellOpen,   setBellOpen]   = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissed, setDismissed] = useState<Record<string, number[]>>({
@@ -177,6 +179,7 @@ export default function ManagerNavbar() {
   useEffect(() => {
     setOpenGroup(null);
     setBellOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   const scheduleClose = () => {
@@ -196,6 +199,7 @@ export default function ManagerNavbar() {
     const next = !bellOpen;
     setBellOpen(next);
     setOpenGroup(null);
+    setMobileMenuOpen(false);
     if (next) clearUnread();
   };
 
@@ -222,7 +226,7 @@ export default function ManagerNavbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-1">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 mr-3 no-underline">
@@ -237,7 +241,6 @@ export default function ManagerNavbar() {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
@@ -253,7 +256,23 @@ export default function ManagerNavbar() {
         </Link>
 
         {/* Divider */}
-        <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+        <button
+          type="button"
+          onClick={() => { setMobileMenuOpen((open) => !open); setBellOpen(false); setOpenGroup(null); }}
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          className={`ml-auto flex md:hidden items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+            mobileMenuOpen
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-green-900 hover:bg-[var(--color-secondary-light)]' : 'text-white/80 hover:bg-white/10'
+          }`}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+
+        <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto navbar-scroll">
 
         {/* Dashboard */}
         <NavLinkDirect href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
@@ -283,7 +302,6 @@ export default function ManagerNavbar() {
                     ? `${activeLinkColor} ${activeBg}`
                     : `${linkColor} opacity-70 ${hoverBg}`
                 }`}
-                style={{ fontFamily: 'Raleway, sans-serif' }}
               >
                 <span className="opacity-80">{group.icon}</span>
                 {group.label}
@@ -329,7 +347,7 @@ export default function ManagerNavbar() {
                               {item.icon}
                             </span>
                             <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
+                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`}>
                                 {item.label}
                               </span>
                               {item.description && (
@@ -372,12 +390,10 @@ export default function ManagerNavbar() {
 
         {/* Users */}
         <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
-
-        {/* Spacer */}
-        <div className="flex-1" />
+        </div>
 
         {/* Bell + notification panel */}
-        <div className="relative">
+        <div className="relative hidden md:block shrink-0">
           <button
             onClick={handleBellClick}
             aria-label={t.notifications.notifications}
@@ -427,7 +443,7 @@ export default function ManagerNavbar() {
               >
                 {/* Panel header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
                     {t.notifications.notifications}
                   </span>
                   <button
@@ -725,17 +741,19 @@ export default function ManagerNavbar() {
         </div>
 
         {/* Language switcher */}
-        <LanguageSwitcher />
+        <div className="hidden md:block shrink-0">
+          <LanguageSwitcher />
+        </div>
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
+        <div className={`hidden md:block w-px h-4.5 mx-1 shrink-0 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           title={t.notifications.signOut}
           aria-label={t.notifications.signOut}
-          className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+          className={`hidden md:flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 shrink-0 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
@@ -744,6 +762,47 @@ export default function ManagerNavbar() {
           <LogOut size={14} />
         </button>
       </div>
+
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="md:hidden border-t border-white/10 bg-white/95 backdrop-blur-md shadow-xl"
+          >
+            <div className="mx-auto max-w-7xl px-4 py-3">
+              <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                <MobileNavLink href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={15} />} active={pathname === '/manager'} />
+                <MobileNavLink href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={15} />} active={pathname.startsWith('/manager/tasks')} />
+                <MobileNavLink href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={15} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} />
+                <div className="px-3 pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">{t.nav.inventory}</div>
+                {navGroups[0].items.map((item) => (
+                  <MobileNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} active={pathname === item.href || pathname.startsWith(item.href + '/')} inset />
+                ))}
+                <MobileNavLink href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={15} />} active={pathname.startsWith('/manager/spray-map')} />
+                <MobileNavLink href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={15} />} active={pathname.startsWith('/manager/reports')} />
+                <MobileNavLink href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={15} />} active={pathname.startsWith('/manager/newsletter')} />
+                <MobileNavLink href="/manager/orders" label="Orders" icon={<Package size={15} />} active={pathname.startsWith('/manager/orders')} />
+                <MobileNavLink href="/manager/coupons" label={t.store.coupons} icon={<Tag size={15} />} active={pathname.startsWith('/manager/coupons')} />
+                <MobileNavLink href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={15} />} active={pathname.startsWith('/manager/employee-discounts')} />
+                <MobileNavLink href="/manager/users" label={t.nav.users} icon={<Users size={15} />} active={pathname.startsWith('/manager/users')} />
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+                  <LanguageSwitcher />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut size={15} />
+                    {t.notifications.signOut}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
@@ -778,7 +837,6 @@ function NavLinkDirect({
               ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800'
               : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
-        style={{ fontFamily: 'Raleway, sans-serif' }}
       >
         <span className="opacity-75">{icon}</span>
         {label}
@@ -787,5 +845,35 @@ function NavLinkDirect({
         <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
       )}
     </div>
+  );
+}
+
+function MobileNavLink({
+  href,
+  label,
+  icon,
+  active,
+  inset = false,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  inset?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors ${
+        inset ? 'ml-3' : ''
+      } ${
+        active
+          ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]'
+          : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+      }`}
+    >
+      <span className="opacity-75">{icon}</span>
+      {label}
+    </Link>
   );
 }

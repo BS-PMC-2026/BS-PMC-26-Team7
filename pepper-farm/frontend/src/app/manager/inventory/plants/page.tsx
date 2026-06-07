@@ -528,7 +528,7 @@ export default function PlantsByVarietyPage() {
         <Modal onClose={() => setTransferModal(null)}>
           <h2 className="text-lg font-semibold mb-1">Transfer Seedling</h2>
           <p className="text-sm text-[var(--color-muted-foreground)] mb-1">{transferModal.pepperName}</p>
-          <p className="text-xs text-[var(--color-muted-foreground)] mb-4 font-mono">{transferModal.plant.PlantCode}</p>
+          <p className="text-xs text-[var(--color-muted-foreground)] mb-4">{transferModal.plant.PlantCode}</p>
           {transferError && (
             <div className="mb-3 flex items-start gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               <span className="shrink-0 text-base">🚫</span>

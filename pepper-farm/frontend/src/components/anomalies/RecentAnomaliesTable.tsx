@@ -121,8 +121,8 @@ export default function RecentAnomaliesTable({
                       />
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono font-semibold text-gray-800">{alert.actualValue}</td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">{range}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-800">{alert.actualValue}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{range}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${SEVERITY_BADGE[alert.severity] ?? 'bg-gray-100 text-gray-600'}`}>
                       {translateEnum(alert.severity, t.enums.severity)}

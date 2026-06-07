@@ -165,7 +165,7 @@ export default function VisitorSprayRestrictionsPage() {
                     <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
-                        <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
+                        <span className="block text-xs text-[var(--color-muted-foreground)]">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
                         {/* US33 — primary entry permission badge */}

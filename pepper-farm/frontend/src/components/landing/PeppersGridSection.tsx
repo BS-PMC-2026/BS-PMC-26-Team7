@@ -48,7 +48,6 @@ export default function PeppersGridSection({
           </p>
           <h2
             className="text-4xl font-bold text-green-900"
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {la.everyPepperStory}
           </h2>

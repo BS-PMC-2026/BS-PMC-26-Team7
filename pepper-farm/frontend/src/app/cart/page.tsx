@@ -47,6 +47,11 @@ export default function CartPage() {
   const [updating, setUpdating] = useState<number | null>(null);
 
   const loadCart = useCallback(async (code?: string) => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('token')) {
+      startRouteLoader();
+      router.replace('/login?redirect=/cart');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -62,7 +67,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  }, [st.couponInvalid]);
+  }, [router, startRouteLoader, st.couponInvalid]);
 
   useEffect(() => { loadCart(); }, [loadCart]);
 

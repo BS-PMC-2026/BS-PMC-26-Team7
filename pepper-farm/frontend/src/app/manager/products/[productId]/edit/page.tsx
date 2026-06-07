@@ -239,13 +239,6 @@ export default function EditProductPage() {
   return (
     <main className="mx-auto max-w-3xl p-6">
       <div className="mb-6">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="mb-3 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition"
-        >
-          ← Back
-        </button>
         <h1 className="text-3xl font-bold">Edit Product</h1>
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
           Update the product details below.
@@ -471,7 +464,7 @@ export default function EditProductPage() {
           </button>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push('/manager/products')}
             className="rounded-md border border-[var(--color-border)] px-5 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)] transition"
           >
             Cancel

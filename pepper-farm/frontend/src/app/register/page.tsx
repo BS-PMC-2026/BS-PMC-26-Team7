@@ -3,11 +3,15 @@
 import RegisterForm from "@/components/auth/RegisterForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/context/LanguageContext";
+import BackButton from "@/components/ui/BackButton";
 
 export default function RegisterPage() {
   const { locale } = useLanguage();
   return (
     <main className="app-page-bg flex flex-col items-center justify-center relative">
+      <div className="absolute left-4 top-4">
+        <BackButton fallbackHref="/" />
+      </div>
       <div className="absolute top-4 right-4">
         <LanguageSwitcher />
       </div>

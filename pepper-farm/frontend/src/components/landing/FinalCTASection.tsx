@@ -28,7 +28,6 @@ export default function FinalCTASection({
         </p>
         <h2
           className="text-4xl font-bold text-green-900 mb-5"
-          style={{ fontFamily: 'Lora, serif' }}
         >
           {la.readyToTasteHeat}
         </h2>

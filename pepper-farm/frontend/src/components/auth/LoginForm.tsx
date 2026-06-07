@@ -58,7 +58,12 @@ export default function LoginForm() {
         document.cookie = `token=${data.accessToken}; path=/; max-age=3600`;
         document.cookie = `role=${data.role}; path=/; max-age=3600`;
 
-        const route = ROLE_ROUTES[data.role] ?? "/visitor";
+        const redirect = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect")
+          : null;
+        const route = redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : ROLE_ROUTES[data.role] ?? "/visitor";
         startRouteLoader();
         router.push(route);
       });

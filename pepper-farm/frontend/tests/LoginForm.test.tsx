@@ -12,6 +12,7 @@ global.fetch = jest.fn();
 describe('LoginForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.history.pushState({}, '', '/login');
   });
 
   it('renders email and password fields', () => {
@@ -105,6 +106,30 @@ describe('LoginForm', () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/visitor');
+    });
+  });
+
+  it('uses a safe redirect query after login when provided', async () => {
+    window.history.pushState({}, '', '/login?redirect=%2Fcheckout%3FproductId%3D1%26qty%3D1');
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok:   true,
+      json: async () => ({
+        accessToken: 'tok123',
+        tokenType:   'bearer',
+        role:        'Visitor',
+        fullName:    'Test User',
+      }),
+    });
+
+    render(<LoginForm />);
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),
+      { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Your password'),
+      { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByText('Login'));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/checkout?productId=1&qty=1');
     });
   });
 

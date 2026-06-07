@@ -677,7 +677,7 @@ export default function WorkerDashboard() {
                         <span className="shrink-0">🌶️</span>
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{pepperName ?? p.PlantCode}</p>
-                          <p className="font-mono text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
+                          <p className=" text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
                             #{p.PlantId} - {p.PlantCode}
                           </p>
                         </div>
@@ -764,7 +764,7 @@ export default function WorkerDashboard() {
                         <span className="shrink-0">🌶️</span>
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{pepperName ?? p.PlantCode}</p>
-                          <p className="font-mono text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
+                          <p className=" text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
                             #{p.PlantId} - {p.PlantCode}
                           </p>
                         </div>
@@ -1127,7 +1127,7 @@ export default function WorkerDashboard() {
                             ).map((z) => (
                               <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                                 <td className="px-3 py-2">
-                                  <span className="font-medium text-[var(--color-foreground)] font-mono">{z.zoneCode}</span>
+                                  <span className="font-medium text-[var(--color-foreground)]">{z.zoneCode}</span>
                                 </td>
                                 <td className="px-3 py-2">
                                   <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold border ${
@@ -1534,7 +1534,7 @@ export default function WorkerDashboard() {
 
             <h3 className="mb-1 pe-8 text-base font-semibold text-[var(--color-foreground)]">{wk.transferSeedling}</h3>
             <p className="mb-1 text-sm text-[var(--color-muted-foreground)]">{transferRegModal.pepperName}</p>
-            <p className="mb-4 font-mono text-xs text-[var(--color-muted-foreground)]">{transferRegModal.plant.PlantCode}</p>
+            <p className="mb-4 text-xs text-[var(--color-muted-foreground)]">{transferRegModal.plant.PlantCode}</p>
 
             {transferRegError && (
               <div className="mb-3 flex items-start gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
