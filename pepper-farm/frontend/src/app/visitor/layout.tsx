@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Leaf, LogOut, MapPin, Menu, ShieldAlert, ShoppingBag, ShoppingCart, X } from 'lucide-react';
+import { Bell, Leaf, LogOut, MapPin, Menu, ShoppingBag, ShoppingCart, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import {
@@ -27,7 +27,8 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  const [scrolled, setScrolled] = useState(false);
+  /* Navbar is always in its stable white state — no scroll-driven style switch (BSPMT7-486). */
+  const scrolled = true;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -40,12 +41,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
     setBellOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,15 +112,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
             >
               {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
             </span>
-            <span
-              className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
-                scrolled
-                  ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)] border-[var(--color-border)]'
-                  : 'text-white/50 bg-white/10 border-white/20'
-              }`}
-            >
-              Visitor
-            </span>
           </Link>
 
           <button
@@ -148,7 +134,6 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
           <VisitorNavLink href="/visitor" label={t.nav.dashboard} icon={<Leaf size={14} />} active={pathname === '/visitor'} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={14} />} active={pathname.startsWith('/visitor/products')} scrolled={scrolled} />
           <VisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={14} />} active={pathname.startsWith('/visitor/map')} scrolled={scrolled} />
-          <VisitorNavLink href="/visitor/spray-restrictions" label={t.landing.navSafetyMap} icon={<ShieldAlert size={14} />} active={pathname.startsWith('/visitor/spray-restrictions')} scrolled={scrolled} />
           </div>
 
           <Link
@@ -261,10 +246,8 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
             >
               <div className="mx-auto max-w-7xl px-4 py-3">
                 <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
-                  <MobileVisitorNavLink href="/visitor" label={t.nav.dashboard} icon={<Leaf size={15} />} active={pathname === '/visitor'} />
                   <MobileVisitorNavLink href="/visitor/products" label={t.nav.products} icon={<ShoppingBag size={15} />} active={pathname.startsWith('/visitor/products')} />
                   <MobileVisitorNavLink href="/visitor/map" label={t.landing.navFarmMap} icon={<MapPin size={15} />} active={pathname.startsWith('/visitor/map')} />
-                  <MobileVisitorNavLink href="/visitor/spray-restrictions" label={t.landing.navSafetyMap} icon={<ShieldAlert size={15} />} active={pathname.startsWith('/visitor/spray-restrictions')} />
                   <MobileVisitorNavLink href="/cart" label="Cart" icon={<ShoppingCart size={15} />} active={pathname.startsWith('/cart')} badge={cartCount} />
                   <MobileVisitorNavLink href="/profile/orders" label="My Orders" icon={<ShoppingBag size={15} />} active={pathname.startsWith('/profile/orders')} />
                   <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
