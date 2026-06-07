@@ -88,7 +88,8 @@ export default function ManagerNavbar() {
   const [openGroup,  setOpenGroup]  = useState<string | null>(null);
   const [bellOpen,   setBellOpen]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled,   setScrolled]   = useState(false);
+  /* Navbar is always in its stable white state - no scroll-driven style switch (BSPMT7-486). */
+  const scrolled = true;
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissed, setDismissed] = useState<Record<string, number[]>>({
     sensor: [],
@@ -158,12 +159,6 @@ export default function ManagerNavbar() {
   const clearGroup = (kind: 'sensor' | 'spray' | 'overdue' | 'completed', ids: number[]) => {
     persistDismissed({ ...dismissed, [kind]: Array.from(new Set([...(dismissed[kind] ?? []), ...ids])) });
   };
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
