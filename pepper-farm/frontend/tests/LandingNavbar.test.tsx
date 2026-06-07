@@ -170,9 +170,9 @@ describe('LandingNavbar — nav link hrefs (desktop)', () => {
     expect(screen.getByRole('link', { name: /farm map/i })).toHaveAttribute('href', '/visitor/map');
   });
 
-  it('All Varieties links to /visitor/peppers/1', () => {
+  it('All Varieties links to /visitor', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /all varieties/i })).toHaveAttribute('href', '/visitor/peppers/1');
+    expect(screen.getByRole('link', { name: /all varieties/i })).toHaveAttribute('href', '/visitor');
   });
 
   it('Sign In links to /login', () => {

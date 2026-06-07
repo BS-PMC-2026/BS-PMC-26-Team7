@@ -23,7 +23,7 @@ interface PeppersGridSectionProps {
 
 export default function PeppersGridSection({
   peppers,
-  allVarietiesHref = '/visitor/peppers/1',
+  allVarietiesHref = '/visitor',
 }: PeppersGridSectionProps) {
   const { t } = useLanguage();
   const la = t.landing;

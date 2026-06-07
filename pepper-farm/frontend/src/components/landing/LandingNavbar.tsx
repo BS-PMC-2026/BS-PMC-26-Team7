@@ -35,7 +35,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
         { id: 21, title: la.navFarmMap,      url: '/visitor/map'       },
         { id: 22, title: la.navSafetyMap,    url: '/visitor/spray-restrictions' },
         { id: 23, title: la.navProducts,     url: '/visitor/products'  },
-        { id: 24, title: la.navAllVarieties, url: '/visitor/peppers/1' },
+        { id: 24, title: la.navAllVarieties, url: '/visitor' },
       ],
     },
     { id: 3, title: la.navOurFarm, url: '/#farm', dropdown: false },
