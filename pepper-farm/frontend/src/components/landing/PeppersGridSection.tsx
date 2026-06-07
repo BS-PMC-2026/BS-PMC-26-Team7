@@ -59,7 +59,7 @@ export default function PeppersGridSection({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {list.map((p, i) => (
-            <PepperVarietyCard key={p.name} {...p} delay={i * 0.07} />
+            <PepperVarietyCard key={p.name} {...p} delay={i * 0.07} href={allVarietiesHref} />
           ))}
         </div>
 

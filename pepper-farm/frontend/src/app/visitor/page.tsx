@@ -200,7 +200,13 @@ export default function VisitorPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredPeppers.map((pepper) => (
-                <PepperCard key={pepper.PepperId} pepper={pepper} />
+                <Link
+                  key={pepper.PepperId}
+                  href={`/visitor/peppers/${pepper.PepperId}`}
+                  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded-2xl"
+                >
+                  <PepperCard pepper={pepper} />
+                </Link>
               ))}
             </div>
           </>

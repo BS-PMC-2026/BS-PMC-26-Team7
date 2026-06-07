@@ -621,6 +621,13 @@ export interface PeppersDictionary {
   failedToDelete:           string;
   failedToLoad:             string;
   zoneLabel:                string;
+  detailsBackToVarieties:   string;
+  detailsReturnToVarieties: string;
+  detailsScovilleRange:     string;
+  detailsOptimalPar:        string;
+  detailsOptimalTemperature: string;
+  detailsOptimalSoilMoisture: string;
+  detailsNotFound:          string;
 }
 
 export interface ProductsDictionary {
@@ -2001,6 +2008,13 @@ const en: Dictionary = {
     failedToDelete: 'Failed to delete pepper.',
     failedToLoad:   'Failed to load peppers. Is the backend running?',
     zoneLabel:      'Zone',
+    detailsBackToVarieties:     'Back to varieties',
+    detailsReturnToVarieties:   'Return to varieties',
+    detailsScovilleRange:       'Scoville range',
+    detailsOptimalPar:          'Optimal PAR',
+    detailsOptimalTemperature:  'Optimal temperature',
+    detailsOptimalSoilMoisture: 'Optimal soil moisture',
+    detailsNotFound:            'Pepper variety not found.',
   },
 
   products: {
@@ -3307,6 +3321,13 @@ const he: Dictionary = {
     failedToDelete:  'מחיקת הפלפל נכשלה.',
     failedToLoad:    'טעינת הפלפלים נכשלה. האם השרת פועל?',
     zoneLabel:       'אזור',
+    detailsBackToVarieties:     'חזרה לכל הזנים',
+    detailsReturnToVarieties:   'חזרה לכל הזנים',
+    detailsScovilleRange:       'טווח סקוביל',
+    detailsOptimalPar:          'PAR אופטימלי',
+    detailsOptimalTemperature:  'טמפרטורה אופטימלית',
+    detailsOptimalSoilMoisture: 'לחות קרקע אופטימלית',
+    detailsNotFound:            'זן הפלפל לא נמצא.',
   },
 
   products: {
