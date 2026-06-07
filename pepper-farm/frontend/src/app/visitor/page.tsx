@@ -9,7 +9,6 @@ import PageHeader from '@/components/ui/PageHeader';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
-import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorPage() {
   const { t } = useLanguage();
@@ -164,8 +163,6 @@ export default function VisitorPage() {
           </>
         )}
       </div>
-
-      <ChatWidget />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
 import type { AppNotification } from '@/services/notificationsService';
 import { getCart } from '@/services/cartService';
 import BackButton from '@/components/ui/BackButton';
+import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorLayout({ children }: { children: ReactNode }) {
   const { t, locale } = useLanguage();
@@ -276,6 +277,11 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
         )}
         {children}
       </div>
+
+      {/* Visitor AI chatbot — mounted once in the layout so it appears on every
+          Visitor page (/visitor, /visitor/products, /visitor/map, /visitor/peppers/[id]).
+          It is fixed-positioned and flips side for RTL, so it never affects layout. */}
+      <ChatWidget />
     </>
   );
 }
