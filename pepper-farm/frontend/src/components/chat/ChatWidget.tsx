@@ -84,7 +84,7 @@ export default function ChatWidget() {
   // Expanded: the chat panel.
   return (
     <div
-      className={`fixed bottom-4 ${sideClass} z-50 flex max-h-[70vh] w-[20rem] flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl sm:w-[24rem]`}
+      className={`fixed bottom-4 ${sideClass} z-50 flex max-h-[70vh] w-[20rem] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl sm:w-[24rem]`}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">

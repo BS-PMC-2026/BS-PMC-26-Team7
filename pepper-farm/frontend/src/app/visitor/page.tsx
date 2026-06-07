@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import PepperCard from '@/components/peppers/PepperCard';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
@@ -14,7 +13,6 @@ import { Map, ShieldAlert } from 'lucide-react';
 import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function VisitorPage() {
-  const router = useRouter();
   const { t } = useLanguage();
   const vi = t.visitor;
   const [peppers,    setPeppers]   = useState<Pepper[]>([]);
@@ -29,16 +27,6 @@ export default function VisitorPage() {
     const role  = localStorage.getItem('role');
     setIsLoggedIn(!!token && role === 'Visitor');
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('fullName');
-    document.cookie = 'token=; path=/; max-age=0';
-    document.cookie = 'role=; path=/; max-age=0';
-    setIsLoggedIn(false);
-    router.push('/');
-  };
 
   const loadPeppers = useCallback(async () => {
     setIsLoading(true);
@@ -90,7 +78,7 @@ export default function VisitorPage() {
               title={vi.pepperVarietiesTitle}
               subtitle={vi.pepperVarietiesSubtitle}
             />
-            <div className="flex gap-3 mt-1">
+            <div className="flex flex-wrap justify-end gap-3 mt-1">
               {/* Always visible — public safety information, no login required */}
               <Link
                 href="/visitor/spray-restrictions"
@@ -115,12 +103,7 @@ export default function VisitorPage() {
                     <Map size={14} />
                     {vi.map}
                   </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-[var(--color-accent)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-accent-hover)] transition"
-                  >
-                    {vi.logout}
-                  </button>
+                  {/* Logout intentionally omitted here — the visitor layout header already provides it (no duplicate). */}
                 </>
               ) : (
                 <>
@@ -149,24 +132,26 @@ export default function VisitorPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 pt-8 pb-28">
         <div className="mb-6 flex flex-col md:flex-row gap-4">
           <input
           type="text"
-          placeholder="Search pepper varieties..."
+          placeholder={vi.searchPlaceholder}
+          aria-label={vi.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
           />
           <select
           value={heatFilter}
+          aria-label={vi.allHeatLevels}
           onChange={(e) => setHeatFilter(e.target.value)}
           className="rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white">
-            <option value="">All Heat Levels</option>
-            <option value="Mild">Mild</option>
-            <option value="Medium">Medium</option>
-            <option value="Hot">Hot</option>
-            <option value="Extreme">Extreme</option>
+            <option value="">{vi.allHeatLevels}</option>
+            <option value="Mild">{vi.heatMild}</option>
+            <option value="Medium">{vi.heatMedium}</option>
+            <option value="Hot">{vi.heatHot}</option>
+            <option value="Extreme">{vi.heatExtreme}</option>
             </select>
           </div>
         {loadError && <Alert variant="info" className="mb-6">{loadError}</Alert>}
@@ -190,8 +175,8 @@ export default function VisitorPage() {
           ) : filteredPeppers.length === 0 ? (
           <EmptyState
           icon="🔍"
-          title="No pepper varieties found"
-          description="Try a different search term"
+          title={vi.noPepperVariants}
+          description={vi.noResultsDesc}
           />
         ) : (
           <>
@@ -203,7 +188,7 @@ export default function VisitorPage() {
                 <Link
                   key={pepper.PepperId}
                   href={`/visitor/peppers/${pepper.PepperId}`}
-                  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded-2xl"
+                  className="block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded-2xl"
                 >
                   <PepperCard pepper={pepper} />
                 </Link>

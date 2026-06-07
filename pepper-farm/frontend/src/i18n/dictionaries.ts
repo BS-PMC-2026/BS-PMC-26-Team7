@@ -914,6 +914,13 @@ export interface VisitorDictionary {
   farmMapTitle:             string;
   farmMapSubtitle:          string;
   safetyMap:                string;
+  searchPlaceholder:        string;
+  allHeatLevels:            string;
+  heatMild:                 string;
+  heatMedium:               string;
+  heatHot:                  string;
+  heatExtreme:              string;
+  noResultsDesc:            string;
 }
 
 export interface LandingDictionary {
@@ -2170,7 +2177,7 @@ const en: Dictionary = {
     pepperVarietiesSubtitle: 'Browse all pepper varieties grown at our farm',
     label:                   'Hadinerim',
     products:                'Products',
-    map:                     '🗺️ Map',
+    map:                     '🗺️ Farm Map',
     login:                   'Login',
     register:                'Register',
     logout:                  'Logout',
@@ -2184,7 +2191,14 @@ const en: Dictionary = {
     checkBackLater:          'Check back later.',
     farmMapTitle:            'Farm Map',
     farmMapSubtitle:         'Interactive layout of the farm facility — click any section to learn more',
-    safetyMap:               'Safety Map',
+    safetyMap:               'Safety / Spray Restrictions',
+    searchPlaceholder:       'Search pepper varieties...',
+    allHeatLevels:           'All Heat Levels',
+    heatMild:                'Mild',
+    heatMedium:              'Medium',
+    heatHot:                 'Hot',
+    heatExtreme:             'Extreme',
+    noResultsDesc:           'Try a different search term',
   },
 
   landing: {
@@ -3483,7 +3497,7 @@ const he: Dictionary = {
     pepperVarietiesSubtitle: 'עיין בכל זני הפלפל הגדלים בחווה שלנו',
     label:                   'הדינרים',
     products:                'מוצרים',
-    map:                     '🗺️ מפה',
+    map:                     '🗺️ מפת החווה',
     login:                   'התחברות',
     register:                'הרשמה',
     logout:                  'התנתק',
@@ -3497,7 +3511,14 @@ const he: Dictionary = {
     checkBackLater:          'בדוק שוב מאוחר יותר.',
     farmMapTitle:            'מפת החווה',
     farmMapSubtitle:         'פריסה אינטראקטיבית של מתקן החווה — לחץ על כל קטע לפרטים נוספים',
-    safetyMap:               'מפת בטיחות',
+    safetyMap:               'בטיחות / ריסוס',
+    searchPlaceholder:       'חיפוש זני פלפל...',
+    allHeatLevels:           'כל רמות החום',
+    heatMild:                'עדין',
+    heatMedium:              'בינוני',
+    heatHot:                 'חריף',
+    heatExtreme:             'חריף מאוד',
+    noResultsDesc:           'נסה מונח חיפוש אחר',
   },
 
   landing: {
