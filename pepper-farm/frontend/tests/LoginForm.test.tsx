@@ -56,6 +56,35 @@ describe('LoginForm', () => {
     });
   });
 
+  it('disables submit and fields while login is pending', async () => {
+    let resolveLogin: (value: unknown) => void = () => {};
+    (fetch as jest.Mock).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogin = resolve;
+      }),
+    );
+
+    render(<LoginForm />);
+    const email = screen.getByPlaceholderText('your@email.com');
+    const password = screen.getByPlaceholderText('Your password');
+    fireEvent.change(email, { target: { value: 'test@farm.com' } });
+    fireEvent.change(password, { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    expect(screen.getByRole('button')).toBeDisabled();
+    expect(email).toBeDisabled();
+    expect(password).toBeDisabled();
+
+    resolveLogin({
+      ok: false,
+      json: async () => ({ detail: 'Invalid email or password.' }),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /login/i })).not.toBeDisabled();
+    });
+  });
+
   it('redirects to /visitor after Visitor login', async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok:   true,

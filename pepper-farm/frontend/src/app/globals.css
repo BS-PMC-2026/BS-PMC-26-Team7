@@ -159,6 +159,11 @@ body {
   background-color: #F6F8F4;
 }
 
+@keyframes pepper-loader-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ── Utility: Heat Badge ─────────────────────────────────────── */
 .badge-mild    { background: var(--heat-mild-bg,    #F0FBE8); color: #3A7A1A; }
 .badge-medium  { background: var(--heat-medium-bg,  #FFFBEB); color: #92600A; }

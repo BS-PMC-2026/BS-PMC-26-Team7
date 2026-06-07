@@ -23,6 +23,7 @@ import {
   publishAnnouncement,
 } from '@/services/notificationsService';
 import { useLanguage } from '@/context/LanguageContext';
+import PepperSpinnerLoader from '@/components/ui/PepperSpinnerLoader';
 
 /* ── Utility ─────────────────────────────────────────────────────────────────── */
 
@@ -324,6 +325,8 @@ export default function NewsletterPage() {
   const [previewErr,      setPreviewErr]      = useState('');
 
   const [sendingId,  setSendingId]  = useState<number | null>(null);
+  const [sendLoading,setSendLoading]= useState(false);
+  const [archivingId,setArchivingId]= useState<number | null>(null);
   const [sendGroups, setSendGroups] = useState<Set<RecipientGroup>>(new Set(['customers']));
   const [sendResult, setSendResult] = useState<SendTemplateResult | null>(null);
   const [sendErr,    setSendErr]    = useState('');
@@ -422,8 +425,10 @@ export default function NewsletterPage() {
 
   async function handleArchive(id: number) {
     if (!confirm(tn.confirmDelete)) return;
+    setArchivingId(id);
     try { await archiveTemplate(id); await loadTemplates(); }
     catch (err) { setListError(err instanceof Error ? err.message : tn.failedToSaveTemplate); }
+    finally { setArchivingId(null); }
   }
 
   function openSend(tpl: TemplateEntry) {
@@ -436,8 +441,10 @@ export default function NewsletterPage() {
     if (!sendingId) return;
     if (sendGroups.size === 0) { setSendErr(tn.errGroupRequired); return; }
     setSendErr('');
+    setSendLoading(true);
     try { setSendResult(await sendTemplate(sendingId, Array.from(sendGroups))); }
     catch (err) { setSendErr(err instanceof Error ? err.message : tn.failedToSend); }
+    finally { setSendLoading(false); }
   }
 
   async function handleAnnounce() {
@@ -498,7 +505,7 @@ export default function NewsletterPage() {
       {/* ── LIST VIEW ── */}
       {view === 'list' && (
         <section>
-          {listLoading && <p className="text-sm text-[var(--color-muted-foreground)]">{t.common.loading}</p>}
+          {listLoading && <PepperSpinnerLoader minDelay={250} />}
           {listError   && <p className="text-sm text-[var(--color-error)]" data-testid="list-error">{listError}</p>}
           {!listLoading && !listError && templates.length === 0 && (
             <div className="rounded-lg border border-[var(--color-border)] p-8 text-center">
@@ -539,9 +546,10 @@ export default function NewsletterPage() {
                       {tn.sendTemplate}
                     </button>
                     <button onClick={() => handleArchive(tpl.NewsletterTemplateId)}
+                      disabled={archivingId !== null}
                       className="px-2.5 py-1 text-xs rounded border border-red-200 text-red-500 hover:bg-red-50 transition"
                       data-testid={`archive-btn-${tpl.NewsletterTemplateId}`}>
-                      {tn.deleteTemplate}
+                      {archivingId === tpl.NewsletterTemplateId ? tn.savingTemplate : tn.deleteTemplate}
                     </button>
                   </div>
                 </div>
@@ -588,13 +596,14 @@ export default function NewsletterPage() {
                 )}
                 <div className="flex gap-2 justify-end">
                   <button onClick={() => { setSendingId(null); setSendResult(null); setSendErr(''); }}
+                    disabled={sendLoading}
                     className="px-4 py-2 text-sm rounded border border-[var(--color-border)] hover:bg-[var(--color-muted)]">
                     {t.common.close}
                   </button>
-                  <button onClick={handleSend} disabled={!!sendResult}
+                  <button onClick={handleSend} disabled={!!sendResult || sendLoading}
                     className="px-4 py-2 text-sm rounded bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
                     data-testid="send-modal-submit">
-                    {tn.sendTemplate}
+                    {sendLoading ? tn.sending : tn.sendTemplate}
                   </button>
                 </div>
               </div>

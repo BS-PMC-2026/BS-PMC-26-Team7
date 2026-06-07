@@ -11,6 +11,8 @@ import {
   CartLineItem,
 } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
+import { useLoading } from '@/context/LoadingContext';
+import PepperSpinnerLoader from '@/components/ui/PepperSpinnerLoader';
 
 function fmt(n: number) {
   return `₪${Number(n).toFixed(2)}`;
@@ -35,6 +37,7 @@ export default function CartPage() {
   const { t } = useLanguage();
   const st = t.store;
   const router = useRouter();
+  const { startRouteLoader } = useLoading();
 
   const [cart, setCart]         = useState<CartSummary | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -94,11 +97,7 @@ export default function CartPage() {
   }
 
   if (loading) {
-    return (
-      <div className="app-page-bg flex items-center justify-center">
-        <p className="text-sm text-gray-500">{t.common.loading}</p>
-      </div>
-    );
+    return <PepperSpinnerLoader minDelay={250} />;
   }
 
   if (error) {
@@ -266,14 +265,16 @@ export default function CartPage() {
                         value={coupon}
                         onChange={(e) => setCoupon(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        disabled={updating !== null}
                         placeholder="CODE"
                         data-testid="coupon-input"
                         className="flex-1 border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-[var(--color-primary)]"
                       />
                       <button
                         onClick={handleApplyCoupon}
+                        disabled={updating !== null}
                         data-testid="apply-coupon-btn"
-                        className="bg-[var(--color-primary)] text-white text-xs px-3 rounded-md hover:opacity-90"
+                        className="bg-[var(--color-primary)] text-white text-xs px-3 rounded-md hover:opacity-90 disabled:opacity-40"
                       >
                         {st.applyCoupon}
                       </button>
@@ -315,7 +316,10 @@ export default function CartPage() {
                 </div>
 
                 <button
-                  onClick={() => router.push('/checkout')}
+                  onClick={() => {
+                    startRouteLoader();
+                    router.push('/checkout');
+                  }}
                   disabled={cart!.hasBlockingIssues}
                   data-testid="proceed-to-checkout-btn"
                   className="mt-4 w-full bg-[var(--color-primary)] text-white rounded-lg py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-40 transition"

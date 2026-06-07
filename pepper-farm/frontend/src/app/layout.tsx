@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { LanguageProvider } from "@/context/LanguageContext";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Hadinerim",
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -456,6 +456,9 @@ BS-PMC-26-Team7/
 32. **US47 design: all pages use the unified worker-style background.**  
     The shared app background is `#F6F8F4`, exposed through `--background`, `--color-background`, and the `.app-page-bg` utility in `src/app/globals.css`. Root/role layouts and page-level wrappers should use this shared background. Do not add page-level `bg-gray-50`, `bg-[var(--color-muted)]`, or one-off background colours to full-page wrappers; reserve those fills for cards, tables, skeletons, hover states, and small panels.
 
+33. **US47 design: users must receive loading feedback for noticeable waits.**  
+    Use `PepperSpinnerLoader` for page-level, navigation/auth, checkout/payment, and long-running save/update/delete/publish/confirm waits. Small local mutations should use button-level or local pending state. Buttons/forms must be disabled while pending to prevent double submits. Loader copy is only `Loading.` / `Loading..` / `Loading...`; never use product/place names in loader text. The full-screen loader uses the unified `app-page-bg` / `#F6F8F4` background. `LoadingProvider` is mounted at the root and uses pending reference counting so parallel waits do not hide the loader early. `apiFetch` triggers the global loader for non-GET requests; background polling/GET refreshes should remain silent or local.
+
 47. **US41: PayPal Sandbox (real PayPal, not mock):**
     - **Credit card = mock only**: Validates card fields + Luhn, stores only last 4 digits + brand. Never calls any real card gateway. Mock-decline card: `4000 0000 0000 0002`. `PaymentMethod="credit_card"` in DB.
     - **PayPal = real PayPal Sandbox**: Uses PayPal Orders API v2. No mock/fake PayPal flow. `paymentMethod="paypal"` in DB. Credentials: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` (backend-only). Frontend uses `NEXT_PUBLIC_PAYPAL_CLIENT_ID` only. Sandbox: `https://api-m.sandbox.paypal.com`.

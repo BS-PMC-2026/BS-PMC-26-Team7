@@ -15,6 +15,8 @@ import {
 } from '@/services/paypalService';
 import { getCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
+import { useLoading } from '@/context/LoadingContext';
+import PepperSpinnerLoader from '@/components/ui/PepperSpinnerLoader';
 
 declare global {
   interface Window {
@@ -62,9 +64,11 @@ function PayPalPanel({
   quickQty?: string;
   onSuccess: (orderId: number) => void;
 }) {
+  const { withLoader, startRouteLoader } = useLoading();
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready,  setReady]  = useState(false);
   const [sdkErr, setSdkErr] = useState<string | null>(null);
+  const [paypalPending, setPaypalPending] = useState(false);
 
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? '';
   const currency = process.env.NEXT_PUBLIC_PAYPAL_CURRENCY ?? 'ILS';
@@ -96,22 +100,33 @@ function PayPalPanel({
 
     window.paypal.Buttons({
       createOrder: async () => {
-        const resp = await createPaypalOrder({ couponCode, items });
-        return resp.paypalOrderId;
+        setPaypalPending(true);
+        try {
+          const resp = await withLoader(() => createPaypalOrder({ couponCode, items }));
+          return resp.paypalOrderId;
+        } finally {
+          setPaypalPending(false);
+        }
       },
       onApprove: async (data: { orderID: string }) => {
-        const result = await capturePaypalOrder({ paypalOrderId: data.orderID, couponCode, items });
-        if (result.success && result.orderId) {
-          onSuccess(result.orderId);
-        } else {
-          setSdkErr(result.errors.length > 0 ? result.errors.join(' ') : result.message);
+        setPaypalPending(true);
+        try {
+          const result = await withLoader(() => capturePaypalOrder({ paypalOrderId: data.orderID, couponCode, items }));
+          if (result.success && result.orderId) {
+            startRouteLoader();
+            onSuccess(result.orderId);
+          } else {
+            setSdkErr(result.errors.length > 0 ? result.errors.join(' ') : result.message);
+          }
+        } finally {
+          setPaypalPending(false);
         }
       },
       onError: (err: unknown) => {
         setSdkErr(`PayPal error: ${err instanceof Error ? err.message : String(err)}`);
       },
     }).render(containerRef.current);
-  }, [ready, couponCode, quickProductId, quickQty, onSuccess]);
+  }, [ready, couponCode, quickProductId, quickQty, onSuccess, startRouteLoader, withLoader]);
 
   if (sdkErr) {
     return (
@@ -128,8 +143,13 @@ function PayPalPanel({
     <div className="bg-white rounded-xl border border-[var(--color-border)] p-5">
       {!ready && (
         <p className="text-sm text-gray-500 text-center py-4" data-testid="paypal-loading">
-          Loading PayPal…
+          Loading...
         </p>
+      )}
+      {paypalPending && (
+        <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[#F6F8F4] px-3 py-2 text-center text-sm text-[var(--color-muted-foreground)]">
+          Loading...
+        </div>
       )}
       <div ref={containerRef} data-testid="paypal-button-container" />
     </div>
@@ -139,6 +159,7 @@ function PayPalPanel({
 
 function CheckoutPageInner() {
   const { t } = useLanguage();
+  const { startRouteLoader } = useLoading();
   const st = t.store;
   const router = useRouter();
   const params = useSearchParams();
@@ -276,6 +297,7 @@ function CheckoutPageInner() {
     try {
       const result = await pay(buildRequest('mock_credit_card'));
       if (result.success && result.orderId) {
+        startRouteLoader();
         router.push(`/checkout/success?orderId=${result.orderId}`);
       } else {
         setGlobalErr(result.errors.length > 0 ? result.errors : [result.message]);
@@ -293,11 +315,7 @@ function CheckoutPageInner() {
   }
 
   if (loading) {
-    return (
-      <div className="app-page-bg flex items-center justify-center">
-        <p className="text-sm text-gray-500">{t.common.loading}</p>
-      </div>
-    );
+    return <PepperSpinnerLoader minDelay={250} />;
   }
 
   if (error && !preview) {
@@ -359,6 +377,7 @@ function CheckoutPageInner() {
                   <input
                     type="text"
                     value={card.cardholderName}
+                    disabled={submitting}
                     onChange={(e) => { setCard({ ...card, cardholderName: e.target.value }); if (cardErrs.cardholderName) setCardErrs(p => ({ ...p, cardholderName: undefined })); }}
                     onBlur={() => validateFieldOnBlur('cardholderName')}
                     data-testid="input-cardholder-name"
@@ -378,6 +397,7 @@ function CheckoutPageInner() {
                     type="text"
                     inputMode="numeric"
                     value={card.cardNumber}
+                    disabled={submitting}
                     onChange={(e) => {
                       // Strip all non-digits, re-insert spaces every 4 chars
                       const formatted = fmtCardDisplay(e.target.value);
@@ -407,6 +427,7 @@ function CheckoutPageInner() {
                       <input
                         type="text"
                         value={card.expiryMonth}
+                        disabled={submitting}
                         onChange={(e) => setCard({ ...card, expiryMonth: e.target.value })}
                         placeholder="MM"
                         maxLength={2}
@@ -418,6 +439,7 @@ function CheckoutPageInner() {
                       <input
                         type="text"
                         value={card.expiryYear}
+                        disabled={submitting}
                         onChange={(e) => setCard({ ...card, expiryYear: e.target.value })}
                         placeholder="YY"
                         maxLength={4}
@@ -436,6 +458,7 @@ function CheckoutPageInner() {
                     <input
                       type="text"
                       value={card.cvv}
+                      disabled={submitting}
                       onChange={(e) => setCard({ ...card, cvv: e.target.value })}
                       placeholder="123"
                       maxLength={4}
@@ -531,11 +554,7 @@ function CheckoutPageInner() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={
-      <div className="app-page-bg flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
-      </div>
-    }>
+    <Suspense fallback={<PepperSpinnerLoader minDelay={250} />}>
       <CheckoutPageInner />
     </Suspense>
   );

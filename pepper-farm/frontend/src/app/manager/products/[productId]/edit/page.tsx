@@ -267,7 +267,9 @@ export default function EditProductPage() {
       <form
         onSubmit={handleSubmit}
         className="space-y-5 rounded-lg border border-[var(--color-border)] bg-white p-6 shadow-sm"
+        aria-busy={submitting}
       >
+        <fieldset disabled={submitting} className="space-y-5 disabled:opacity-70">
         <div>
           <label htmlFor="ProductName" className="mb-1 block text-sm font-medium">
             Product Name *
@@ -475,6 +477,7 @@ export default function EditProductPage() {
             Cancel
           </button>
         </div>
+        </fieldset>
       </form>
     </main>
   );
