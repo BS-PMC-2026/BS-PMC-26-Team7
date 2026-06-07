@@ -48,7 +48,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 export default function WorkerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { t, dir } = useLanguage();
+  const { t, dir, locale } = useLanguage();
   const {
     unreadCount, clearUnread, newTasks, activeTasks,
     appNotifs, appUnreadCount, loadAppNotifs, markAllAppNotifsRead,
@@ -191,7 +191,7 @@ export default function WorkerNavbar() {
             }`}
             style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${

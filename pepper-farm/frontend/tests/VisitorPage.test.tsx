@@ -98,9 +98,9 @@ describe('VisitorPage', () => {
     expect(screen.getByText('Pepper Varieties')).toBeInTheDocument();
   });
 
-  it('renders PepperFarm label in header', async () => {
+  it('renders Hadinerim label in header', async () => {
     (peppersService.getAllPeppers as jest.Mock).mockResolvedValue([]);
     await act(async () => { render(<VisitorPage />); });
-    expect(screen.getByText('PepperFarm')).toBeInTheDocument();
+    expect(screen.getByText('Hadinerim')).toBeInTheDocument();
   });
 });

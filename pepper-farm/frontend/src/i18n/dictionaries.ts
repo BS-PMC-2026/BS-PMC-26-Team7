@@ -1527,7 +1527,7 @@ const en: Dictionary = {
   },
 
   manager: {
-    title:              'PepperFarm',
+    title:              'Hadinerim',
     subtitle:           'Farm Manager Dashboard',
     label:              'Manager',
     userManagement:     'User Management',
@@ -1547,8 +1547,8 @@ const en: Dictionary = {
 
   dashboard: {
     title:                 'Farm Manager Dashboard',
-    subtitle:              'PepperFarm / Pepper Farm Management',
-    pepperFarmManagement:  'PepperFarm Management',
+    subtitle:              'Hadinerim / Hadinerim Management',
+    pepperFarmManagement:  'Hadinerim Management',
     managerUser:           'Manager',
     tasks:                 'Tasks',
     openTasks:             'Open Tasks',
@@ -1717,7 +1717,7 @@ const en: Dictionary = {
   inventory: {
     title:                    'Warehouse Inventory',
     subtitle:                 'Warehouse is the source of truth. Store (allocated) quantity must stay within warehouse quantity.',
-    label:                    'PepperFarm',
+    label:                    'Hadinerim',
     plantsByVariety:          '🌱 Plants by Variety',
     addItem:                  '+ Add Item',
     failedToLoad:             'Failed to load inventory. Is the backend running?',
@@ -2020,7 +2020,7 @@ const en: Dictionary = {
   products: {
     title:          'Product Catalog',
     subtitle:       'Browse and manage all products',
-    label:          'PepperFarm',
+    label:          'Hadinerim',
     addNewProduct:  '+ Add New Product',
     failedToLoad:   'Failed to load products. Is the backend running?',
     noProducts:     'No products available',
@@ -2044,7 +2044,7 @@ const en: Dictionary = {
   map: {
     title:             'Farm Map — Assign Peppers to Zones',
     subtitle:          'Select a pepper variety and click a zone to plant it there',
-    label:             'PepperFarm',
+    label:             'Hadinerim',
     selectPepper:      'Select Pepper:',
     choosePepper:      '-- Choose a pepper --',
     clickZoneHint:     '✅ Now click a zone on the map to plant it',
@@ -2168,7 +2168,7 @@ const en: Dictionary = {
   visitor: {
     pepperVarietiesTitle:    'Pepper Varieties',
     pepperVarietiesSubtitle: 'Browse all pepper varieties grown at our farm',
-    label:                   'PepperFarm',
+    label:                   'Hadinerim',
     products:                'Products',
     map:                     '🗺️ Map',
     login:                   'Login',
@@ -2229,9 +2229,9 @@ const en: Dictionary = {
     feature3Body:        'We track every plant from seed to harvest day. Peppers are picked at the exact moment of peak flavour and immediately packed for freshness.',
     interactive:         'Interactive',
     exploreFarmMap:      'Explore our farm map',
-    mapDesc:             'Navigate every zone of PepperFarm. See which varieties grow where, check plant health, and plan your visit.',
+    mapDesc:             'Navigate every zone of Hadinerim. See which varieties grow where, check plant health, and plan your visit.',
     openFarmMap:         'Open Farm Map',
-    joinPepperFarm:      'Join PepperFarm',
+    joinPepperFarm:      'Join Hadinerim',
     readyToTasteHeat:    'Ready to taste the heat?',
     ctaDesc:             'Create a free account to track your favourite varieties, get harvest notifications, and order directly from our farm.',
     createFreeAccount:   'Create Free Account',
@@ -2239,7 +2239,7 @@ const en: Dictionary = {
     footerLogin:         'Login',
     footerRegister:      'Register',
     footerFarmMap:       'Farm Map',
-    footerCopyright:     '© {year} PepperFarm. Grown with care in Israel.',
+    footerCopyright:     '© {year} Hadinerim. Grown with care in Israel.',
     exploreVariety:      'Explore variety',
   },
 
@@ -2842,7 +2842,7 @@ const he: Dictionary = {
   },
 
   manager: {
-    title:              'פלפל פארם',
+    title:              'הדינרים',
     subtitle:           'לוח בקרה של מנהל החווה',
     label:              'מנהל',
     userManagement:     'ניהול משתמשים',
@@ -2862,8 +2862,8 @@ const he: Dictionary = {
 
   dashboard: {
     title:                 'לוח ניהול החווה',
-    subtitle:              'PepperFarm / ניהול חוות הפלפלים',
-    pepperFarmManagement:  'ניהול PepperFarm',
+    subtitle:              'הדינרים / ניהול חוות הפלפלים',
+    pepperFarmManagement:  'ניהול הדינרים',
     managerUser:           'מנהל',
     tasks:                 'משימות',
     openTasks:             'משימות פתוחות',
@@ -3030,7 +3030,7 @@ const he: Dictionary = {
   inventory: {
     title:                    'מלאי מחסן',
     subtitle:                 'המחסן הוא מקור האמת. כמות החנות חייבת להיות בתוך כמות המחסן.',
-    label:                    'פלפל פארם',
+    label:                    'הדינרים',
     plantsByVariety:          '🌱 צמחים לפי זן',
     addItem:                  '+ הוסף פריט',
     failedToLoad:             'טעינת המלאי נכשלה. האם השרת פועל?',
@@ -3333,7 +3333,7 @@ const he: Dictionary = {
   products: {
     title:          'קטלוג מוצרים',
     subtitle:       'עיין ונהל את כל המוצרים',
-    label:          'פלפל פארם',
+    label:          'הדינרים',
     addNewProduct:  '+ הוסף מוצר חדש',
     failedToLoad:   'טעינת המוצרים נכשלה. האם השרת פועל?',
     noProducts:     'אין מוצרים זמינים',
@@ -3357,7 +3357,7 @@ const he: Dictionary = {
   map: {
     title:             'מפת חווה — שיוך פלפלים לאזורים',
     subtitle:          'בחר זן פלפל ולחץ על אזור לשתילה',
-    label:             'פלפל פארם',
+    label:             'הדינרים',
     selectPepper:      'בחר פלפל:',
     choosePepper:      '-- בחר פלפל --',
     clickZoneHint:     '✅ עכשיו לחץ על אזור במפה לשתילה',
@@ -3481,7 +3481,7 @@ const he: Dictionary = {
   visitor: {
     pepperVarietiesTitle:    'זני פלפל',
     pepperVarietiesSubtitle: 'עיין בכל זני הפלפל הגדלים בחווה שלנו',
-    label:                   'פלפל פארם',
+    label:                   'הדינרים',
     products:                'מוצרים',
     map:                     '🗺️ מפה',
     login:                   'התחברות',
@@ -3542,9 +3542,9 @@ const he: Dictionary = {
     feature3Body:        'אנו עוקבים אחר כל צמח מזרע ועד יום הקציר. הפלפלים נקטפים ברגע המדויק של שיא הטעם ומיד נארזים לשמירה על הטריות.',
     interactive:         'אינטראקטיבי',
     exploreFarmMap:      'גלה את מפת החווה שלנו',
-    mapDesc:             'נווט בכל אזור של PepperFarm. ראה אילו זנים גדלים היכן, בדוק את בריאות הצמחים ותכנן את ביקורך.',
+    mapDesc:             'נווט בכל אזור של הדינרים. ראה אילו זנים גדלים היכן, בדוק את בריאות הצמחים ותכנן את ביקורך.',
     openFarmMap:         'פתח מפת חווה',
-    joinPepperFarm:      'הצטרף ל-PepperFarm',
+    joinPepperFarm:      'הצטרף להדינרים',
     readyToTasteHeat:    'מוכן לטעום את החריפות?',
     ctaDesc:             'צור חשבון חינמי כדי לעקוב אחר הזנים האהובים עליך, לקבל הודעות קציר ולהזמין ישירות מהחווה שלנו.',
     createFreeAccount:   'צור חשבון חינמי',
@@ -3552,7 +3552,7 @@ const he: Dictionary = {
     footerLogin:         'כניסה',
     footerRegister:      'הרשמה',
     footerFarmMap:       'מפת חווה',
-    footerCopyright:     '© {year} PepperFarm. מגודל באהבה בישראל.',
+    footerCopyright:     '© {year} הדינרים. מגודל באהבה בישראל.',
     exploreVariety:      'גלה את הזן',
   },
 

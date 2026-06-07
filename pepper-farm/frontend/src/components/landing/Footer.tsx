@@ -16,7 +16,7 @@ interface FooterProps {
 }
 
 export default function Footer({ links }: FooterProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const la = t.landing;
 
   /* Minimal footer: keep the Farm Map content link only — Login / Register
@@ -41,7 +41,7 @@ export default function Footer({ links }: FooterProps) {
             className="font-semibold text-green-900 text-sm"
             style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
         </div>
 

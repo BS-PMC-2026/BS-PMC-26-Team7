@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Hadinerim",
-  description: "Pepper Farm Management System",
+  description: "Hadinerim Management System",
 };
 
 export default function RootLayout({

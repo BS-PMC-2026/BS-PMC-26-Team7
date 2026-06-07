@@ -170,7 +170,7 @@ export default function ManagerPage() {
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">
-              PepperFarm
+              {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
             </p>
             <h1 className="text-3xl font-semibold text-[var(--color-foreground)]">{d.title}</h1>
           </div>

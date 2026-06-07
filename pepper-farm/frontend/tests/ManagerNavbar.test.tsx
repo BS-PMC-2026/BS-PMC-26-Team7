@@ -103,9 +103,9 @@ describe('ManagerNavbar — rendering', () => {
     mockAcknowledgeSprayAlert.mockClear();
   });
 
-  it('renders the PepperFarm logo', () => {
+  it('renders the Hadinerim logo', () => {
     renderNavbar();
-    expect(screen.getByText('PepperFarm')).toBeInTheDocument();
+    expect(screen.getByText('Hadinerim')).toBeInTheDocument();
   });
 
   it('renders the "Manager" role badge', () => {
@@ -146,7 +146,7 @@ describe('ManagerNavbar — rendering', () => {
 
   it('logo links to the home page', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /pepperfarm/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /hadinerim/i })).toHaveAttribute('href', '/');
   });
 });
 

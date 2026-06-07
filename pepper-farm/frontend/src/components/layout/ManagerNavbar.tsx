@@ -72,7 +72,7 @@ function timeAgo(dateStr: string | null | undefined): string {
 export default function ManagerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { t, dir } = useLanguage();
+  const { t, dir, locale } = useLanguage();
   const {
     unreadCount,
     clearUnread,
@@ -239,7 +239,7 @@ export default function ManagerNavbar() {
             }`}
             style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${

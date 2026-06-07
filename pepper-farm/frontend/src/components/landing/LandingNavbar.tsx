@@ -21,7 +21,7 @@ interface LandingNavbarProps {
  */
 export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const la = t.landing;
 
   const NAV_ITEMS: IMenu[] = [
@@ -77,7 +77,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
             }`}
             style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
         </Link>
 

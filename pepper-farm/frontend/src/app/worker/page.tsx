@@ -881,7 +881,7 @@ export default function WorkerDashboard() {
       <div className="border-b border-[var(--color-border)] bg-white/85">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">PepperFarm</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">{locale === 'he' ? 'הדינרים' : 'Hadinerim'}</p>
             <h1 className="text-3xl font-semibold text-[var(--color-foreground)]">{wk.dashboardTitle}</h1>
           </div>
           {workerName && (

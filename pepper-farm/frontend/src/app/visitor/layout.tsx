@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, LogOut, ShoppingCart, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import {
   getMyNotifications,
   getUnreadCount,
@@ -16,7 +17,7 @@ import { getCart } from '@/services/cartService';
 /* Minimal visitor header — shows notification bell for in-app messages (Fix D). */
 
 export default function VisitorLayout({ children }: { children: ReactNode }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const router = useRouter();
 
   const [bellOpen,    setBellOpen]    = useState(false);
@@ -72,9 +73,12 @@ export default function VisitorLayout({ children }: { children: ReactNode }) {
       {/* Slim visitor header */}
       <header className="fixed top-0 left-0 right-0 z-[9999] bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)] h-12 flex items-center px-4 gap-3">
         <Link href="/visitor" className="font-semibold text-green-700 text-sm no-underline">
-          🌶️ PepperFarm
+          🌶️ {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
         </Link>
         <div className="flex-1" />
+
+        {/* Language switcher — lets visitors/customers toggle EN/HE after login too */}
+        <LanguageSwitcher />
 
         {/* Cart icon with item count */}
         <Link href="/cart" className="relative flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer text-gray-500 hover:bg-gray-100 transition" data-testid="visitor-cart-icon">
