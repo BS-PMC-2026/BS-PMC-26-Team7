@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import { getPepperById } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizePepperZoneForDisplay } from '@/lib/displayNormalization';
 
 /**
  * One labelled detail row; renders nothing when the value is empty.
@@ -57,7 +58,7 @@ function formatRange(
 
 export default function PepperDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const vi = t.visitor;
 
   const pd = t.peppers;
@@ -179,7 +180,7 @@ export default function PepperDetailsPage() {
                 <DetailRow label={pd.detailsOptimalPar} value={par} ltrValue />
                 <DetailRow label={pd.detailsOptimalTemperature} value={temp} ltrValue />
                 <DetailRow label={pd.detailsOptimalSoilMoisture} value={moisture} ltrValue />
-                <DetailRow label={pd.zoneLabel} value={pepper.Zone} />
+                <DetailRow label={pd.zoneLabel} value={normalizePepperZoneForDisplay(pepper.Zone, locale)} />
               </div>
 
               <div className="mt-6">

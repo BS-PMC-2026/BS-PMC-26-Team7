@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge';
 import { ProductResponse , deleteProduct } from '@/services/productService';
 import { addToCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizeProductCategoryForDisplay } from '@/lib/displayNormalization';
 
 interface ProductCardProps {
   product: ProductResponse;
@@ -36,7 +37,7 @@ function isDiscountCurrentlyActive(product: ProductResponse): boolean {
 }
 
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const pr = t.products;
@@ -160,7 +161,7 @@ export default function ProductCard({ product, showEditButton = false }: Product
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-semibold text-gray-900 leading-snug">{product.ProductName}</h3>
           {product.Category && (
-            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">{product.Category}</Badge>
+            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">{normalizeProductCategoryForDisplay(product.Category, locale)}</Badge>
           )}
         </div>
 

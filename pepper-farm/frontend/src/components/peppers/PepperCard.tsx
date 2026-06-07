@@ -4,6 +4,7 @@ import { Pepper } from '@/types/pepper';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizePepperZoneForDisplay } from '@/lib/displayNormalization';
 
 interface PepperCardProps {
   pepper: Pepper;
@@ -24,7 +25,7 @@ function HeatBadge({ min, max }: { min?: number | null; max?: number | null }) {
 }
 
 export default function PepperCard({ pepper }: PepperCardProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   return (
     <Card className="overflow-hidden flex flex-col h-full transition-shadow hover:shadow-md rounded-2xl">
       {/* Image */}
@@ -78,7 +79,7 @@ export default function PepperCard({ pepper }: PepperCardProps) {
 
         {pepper.Zone && (
           <p className="text-xs text-gray-400 mt-auto pt-2 border-t border-gray-100">
-            {t.peppers.zoneLabel}: <span className="text-gray-600 font-medium">{pepper.Zone}</span>
+            {t.peppers.zoneLabel}: <span className="text-gray-600 font-medium">{normalizePepperZoneForDisplay(pepper.Zone, locale)}</span>
           </p>
         )}
       </div>

@@ -11,9 +11,10 @@ import { getProducts } from '@/services/productService';
 import { ProductResponse } from '@/services/productService';
 import { getMyConsent, updateMyConsent } from '@/services/emailConsentService';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizeProductCategoryForDisplay } from '@/lib/displayNormalization';
 
 export default function VisitorProductsPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const vi = t.visitor;
   const router = useRouter();
   const [products,        setProducts]        = useState<ProductResponse[]>([]);
@@ -159,7 +160,7 @@ const filteredProducts = products
 
     {categories.map((category) => (
       <option key={category} value={category ?? ''}>
-        {category}
+        {normalizeProductCategoryForDisplay(category, locale)}
       </option>
     ))}
   </select>
