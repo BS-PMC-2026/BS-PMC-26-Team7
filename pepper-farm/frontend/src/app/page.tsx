@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useScroll, useSpring, useTransform, motion } from 'framer-motion';
 
 import LandingNavbar      from '@/components/landing/LandingNavbar';
@@ -21,13 +20,6 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
-  /* Navbar switches visual state once scrolled past hero */
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const unsub = scrollYProgress.on('change', (v) => setScrolled(v > 0.02));
-    return unsub;
-  }, [scrollYProgress]);
-
   return (
     <div className="app-page-bg overflow-x-hidden" style={{ fontFamily: 'Raleway, sans-serif' }}>
 
@@ -37,7 +29,8 @@ export default function LandingPage() {
         style={{ scaleX: scrollYProgress, transformOrigin: '0%' }}
       />
 
-      <LandingNavbar scrolled={scrolled} />
+      {/* Navbar is always rendered in its stable white state (no scroll-driven switch) */}
+      <LandingNavbar scrolled />
 
       <HeroSection smoothProgress={smoothProgress} scrollYProgress={scrollYProgress} />
 

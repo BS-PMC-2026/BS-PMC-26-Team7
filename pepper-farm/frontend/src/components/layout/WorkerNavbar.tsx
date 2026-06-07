@@ -86,7 +86,8 @@ export default function WorkerNavbar() {
   }
 
   const [bellOpen,  setBellOpen]  = useState(false);
-  const [scrolled,  setScrolled]  = useState(false);
+  /* Navbar is always in its stable white state — no scroll-driven style switch (BSPMT7-486). */
+  const scrolled = true;
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissedTaskIds, setDismissedTaskIds] = useState<number[]>([]);
 
@@ -125,12 +126,6 @@ export default function WorkerNavbar() {
   const clearTaskGroup = () => {
     persistDismissed(Array.from(new Set([...dismissedTaskIds, ...popupTasks.map((task) => task.id)])));
   };
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
