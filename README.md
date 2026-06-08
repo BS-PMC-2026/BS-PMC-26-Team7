@@ -210,6 +210,30 @@ Implemented improvements:
 
 ---
 
+## Frontend Azure Deployment Note
+
+The frontend deployment workflow builds the Next.js app in GitHub Actions,
+packages the standalone output, and deploys the ready-to-run ZIP to Azure App
+Service. Azure-side Oryx/Kudu build must remain disabled for `Hadinerimfront`.
+
+```bash
+az webapp config appsettings set \
+  -g bs-pm-2026-team7 \
+  -n Hadinerimfront \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false
+
+az webapp config set \
+  -g bs-pm-2026-team7 \
+  -n Hadinerimfront \
+  --startup-file "node server.js"
+
+az webapp restart \
+  -g bs-pm-2026-team7 \
+  -n Hadinerimfront
+```
+
+---
+
 ## Project Structure
 
 ```text

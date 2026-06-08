@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: azure-webapps-deploy
-  cancel-in-progress: false
-
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
@@ -44,6 +40,9 @@ jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
     needs: deploy-backend
+    concurrency:
+      group: hadinerimfront-production
+      cancel-in-progress: true
 
     defaults:
       run:
@@ -63,28 +62,32 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm ci
 
+      # GitHub Actions builds the Next.js app. Azure receives a ready-to-run ZIP;
+      # Azure-side Oryx/Kudu build must remain disabled for this App Service.
       - name: Build Frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_BASE_URL: https://hadinerim.azurewebsites.net
+          API_PROXY_TARGET: https://hadinerim.azurewebsites.net
 
-      - name: Prepare Frontend Package
+      - name: Prepare Standalone Frontend Package
         run: |
-          rm -rf node_modules
-          rm -rf .next/cache
-          zip -r ../../frontend-package.zip . \
-            -x "node_modules/*" \
-            -x ".next/cache/*" \
-            -x ".env" \
-            -x ".git/*"
-
-      - name: Wait before Azure Deploy
-        run: sleep 30
-        working-directory: .
+          rm -rf deploy frontend-package.zip
+          mkdir -p deploy
+          cp -a .next/standalone/. deploy/
+          rm -f deploy/.env deploy/.env.*
+          mkdir -p deploy/.next
+          cp -a .next/static deploy/.next/static
+          if [ -d public ]; then cp -a public deploy/public; fi
+          cd deploy
+          zip -r ../frontend-package.zip .
+          cd ..
+          ls -lh frontend-package.zip
+          unzip -l frontend-package.zip | head -100
 
       - name: Deploy Frontend to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: Hadinerimfront
-          publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          package: ./frontend-package.zip
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: pepper-farm/frontend/frontend-package.zip
