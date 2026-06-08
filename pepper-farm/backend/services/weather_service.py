@@ -442,6 +442,18 @@ def _build_recommendations(
     window_max_temp = max(
         (d.tempMaxC for d in window), default=current.temperatureC
     )
+    window_max_wind = max(
+        (d.windSpeedMaxKph for d in window), default=current.windSpeedKph
+    )
+
+    # Wind signal used for the spraying decision. Today uses the current
+    # instantaneous wind; future ranges also consider the forecast maximum wind
+    # across the selected window (so a calm "now" with windy forecast days still
+    # blocks/cautions spraying). Rain, humidity and sensor logic are unchanged.
+    if selected_range == "today":
+        spray_wind = current.windSpeedKph
+    else:
+        spray_wind = max(current.windSpeedKph, window_max_wind)
 
     # Secondary sensor signals.
     sensor_humidity = sensors.avgHumidityPct if sensors else None
@@ -454,12 +466,12 @@ def _build_recommendations(
     )
 
     # Spraying — weather is primary; high sensor humidity is a secondary signal.
-    if current.windSpeedKph > SPRAY_WIND_MAX_KPH:
+    if spray_wind > SPRAY_WIND_MAX_KPH:
         spray_status, spray_reason, spray_factors = "not_advised", "high_wind", ["high_wind"]
     elif window_rain >= SPRAY_RAIN_PROB_PCT or current.precipitationMm > 0:
         spray_status, spray_reason, spray_factors = "not_advised", "rain_expected", ["rain_expected"]
     else:
-        if current.windSpeedKph >= SPRAY_WIND_CAUTION_KPH:
+        if spray_wind >= SPRAY_WIND_CAUTION_KPH:
             spray_status, spray_reason, spray_factors = "caution", "moderate_wind", ["moderate_wind"]
         else:
             spray_status, spray_reason, spray_factors = "advised", "good_conditions", ["good_conditions"]

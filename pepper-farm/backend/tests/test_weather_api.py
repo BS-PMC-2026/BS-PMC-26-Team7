@@ -509,7 +509,17 @@ def test_today_combined_factors_wind_and_humidity(manager_client, db):
 def test_next_2_days_ignores_sensor(manager_client, db):
     """Next 2 days: a fresh high-humidity sensor must NOT affect recommendations."""
     seed_humid_sensor(db, humidity=92.0)
-    with mock_open_meteo(json_data=make_meteo_body()):  # calm
+    # Genuinely calm forecast winds (< 12 km/h) so the spraying result is driven
+    # purely by conditions, isolating the "sensor humidity is ignored" check.
+    calm_daily = {
+        "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+        "weather_code": [1, 2, 1, 0],
+        "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+        "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+        "precipitation_probability_max": [10, 5, 0, 15],
+        "wind_speed_10m_max": [8.0, 7.0, 9.0, 6.0],
+    }
+    with mock_open_meteo(json_data=make_meteo_body(daily=calm_daily)):  # calm winds
         res = manager_client.get("/api/manager/weather?range=next_2_days")
 
     assert res.status_code == 200
@@ -530,6 +540,81 @@ def test_weekly_ignores_sensor(manager_client, db):
     assert res.status_code == 200
     spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
     assert "high_humidity" not in spraying["factors"]
+
+
+def test_next_2_days_high_forecast_wind_blocks_spraying(manager_client):
+    """Next 2 days: calm current wind but high FORECAST wind → not_advised/high_wind."""
+    body = make_meteo_body(
+        current=MODERATE_WIND_CURRENT | {"wind_speed_10m": 5.0},  # calm right now
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],   # no rain confounder
+            "wind_speed_10m_max": [10.0, 25.0, 8.0, 8.0],     # day 2 (in window) is windy
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=next_2_days")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "not_advised"
+    assert spraying["reason"] == "high_wind"
+    assert "high_wind" in spraying["factors"]
+
+
+def test_next_2_days_moderate_forecast_wind_cautions_spraying(manager_client):
+    """Next 2 days: calm current wind but moderate FORECAST wind → caution/moderate_wind."""
+    body = make_meteo_body(
+        current=MODERATE_WIND_CURRENT | {"wind_speed_10m": 5.0},  # calm right now
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],   # no rain confounder
+            "wind_speed_10m_max": [15.0, 14.0, 8.0, 8.0],     # 12–20 band within window
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=next_2_days")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "caution"
+    assert spraying["reason"] == "moderate_wind"
+    assert "moderate_wind" in spraying["factors"]
+
+
+def test_today_ignores_high_forecast_wind(manager_client):
+    """Today: calm current wind keeps spraying advised even if the daily max is high."""
+    body = make_meteo_body(
+        current={
+            "time": "2026-05-31T14:00",
+            "temperature_2m": 24.0,
+            "relative_humidity_2m": 50,
+            "wind_speed_10m": 5.0,            # calm right now
+            "precipitation": 0.0,
+            "weather_code": 1,
+        },
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],
+            "wind_speed_10m_max": [30.0, 8.0, 8.0, 8.0],      # today's daily max is high
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=today")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "advised"            # today uses current wind only
+    assert spraying["reason"] == "good_conditions"
 
 
 def test_weekly_returns_seven_forecast_days(manager_client):
