@@ -247,7 +247,17 @@ export default function SprayMapPage() {
     description: '',
     checklistItems: [],
   };
+  const [searchTerm, setSearchTerm] = useState('');
+  const filteredSprayAlerts = sprayAlerts.filter((alert) => {
+  const search = searchTerm.toLowerCase();
 
+  return (
+    alert.ZoneName?.toLowerCase().includes(search) ||
+    alert.ZoneCode?.toLowerCase().includes(search) ||
+    alert.PesticideName?.toLowerCase().includes(search) ||
+    alert.ReportStatus?.toLowerCase().includes(search)
+  );
+});
   return (
     <div className="min-h-screen">
       {/* Page header */}
@@ -394,7 +404,7 @@ export default function SprayMapPage() {
                     <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
-                        <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
+                        <span className="block text-xs text-[var(--color-muted-foreground)]">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLE[z.sprayStatus]}`}>
@@ -452,9 +462,18 @@ export default function SprayMapPage() {
                 Alerts generated automatically when workers submit spray reports
               </p>
             </div>
+            <div className="mb-4">
+  <input
+    type="text"
+    placeholder="Search spray alerts..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 bg-white"
+  />
+</div>
             {!alertsLoading && sprayAlerts.length > 0 && (
               <span className="text-xs text-[var(--color-muted-foreground)]">
-                {sprayAlerts.filter((a) => !a.IsRead).length} unread of {sprayAlerts.length}
+                {filteredSprayAlerts.filter((a) => !a.IsRead).length} unread of {filteredSprayAlerts.length}
               </span>
             )}
           </div>
@@ -492,7 +511,7 @@ export default function SprayMapPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {sprayAlerts.map((alert) => (
+                    {filteredSprayAlerts.map((alert) => (
                       <tr
                         key={alert.SprayAlertId}
                         className={`hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/40' : ''}`}
@@ -505,7 +524,7 @@ export default function SprayMapPage() {
                             </span>
                             <span>
                               <span className="font-medium text-[var(--color-foreground)]">{alert.ZoneName}</span>
-                              <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{alert.ZoneCode}</span>
+                              <span className="block text-xs text-[var(--color-muted-foreground)]">{alert.ZoneCode}</span>
                             </span>
                           </span>
                         </td>
@@ -547,7 +566,7 @@ export default function SprayMapPage() {
           )}
 
           {/* Alerts empty state */}
-          {!alertsLoading && sprayAlerts.length === 0 && !alertsError && (
+          {!alertsLoading && filteredSprayAlerts.length === 0 && !alertsError && (
             <div className="text-center py-12 text-[var(--color-muted-foreground)] bg-white rounded-2xl border border-[var(--color-border)]" data-testid="spray-alerts-empty">
               <p className="text-3xl mb-2">🛡️</p>
               <p className="font-medium text-sm">{sp.noSprayAlertsYet}</p>
@@ -615,7 +634,7 @@ export default function SprayMapPage() {
                       >
                         <td className="px-4 py-3">
                           <span className="font-medium text-[var(--color-foreground)]">{alert.ZoneName}</span>
-                          <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{alert.ZoneCode}</span>
+                          <span className="block text-xs text-[var(--color-muted-foreground)]">{alert.ZoneCode}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${OVERDUE_SEVERITY_STYLE[alert.Severity]}`}>
@@ -685,7 +704,7 @@ export default function SprayMapPage() {
               </h3>
               <p className="text-sm text-[var(--color-muted-foreground)] mb-4">
                 {sp.zone}: <span className="font-medium text-[var(--color-foreground)]">{assigningAlert.ZoneName}</span>{' '}
-                <span className="font-mono text-xs text-[var(--color-muted-foreground)]">({assigningAlert.ZoneCode})</span>
+                <span className=" text-xs text-[var(--color-muted-foreground)]">({assigningAlert.ZoneCode})</span>
               </p>
 
               {assignSuccess ? (

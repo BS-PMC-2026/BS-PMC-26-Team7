@@ -6,48 +6,22 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
-  ClipboardList,
   ShoppingBag,
-  Sprout,
-  ChevronDown,
+  ShoppingCart,
   Leaf,
   LogOut,
-  MapPin,
-  Droplets,
   Bell,
   X,
   ClipboardCheck,
+  Menu,
 } from 'lucide-react';
 import { useWorkerNotification } from '@/context/WorkerNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/context/LanguageContext';
-import {
-  getUnreadCount,
-  markAllNotificationsRead,
-  getMyNotifications,
-} from '@/services/notificationsService';
-import type { AppNotification } from '@/services/notificationsService';
+import { getCart } from '@/services/cartService';
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                        */
-/* -------------------------------------------------------------------------- */
-
-type NavItem = {
-  label: string;
-  href: string;
-  icon: React.ReactNode;
-  description?: string;
-};
-
-type NavGroup = {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  items: NavItem[];
-};
-
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                      */
 /* -------------------------------------------------------------------------- */
 
 function timeAgo(dateStr: string | null | undefined): string {
@@ -75,67 +49,51 @@ const PRIORITY_COLOR: Record<string, string> = {
 export default function WorkerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { t, dir } = useLanguage();
-  const { unreadCount, clearUnread, newTasks, activeTasks } = useWorkerNotification();
+  const { t, dir, locale } = useLanguage();
+  const {
+    unreadCount, clearUnread, newTasks, activeTasks,
+    appNotifs, appUnreadCount, loadAppNotifs, markAllAppNotifsRead,
+  } = useWorkerNotification();
 
-  // US40: in-app notifications (messages/announcements only — NOT newsletter emails)
-  const [appNotifCount,   setAppNotifCount]   = useState(0);
-  const [appNotifOpen,    setAppNotifOpen]    = useState(false);
-  const [appNotifs,       setAppNotifs]       = useState<AppNotification[]>([]);
-  const [appNotifLoading, setAppNotifLoading] = useState(false);
-
+  // US41: cart item count badge
+  const [cartCount, setCartCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    const poll = async () => {
+    const loadCart = async () => {
       try {
-        const { unreadCount: count } = await getUnreadCount();
-        if (!cancelled) setAppNotifCount(count);
-      } catch { /* table not yet created — ignore */ }
+        const cart = await getCart();
+        if (!cancelled) setCartCount(cart.items.reduce((s, i) => s + i.quantity, 0));
+      } catch { /* ignore — worker may not have items */ }
     };
-    poll();
-    const id = setInterval(poll, 60_000);
+    loadCart();
+    // Re-poll cart count every 30 s so badge stays accurate
+    const id = setInterval(loadCart, 30_000);
     return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  }, [pathname]);   // refresh whenever the route changes (e.g. after checkout)
+
+  // US40: in-app notifications — now managed via WorkerNotificationContext (shared with dashboard)
+  const [appNotifLoading, setAppNotifLoading] = useState(false);
 
   async function openAppNotifs() {
-    setAppNotifOpen(true);
     setAppNotifLoading(true);
     try {
-      const list = await getMyNotifications();
-      setAppNotifs(list);
-      setAppNotifCount(list.filter((n) => !n.isRead).length);
+      await loadAppNotifs();
     } catch { /* ignore */ }
     finally { setAppNotifLoading(false); }
   }
 
   async function handleMarkAllRead() {
-    try {
-      await markAllNotificationsRead();
-      setAppNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setAppNotifCount(0);
-    } catch { /* ignore */ }
+    await markAllAppNotifsRead();
   }
 
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [bellOpen,  setBellOpen]  = useState(false);
-  const [scrolled,  setScrolled]  = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  /* Navbar is always in its stable white state - no scroll-driven style switch (BSPMT7-486). */
+  const scrolled = true;
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissedTaskIds, setDismissedTaskIds] = useState<number[]>([]);
 
   const navRef        = useRef<HTMLElement>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navGroups: NavGroup[] = [
-    {
-      id: 'plants',
-      label: t.nav.plants,
-      icon: <Sprout size={15} />,
-      items: [
-        { label: t.nav.addPlant,       href: '/worker/plants/add',             icon: <Sprout size={14} />, description: t.nav.addPlantSub },
-        { label: t.nav.updateLocation, href: '/worker/plants/update-location', icon: <MapPin size={14} />, description: t.nav.updateLocationSub },
-      ],
-    },
-  ];
-
   const dismissedTaskIdSet = new Set(dismissedTaskIds);
   const visibleNewTasks = newTasks.filter((task) => !dismissedTaskIdSet.has(task.id));
   const visibleActiveTasks = activeTasks.filter((task) => !dismissedTaskIdSet.has(task.id));
@@ -143,7 +101,7 @@ export default function WorkerNavbar() {
   const historyTasks = [...newTasks, ...activeTasks].filter((task, index, all) =>
     dismissedTaskIdSet.has(task.id) && all.findIndex((item) => item.id === task.id) === index,
   );
-  const visibleUnreadCount = Math.max(0, unreadCount - newTasks.filter((task) => dismissedTaskIdSet.has(task.id)).length);
+  const visibleUnreadCount  = Math.max(0, unreadCount - newTasks.filter((task) => dismissedTaskIdSet.has(task.id)).length);
 
   useEffect(() => {
     try {
@@ -172,15 +130,8 @@ export default function WorkerNavbar() {
   };
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenGroup(null);
         setBellOpen(false);
       }
     };
@@ -189,24 +140,14 @@ export default function WorkerNavbar() {
   }, []);
 
   useEffect(() => {
-    setOpenGroup(null);
     setBellOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
-
-  const scheduleClose = () => {
-    closeTimerRef.current = setTimeout(() => setOpenGroup(null), 100);
-  };
-  const cancelClose = () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  };
-
-  const isGroupActive = (group: NavGroup) =>
-    group.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
 
   const handleBellClick = () => {
     const next = !bellOpen;
     setBellOpen(next);
-    setOpenGroup(null);
+    setMobileMenuOpen(false);
     if (next) {
       clearUnread();
       // Fix A: load in-app notifications when bell opens so the panel shows real details
@@ -232,7 +173,7 @@ export default function WorkerNavbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-1">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 mr-3 no-underline">
@@ -247,9 +188,8 @@ export default function WorkerNavbar() {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
@@ -262,88 +202,52 @@ export default function WorkerNavbar() {
           </span>
         </Link>
 
+        <button
+          type="button"
+          onClick={() => { setMobileMenuOpen((open) => !open); setBellOpen(false); }}
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          className={`ml-auto flex md:hidden items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+            mobileMenuOpen
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-green-900 hover:bg-[var(--color-secondary-light)]' : 'text-white/80 hover:bg-white/10'
+          }`}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+
         {/* Divider */}
-        <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+        <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
         <NavLinkDirect href="/worker"              label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/worker'}                          scrolled={scrolled} />
-        <NavLinkDirect href="/worker/my-tasks"     label={t.worker.myTasks} icon={<ClipboardList size={14} />}   active={pathname.startsWith('/worker/my-tasks')}         scrolled={scrolled} />
         <NavLinkDirect href="/worker/products"     label={t.nav.products} icon={<ShoppingBag size={14} />}     active={pathname.startsWith('/worker/products')}         scrolled={scrolled} />
-        <NavLinkDirect href="/worker/spray-report" label={t.worker.sprayReport} icon={<Droplets size={14} />} active={pathname.startsWith('/worker/spray-report') || pathname.startsWith('/worker/spray-restrictions')} scrolled={scrolled} />
+        </div>
 
-        {/* Plants dropdown */}
-        {navGroups.map((group) => {
-          const active = isGroupActive(group);
-          const open   = openGroup === group.id;
-          return (
-            <div key={group.id} className="relative"
-              onMouseEnter={() => { cancelClose(); setOpenGroup(group.id); setBellOpen(false); }}
-              onMouseLeave={scheduleClose}
+        {/* US41 — cart icon with item count badge (worker has full cart access) */}
+        <Link
+          href="/cart"
+          aria-label="Cart"
+          data-testid="worker-cart-icon"
+          className={`relative hidden md:flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 shrink-0 ${
+            pathname.startsWith('/cart')
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          <ShoppingCart size={15} />
+          {cartCount > 0 && (
+            <span
+              className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-green-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+              data-testid="worker-cart-badge"
             >
-              <button
-                onClick={() => { setOpenGroup(open ? null : group.id); setBellOpen(false); }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
-                  active || open
-                    ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
-                    : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)]' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10'
-                }`}
-                style={{ fontFamily: 'Raleway, sans-serif' }}
-              >
-                <span className="opacity-80">{group.icon}</span>
-                {group.label}
-                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="flex opacity-50">
-                  <ChevronDown size={12} />
-                </motion.span>
-              </button>
-
-              {active && <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />}
-
-              <AnimatePresence>
-                {open && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                    onMouseEnter={cancelClose}
-                    onMouseLeave={scheduleClose}
-                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white overflow-hidden z-[100]"
-                    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
-                  >
-                    <div className="p-1.5">
-                      {group.items.map((item) => {
-                        const itemActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                        return (
-                          <Link key={item.href} href={item.href}
-                            className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
-                              itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
-                            }`}
-                          >
-                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>{item.icon}</span>
-                            <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
-                                {item.label}
-                              </span>
-                              {item.description && (
-                                <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">{item.description}</span>
-                              )}
-                            </span>
-                            {itemActive && <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
-
-        {/* Spacer */}
-        <div className="flex-1" />
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          )}
+        </Link>
 
         {/* Bell — unified: task notifications + in-app messages (Fix E: single bell) */}
-        <div className="relative">
+        <div className="relative hidden md:block shrink-0">
           <button
             onClick={handleBellClick}
             aria-label={t.notifications.taskNotifications}
@@ -351,13 +255,13 @@ export default function WorkerNavbar() {
             className={`relative flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
               bellOpen
                 ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
-                : (visibleUnreadCount + appNotifCount) > 0
+                : (visibleUnreadCount + appUnreadCount) > 0
                   ? scrolled ? 'text-red-500 hover:bg-[var(--color-error-bg)]' : 'text-red-300 hover:bg-white/10'
                   : scrolled ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]' : 'text-white/50 hover:bg-white/10 hover:text-white'
             }`}
           >
             <motion.span
-              animate={(visibleUnreadCount + appNotifCount) > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
+              animate={(visibleUnreadCount + appUnreadCount) > 0 && !bellOpen ? { rotate: [0, -15, 12, -8, 5, 0] } : {}}
               transition={{ duration: 0.5, ease: 'easeInOut' }}
               className="flex"
             >
@@ -365,7 +269,7 @@ export default function WorkerNavbar() {
             </motion.span>
 
             <AnimatePresence>
-              {(visibleUnreadCount + appNotifCount) > 0 && (
+              {(visibleUnreadCount + appUnreadCount) > 0 && (
                 <motion.span
                   key="badge"
                   initial={{ scale: 0, opacity: 0 }}
@@ -375,7 +279,7 @@ export default function WorkerNavbar() {
                   className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
                   data-testid="worker-bell-badge"
                 >
-                  {(visibleUnreadCount + appNotifCount) > 99 ? '99+' : (visibleUnreadCount + appNotifCount)}
+                  {(visibleUnreadCount + appUnreadCount) > 99 ? '99+' : (visibleUnreadCount + appUnreadCount)}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -394,7 +298,7 @@ export default function WorkerNavbar() {
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
                     {t.notifications.taskNotifications}
                     {visibleUnreadCount > 0 && (
                       <span className="ml-1.5 text-[10px] font-bold text-red-400">
@@ -450,7 +354,7 @@ export default function WorkerNavbar() {
                       {visibleNewTasks.length > 0 ? t.notifications.newlyAssigned : t.notifications.activeTasks}
                     </span>
                     <Link
-                      href="/worker/my-tasks"
+                      href="/worker"
                       onClick={() => setBellOpen(false)}
                       className="text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
@@ -467,7 +371,7 @@ export default function WorkerNavbar() {
                           key={task.id}
                           className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors"
                         >
-                          <Link href="/worker/my-tasks" onClick={() => setBellOpen(false)} className="contents">
+                          <Link href="/worker" onClick={() => setBellOpen(false)} className="contents">
                           <span className={`mt-0.5 shrink-0 ${PRIORITY_COLOR[task.priority] ?? 'text-[var(--color-muted-foreground)]'}`}>
                             <ClipboardCheck size={13} />
                           </span>
@@ -499,13 +403,13 @@ export default function WorkerNavbar() {
                 </div>
 
                 {/* Fix E: in-app messages inside the unified bell panel */}
-                {(appNotifs.length > 0 || appNotifCount > 0) && (
+                {(appNotifs.length > 0 || appUnreadCount > 0) && (
                   <div className="border-t border-[var(--color-border)] px-3.5 pt-2 pb-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-muted-foreground)]">
                         {t.appNotifications.appNotifications}
                       </span>
-                      {appNotifCount > 0 && (
+                      {appUnreadCount > 0 && (
                         <button onClick={handleMarkAllRead} className="text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
                           {t.appNotifications.markAllAsRead}
                         </button>
@@ -560,18 +464,33 @@ export default function WorkerNavbar() {
           </AnimatePresence>
         </div>
 
+        {/* My Orders */}
+        <Link
+          href="/profile/orders"
+          className={`hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap shrink-0 ${
+            pathname.startsWith('/profile/orders')
+              ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
+              : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)]' : 'text-white/60 hover:opacity-100 hover:bg-white/10 hover:text-white'
+          }`}
+          data-testid="worker-my-orders-link"
+        >
+          My Orders
+        </Link>
+
         {/* Language switcher */}
-        <LanguageSwitcher />
+        <div className="hidden md:block shrink-0">
+          <LanguageSwitcher />
+        </div>
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
+        <div className={`hidden md:block w-px h-4.5 mx-1 shrink-0 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           title={t.notifications.signOut}
           aria-label={t.notifications.signOut}
-          className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+          className={`hidden md:flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 shrink-0 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
@@ -580,6 +499,37 @@ export default function WorkerNavbar() {
           <LogOut size={14} />
         </button>
       </div>
+
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="md:hidden border-t border-white/10 bg-white/95 backdrop-blur-md shadow-xl"
+          >
+            <div className="mx-auto max-w-7xl px-4 py-3">
+              <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                <MobileNavLink href="/worker" label={t.nav.dashboard} icon={<LayoutDashboard size={15} />} active={pathname === '/worker'} />
+                <MobileNavLink href="/worker/products" label={t.nav.products} icon={<ShoppingBag size={15} />} active={pathname.startsWith('/worker/products')} />
+                <MobileNavLink href="/cart" label="Cart" icon={<ShoppingCart size={15} />} active={pathname.startsWith('/cart')} badge={cartCount} />
+                <MobileNavLink href="/profile/orders" label="My Orders" icon={<ShoppingBag size={15} />} active={pathname.startsWith('/profile/orders')} />
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+                  <LanguageSwitcher />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut size={15} />
+                    {t.notifications.signOut}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
@@ -598,12 +548,44 @@ function NavLinkDirect({ href, label, icon, active, scrolled }: { href: string; 
             ? scrolled ? 'text-[var(--color-primary)] bg-[var(--color-secondary-light)]' : 'text-white bg-white/10'
             : scrolled ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
-        style={{ fontFamily: 'Raleway, sans-serif' }}
       >
         <span className="opacity-75">{icon}</span>
         {label}
       </Link>
       {active && <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />}
     </div>
+  );
+}
+
+function MobileNavLink({
+  href,
+  label,
+  icon,
+  active,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors ${
+        active
+          ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]'
+          : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+      }`}
+    >
+      <span className="opacity-75">{icon}</span>
+      <span>{label}</span>
+      {!!badge && badge > 0 && (
+        <span className="ml-auto min-w-[18px] rounded-full bg-green-600 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
   );
 }

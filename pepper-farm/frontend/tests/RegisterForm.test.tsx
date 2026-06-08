@@ -65,6 +65,41 @@ describe('RegisterForm', () => {
     expect(body.emailConsent).toBe(true);
   });
 
+  it('disables submit and fields while registration is pending', async () => {
+    let resolveRegister: (value: unknown) => void = () => {};
+    (fetch as jest.Mock).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRegister = resolve;
+      }),
+    );
+
+    render(<RegisterForm />);
+    const fullName = screen.getByPlaceholderText('Your full name');
+    const email = screen.getByPlaceholderText('your@email.com');
+    const password = screen.getByPlaceholderText('Min. 6 characters');
+    const consent = screen.getByTestId('email-consent-checkbox');
+
+    fireEvent.change(fullName, { target: { value: 'Test User' } });
+    fireEvent.change(email, { target: { value: 'test@farm.com' } });
+    fireEvent.change(password, { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /register/i }));
+
+    expect(screen.getByRole('button')).toBeDisabled();
+    expect(fullName).toBeDisabled();
+    expect(email).toBeDisabled();
+    expect(password).toBeDisabled();
+    expect(consent).toBeDisabled();
+
+    resolveRegister({
+      ok: false,
+      json: async () => ({ detail: 'Registration failed.' }),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /register/i })).not.toBeDisabled();
+    });
+  });
+
   it('renders register button', () => {
     render(<RegisterForm />);
     expect(screen.getByText('Register')).toBeInTheDocument();

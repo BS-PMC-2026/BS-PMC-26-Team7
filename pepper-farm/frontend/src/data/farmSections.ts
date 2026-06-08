@@ -35,6 +35,16 @@ const GH_DESC_EN   = 'Main growing greenhouse for pepper cultivation, equipped w
 const GH_SMALL_EN  = 'Secondary growing greenhouse used for overflow capacity and specialty pepper cultivation.';
 const GERM_DESC_EN = 'Visitor greenhouse with display plants, interactive exhibits, and educational materials about pepper varieties.';
 
+// Zone types that are valid targets for FIRST planting of a new seedling
+export const PLANTABLE_ZONE_TYPES = new Set<FarmSectionData['type']>(['nursery']);
+
+// Zone types that are valid targets when TRANSFERRING an existing seedling
+export const TRANSFER_TARGET_ZONE_TYPES = new Set<FarmSectionData['type']>([
+  'greenhouse',   // GH-01 to GH-08 — regular growing greenhouses
+  'growing',      // GH-09, GH-10   — small growing greenhouses
+  'germination',  // GERM-01 to GERM-04 — visitor greenhouses
+]);
+
 export const FARM_SECTIONS: FarmSectionData[] = [
   { id: 'GH-01', name: 'חממת גידול 1',  nameEn: 'Greenhouse 1',        area: 'מ״ר 400', areaEn: '400 m²', descriptionEn: GH_DESC_EN,   type: 'greenhouse',  color: TYPE_BORDER_COLORS.greenhouse,  position: { x: 40,   y: 40,  width: 58,  height: 320 } },
   { id: 'GH-02', name: 'חממת גידול 2',  nameEn: 'Greenhouse 2',        area: 'מ״ר 400', areaEn: '400 m²', descriptionEn: GH_DESC_EN,   type: 'greenhouse',  color: TYPE_BORDER_COLORS.greenhouse,  position: { x: 105,  y: 40,  width: 58,  height: 320 } },

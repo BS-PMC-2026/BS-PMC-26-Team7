@@ -7,6 +7,14 @@ from routers.emails import router as emails_router
 from routers.newsletter_templates import router as newsletter_templates_router
 from routers.email_consent import router as email_consent_router
 from routers.notifications import router as notifications_router
+from routers.cart import router as cart_router
+from routers.checkout import router as checkout_router
+from routers.payments import router as payments_router
+from routers.coupons import router as coupons_router
+from routers.employee_discount import router as employee_discount_router
+from routers.orders import router as orders_router
+from routers.analytics import router as analytics_router
+from routers.worker_dashboard import router as worker_dashboard_router
 import models.role  # noqa: F401
 import models.pepper_variety  # noqa: F401
 import models.farm_zone  # noqa: F401
@@ -91,6 +99,16 @@ app.include_router(emails_router)
 app.include_router(newsletter_templates_router)
 app.include_router(email_consent_router)
 app.include_router(notifications_router)
+app.include_router(cart_router)
+app.include_router(checkout_router)
+app.include_router(payments_router)
+app.include_router(coupons_router)
+app.include_router(employee_discount_router)
+app.include_router(orders_router)
+app.include_router(analytics_router)
+app.include_router(worker_dashboard_router)
+
+app.include_router(weather.router)
 
 @app.get("/api/health/db")
 def db_health():

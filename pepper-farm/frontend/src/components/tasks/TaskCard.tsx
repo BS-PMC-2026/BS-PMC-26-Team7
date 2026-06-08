@@ -126,6 +126,8 @@ interface TaskCardProps {
   task: Task;
   workers: Worker[];
   onEdit?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
+  canDelete?: boolean;
   onStatusChange?: (task: Task, newStatus: TaskStatus) => void;
   onToggleChecklistItem?: (task: Task, item: ChecklistItem, nextCompleted: boolean) => void;
 }
@@ -134,6 +136,8 @@ export default function TaskCard({
   task,
   workers,
   onEdit,
+  onDelete,
+  canDelete = true,
   onStatusChange,
   onToggleChecklistItem,
 }: TaskCardProps) {
@@ -177,6 +181,17 @@ export default function TaskCard({
               className="ml-1 px-2 py-0.5 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
             >
               {tk.editButton}
+            </button>
+          )}
+          {/* Soft-delete (US42): managers only (onDelete provided) and only for
+              tasks the current manager created (canDelete). Allowed in any
+              status, including done. */}
+          {onDelete && canDelete && (
+            <button
+              onClick={() => onDelete(task)}
+              className="px-2 py-0.5 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+            >
+              {tk.deleteButton}
             </button>
           )}
         </div>

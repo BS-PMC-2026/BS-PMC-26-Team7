@@ -1,8 +1,14 @@
 /**
- * Tests for US31 — /worker/spray-restrictions (WorkerSprayRestrictionsPage).
+ * Tests for US31 — Worker spray-restrictions map (SpraySafetyMapSection).
+ *
+ * The route /worker/spray-restrictions was converted to a redirect; the actual
+ * map UI now lives in the worker dashboard Sprays mode. We import the component directly to preserve test
+ * coverage over the map functionality, and also verify that the old route
+ * redirects correctly.
  *
  * Covers:
- *  - Page renders for worker
+ *  - /worker/spray-restrictions redirects to /worker
+ *  - Component renders for worker
  *  - Loading skeleton shown while fetching
  *  - SprayZoneMap renders with data
  *  - Restricted zones banner shown when unsafe/requires_approval zones exist
@@ -18,8 +24,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 /* ── Mocks ───────────────────────────────────────────────────────────────── */
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
-  usePathname: () => '/worker/spray-restrictions',
+  redirect: (...args: unknown[]) => mockRedirect(...args),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '/worker',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 jest.mock('next/link', () => {
@@ -80,8 +88,26 @@ const renderPage = () => render(React.createElement(SprayRestrictionsPage));
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 
-describe('WorkerSprayRestrictionsPage', () => {
-  afterEach(() => { mockGetRestrictedZones.mockReset(); });
+/* ── Route redirect tests ────────────────────────────────────────────────── */
+
+describe('WorkerSprayRestrictionsPage route', () => {
+  beforeEach(() => {
+    mockRedirect.mockClear();
+  });
+
+  it('redirects to /worker', () => {
+    WorkerSprayRestrictionsPage();
+
+    expect(mockRedirect).toHaveBeenCalledWith('/worker');
+  });
+});
+
+/* ── Component tests ─────────────────────────────────────────────────────── */
+
+describe('SpraySafetyMapSection', () => {
+  afterEach(() => {
+    mockGetRestrictedZones.mockReset();
+  });
 
   it('renders the page title', async () => {
     mockGetRestrictedZones.mockResolvedValue([]);

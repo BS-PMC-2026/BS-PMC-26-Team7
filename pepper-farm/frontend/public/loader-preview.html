@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Loader Preview</title>
+    <style>
+      :root {
+        --bg: #f6f8f4;
+        --text: #315f29;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+      }
+
+      .ring {
+        position: relative;
+        width: 128px;
+        height: 128px;
+        animation: spin 1.35s linear infinite;
+      }
+
+      .pepper {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        display: block;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateY(-45px)
+          scale(var(--scale));
+        opacity: var(--opacity);
+        filter: drop-shadow(0 5px 8px rgb(47 85 45 / 0.2));
+      }
+
+      .pepper svg {
+        display: block;
+        transform: rotate(-22deg);
+      }
+
+      .text {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 400;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ring {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="loader" role="status" aria-live="polite" aria-busy="true">
+      <div class="ring" aria-hidden="true"></div>
+      <p class="text">Loading<span id="dots">.</span></p>
+    </main>
+
+    <script>
+      const swatches = [
+        ["#2F6F2F", "#1F4D24", "#42682E", "#D7E9C8", 1, 1.02],
+        ["#D83A2E", "#A92420", "#7B4822", "#FFE0D8", 1, 1.04],
+        ["#7FA46D", "#5E804D", "#6C8C4E", "#E4EFD8", 0.78, 0.98],
+        ["#A6BD8D", "#7F9869", "#8AA06B", "#EFF6E7", 0.48, 0.96],
+        ["#C7D5B3", "#9BAD86", "#9DAE78", "#F7FAEF", 0.35, 0.94],
+        ["#9AB87D", "#71935D", "#789756", "#EDF5E5", 0.64, 0.98],
+        ["#6F9A55", "#4D7439", "#587A3E", "#E3EFD7", 0.84, 1],
+        ["#315F29", "#21451E", "#42682E", "#D3E5C4", 1, 1.02],
+      ];
+
+      const ring = document.querySelector(".ring");
+      const pepperSvg = (body, shadow, stem, highlight) => `
+        <svg width="34" height="54" viewBox="0 0 34 54" fill="none">
+          <path d="M18.4 6.5c-2.5-3.1-5-4.7-7.3-4.8" stroke="${stem}" stroke-width="3.2" stroke-linecap="round" />
+          <path d="M18.7 6.2c7.1 4.7 10 13.2 7.8 22.7-2.4 10.3-9.9 18.1-20.2 20.7-1.9.5-3.4-1.4-2.5-3.1 3.4-6.5 3.1-14.4 4.1-22.4C9.1 14.2 12.8 7.8 18.7 6.2Z" fill="${body}" />
+          <path d="M20.8 10.4c4.4 5.6 5.1 12.5 2.3 20.3-2.8 7.5-8.4 13.1-15.9 16" stroke="${shadow}" stroke-width="4.2" stroke-linecap="round" opacity="0.42" />
+          <path d="M20.2 13.7c2.7 3.1 3.3 7.2 1.7 12.1" stroke="${highlight}" stroke-width="3.2" stroke-linecap="round" opacity="0.75" />
+          <path d="M16.4 37.8c-2 2.6-4.6 4.4-7.8 5.4" stroke="${highlight}" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
+        </svg>`;
+
+      swatches.forEach(([body, shadow, stem, highlight, opacity, scale], index) => {
+        const pepper = document.createElement("span");
+        pepper.className = "pepper";
+        pepper.style.setProperty("--angle", `${index * 45}deg`);
+        pepper.style.setProperty("--opacity", opacity);
+        pepper.style.setProperty("--scale", scale);
+        pepper.innerHTML = pepperSvg(body, shadow, stem, highlight);
+        ring.appendChild(pepper);
+      });
+
+      let dots = 1;
+      setInterval(() => {
+        dots = (dots % 3) + 1;
+        document.getElementById("dots").textContent = ".".repeat(dots);
+      }, 450);
+    </script>
+  </body>
+</html>

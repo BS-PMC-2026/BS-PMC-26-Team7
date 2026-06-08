@@ -14,6 +14,7 @@ export type PlantResponse = {
   PepperId: number;
   ZoneId?: number | null;
   PlantedAt?: string | null;
+  TransferredAt?: string | null;
   Status?: string | null;
   Notes?: string | null;
   IsActive: boolean;

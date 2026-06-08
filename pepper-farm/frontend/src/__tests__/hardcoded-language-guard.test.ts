@@ -15,7 +15,8 @@ const ROOT = path.resolve(__dirname, '../../');
 
 const US38_SCAN_FILES = [
   'src/app/manager/page.tsx',
-  'src/app/manager/tasks/page.tsx',
+  'src/components/tasks/ManageTasksModalContent.tsx',
+  'src/components/spray/SprayManagementModalContent.tsx',
   'src/app/manager/inventory/page.tsx',
   'src/app/manager/reports/page.tsx',
   'src/app/manager/sensors/page.tsx',

@@ -101,14 +101,14 @@ const renderNavbar = (scrolled = false) => render(React.createElement(LandingNav
 /* -------------------------------------------------------------------------- */
 
 describe('LandingNavbar — rendering', () => {
-  it('renders the PepperFarm logo', () => {
+  it('renders the Hadinerim logo', () => {
     renderNavbar();
-    expect(screen.getByText('PepperFarm')).toBeInTheDocument();
+    expect(screen.getByText('Hadinerim')).toBeInTheDocument();
   });
 
   it('logo links to the home page', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /pepperfarm/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /hadinerim/i })).toHaveAttribute('href', '/');
   });
 
   it('renders the desktop NavMenu', () => {
@@ -170,9 +170,9 @@ describe('LandingNavbar — nav link hrefs (desktop)', () => {
     expect(screen.getByRole('link', { name: /farm map/i })).toHaveAttribute('href', '/visitor/map');
   });
 
-  it('All Varieties links to /visitor/peppers/1', () => {
+  it('All Varieties links to /visitor', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /all varieties/i })).toHaveAttribute('href', '/visitor/peppers/1');
+    expect(screen.getByRole('link', { name: /all varieties/i })).toHaveAttribute('href', '/visitor');
   });
 
   it('Sign In links to /login', () => {

@@ -5,11 +5,17 @@ import { ZoneSummary, getZones } from '@/services/zones';
 import { getPesticides, createSprayReport } from '@/services/spray';
 import { Pesticide, SafetyWarning } from '@/types/spray';
 import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
 import { useLanguage } from '@/context/LanguageContext';
 
 type ReportType = 'completed' | 'planned';
 
-export default function SprayReportForm() {
+interface SprayReportFormProps {
+  initialZoneCode?: string | null;
+  onSubmitted?: () => void;
+}
+
+export default function SprayReportForm({ initialZoneCode = null, onSubmitted }: SprayReportFormProps) {
   const { t } = useLanguage();
   const sp = t.spray;
 
@@ -68,6 +74,12 @@ export default function SprayReportForm() {
     loadCatalogs();
   }, [loadCatalogs]);
 
+  useEffect(() => {
+    if (!initialZoneCode || zones.length === 0) return;
+    const selectedZone = zones.find((z) => z.ZoneCode === initialZoneCode);
+    if (selectedZone) setZoneId(selectedZone.ZoneId);
+  }, [initialZoneCode, zones]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -113,6 +125,7 @@ export default function SprayReportForm() {
           : sp.sprayPlanSaved,
       );
       setSafetyWarning(result.safetyWarning);
+      onSubmitted?.();
 
       // Reset only the inputs - keep the selected reportType so the worker
       // can quickly file another report of the same kind.
@@ -169,7 +182,7 @@ export default function SprayReportForm() {
             onClick={() => setReportType('completed')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition ${
               reportType === 'completed'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[var(--color-primary)] text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
@@ -180,7 +193,7 @@ export default function SprayReportForm() {
             onClick={() => setReportType('planned')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition ${
               reportType === 'planned'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[var(--color-primary)] text-white'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
@@ -191,10 +204,11 @@ export default function SprayReportForm() {
 
       {/* Zone */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="spray-zone-select" className="block text-sm font-medium text-gray-700 mb-1">
           {sp.zone} <span className="text-red-500">*</span>
         </label>
         <select
+          id="spray-zone-select"
           value={zoneId}
           onChange={(e) =>
             setZoneId(e.target.value === '' ? '' : Number(e.target.value))
@@ -214,10 +228,11 @@ export default function SprayReportForm() {
 
       {/* Pesticide */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="spray-pesticide-select" className="block text-sm font-medium text-gray-700 mb-1">
           {sp.pesticide} <span className="text-red-500">*</span>
         </label>
         <select
+          id="spray-pesticide-select"
           value={pesticideId}
           onChange={(e) =>
             setPesticideId(e.target.value === '' ? '' : Number(e.target.value))
@@ -239,10 +254,11 @@ export default function SprayReportForm() {
       {/* Planned-at — only for 'planned' reports */}
       {reportType === 'planned' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="spray-planned-at-input" className="block text-sm font-medium text-gray-700 mb-1">
             {sp.plannedDateTime} <span className="text-red-500">*</span>
           </label>
           <input
+            id="spray-planned-at-input"
             type="datetime-local"
             value={plannedAtLocal}
             onChange={(e) => setPlannedAtLocal(e.target.value)}
@@ -254,10 +270,11 @@ export default function SprayReportForm() {
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="spray-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
           {sp.notesOptional}
         </label>
         <textarea
+          id="spray-notes-input"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
@@ -270,17 +287,19 @@ export default function SprayReportForm() {
         </p>
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={isSubmitting || isLoadingCatalogs}
-        className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
+        variant="primary"
+        size="md"
+        className="w-full"
       >
         {isSubmitting
           ? sp.submitting
           : reportType === 'completed'
             ? sp.submitSprayReport
             : sp.saveSprayPlan}
-      </button>
+      </Button>
 
       {/* Safety information block - shown after a successful submission */}
       {safetyWarning && (

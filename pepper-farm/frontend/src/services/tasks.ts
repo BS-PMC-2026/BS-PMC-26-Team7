@@ -73,6 +73,18 @@ export async function updateTask(
   });
 }
 
+/**
+ * Soft-delete (cancel) a task via the manager-only DELETE endpoint (US42).
+ * The task is marked cancelled on the server, not removed; it returns the
+ * updated task so callers can drop it from the active list.
+ */
+export async function cancelTask(taskId: number, token: string): Promise<Task> {
+  return apiFetch<Task>(`/api/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getTasksReport(token: string): Promise<Task[]> {
   return apiFetch<Task[]>('/api/tasks/report', {
     headers: { Authorization: `Bearer ${token}` },

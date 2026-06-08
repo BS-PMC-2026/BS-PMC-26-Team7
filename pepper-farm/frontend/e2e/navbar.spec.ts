@@ -44,10 +44,6 @@ async function mockNotificationApis(page: Page) {
   await page.route('**/api/manager/anomalies/stream**', (route) =>
     route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' }),
   );
-  // Worker: my tasks
-  await page.route('**/api/worker/my-tasks**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
-  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -164,12 +160,6 @@ test.describe('ManagerNavbar — FarmManager', () => {
     await expect(page.getByRole('link', { name: /dashboard/i })).toBeVisible();
   });
 
-  test('Tasks link is visible and href is /manager/tasks', async ({ page }) => {
-    const link = page.getByRole('link', { name: /^tasks$/i });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/manager/tasks');
-  });
-
   test('Sensor Explorer link is visible and href is /manager/sensors', async ({ page }) => {
     const link = page.getByRole('link', { name: /sensor explorer/i });
     await expect(link).toBeVisible();
@@ -260,11 +250,6 @@ test.describe('ManagerNavbar — FarmManager', () => {
     await expect(page.getByRole('link', { name: /my tasks/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /spray report/i })).not.toBeVisible();
   });
-
-  test('Tasks link navigates to /manager/tasks', async ({ page }) => {
-    await page.getByRole('link', { name: /^tasks$/i }).click();
-    await expect(page).toHaveURL('/manager/tasks');
-  });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -289,10 +274,8 @@ test.describe('WorkerNavbar — Worker', () => {
     await expect(link).toHaveAttribute('href', '/worker');
   });
 
-  test('My Tasks link is visible with href /worker/my-tasks', async ({ page }) => {
-    const link = page.getByRole('link', { name: /my tasks/i });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/worker/my-tasks');
+  test('My Tasks link is not shown because tasks live on the dashboard', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /my tasks/i })).not.toBeVisible();
   });
 
   test('Products link is visible with href /worker/products', async ({ page }) => {
@@ -301,26 +284,14 @@ test.describe('WorkerNavbar — Worker', () => {
     await expect(link).toHaveAttribute('href', '/worker/products');
   });
 
-  test('Spray Report link is visible with href /worker/spray-report', async ({ page }) => {
-    const link = page.getByRole('link', { name: /spray report/i });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/worker/spray-report');
+  test('Spray Report link is not shown because spray reports live on the dashboard', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /spray report/i })).not.toBeVisible();
   });
 
-  test('Plants dropdown button is visible', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /plants/i })).toBeVisible();
-  });
-
-  test('Plants dropdown opens and shows Add Plant and Update Location', async ({ page }) => {
-    await page.getByRole('button', { name: /plants/i }).click();
-    await expect(page.getByRole('link', { name: /add plant/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /update location/i })).toBeVisible();
-  });
-
-  test('Plants dropdown items have correct hrefs', async ({ page }) => {
-    await page.getByRole('button', { name: /plants/i }).click();
-    await expect(page.getByRole('link', { name: /add plant/i })).toHaveAttribute('href', '/worker/plants/add');
-    await expect(page.getByRole('link', { name: /update location/i })).toHaveAttribute('href', '/worker/plants/update-location');
+  test('Plants dropdown is not shown because planting lives on the dashboard', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /plants/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /add plant/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /update location/i })).not.toBeVisible();
   });
 
   test('bell button is visible with aria-label "Task notifications"', async ({ page }) => {
@@ -358,15 +329,6 @@ test.describe('WorkerNavbar — Worker', () => {
     await expect(page.getByRole('link', { name: /users/i })).not.toBeVisible();
   });
 
-  test('My Tasks link navigates to /worker/my-tasks', async ({ page }) => {
-    await page.getByRole('link', { name: /my tasks/i }).click();
-    await expect(page).toHaveURL('/worker/my-tasks');
-  });
-
-  test('Spray Report link navigates to /worker/spray-report', async ({ page }) => {
-    await page.getByRole('link', { name: /spray report/i }).click();
-    await expect(page).toHaveURL('/worker/spray-report');
-  });
 });
 
 /* -------------------------------------------------------------------------- */

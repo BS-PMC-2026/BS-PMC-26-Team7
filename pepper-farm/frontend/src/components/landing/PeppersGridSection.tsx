@@ -23,7 +23,7 @@ interface PeppersGridSectionProps {
 
 export default function PeppersGridSection({
   peppers,
-  allVarietiesHref = '/visitor/peppers/1',
+  allVarietiesHref = '/visitor',
 }: PeppersGridSectionProps) {
   const { t } = useLanguage();
   const la = t.landing;
@@ -48,7 +48,6 @@ export default function PeppersGridSection({
           </p>
           <h2
             className="text-4xl font-bold text-green-900"
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {la.everyPepperStory}
           </h2>
@@ -59,7 +58,7 @@ export default function PeppersGridSection({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {list.map((p, i) => (
-            <PepperVarietyCard key={p.name} {...p} delay={i * 0.07} />
+            <PepperVarietyCard key={p.name} {...p} delay={i * 0.07} href={allVarietiesHref} />
           ))}
         </div>
 

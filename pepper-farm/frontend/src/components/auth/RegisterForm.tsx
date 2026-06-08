@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import { useLoading } from "@/context/LoadingContext";
+import Button from "@/components/ui/Button";
 
 /** Convert any FastAPI/Pydantic error shape into a displayable string. */
 function normalizeApiError(detail: unknown, fallback: string): string {
@@ -40,6 +42,7 @@ interface FieldErrors {
 export default function RegisterForm() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { withLoader, startRouteLoader } = useLoading();
 
   const [form,     setForm]     = useState<FormData>({
     fullName: "", email: "", password: "", emailConsent: false,
@@ -79,20 +82,22 @@ export default function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/auth/register`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
+      await withLoader(async () => {
+        const res = await fetch(`/api/auth/register`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(form),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setApiError(normalizeApiError(data?.detail, t.auth.registrationFailed));
+          return;
+        }
+
+        setSuccess(true);
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setApiError(normalizeApiError(data?.detail, t.auth.registrationFailed));
-        return;
-      }
-
-      setSuccess(true);
 
     } catch {
       setApiError(t.auth.networkError);
@@ -107,12 +112,17 @@ export default function RegisterForm() {
         <div className="text-4xl mb-4">✅</div>
         <h2 className="text-xl font-bold text-green-700 mb-2">{t.auth.registrationSuccess}</h2>
         <p className="text-gray-500 mb-6">{t.auth.accountCreatedAsVisitor}</p>
-        <button
-          onClick={() => router.push("/login")}
-          className="bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700 transition"
+        <Button
+          onClick={() => {
+            startRouteLoader();
+            router.push("/login");
+          }}
+          variant="primary"
+          size="md"
+          className="w-full"
         >
           {t.auth.goToLogin}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -131,6 +141,7 @@ export default function RegisterForm() {
           type="text"
           value={form.fullName}
           onChange={handleChange}
+          disabled={loading}
           placeholder={t.auth.fullNamePlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
@@ -146,6 +157,7 @@ export default function RegisterForm() {
           type="email"
           value={form.email}
           onChange={handleChange}
+          disabled={loading}
           placeholder={t.auth.emailPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
           dir="ltr"
@@ -162,6 +174,7 @@ export default function RegisterForm() {
           type="password"
           value={form.password}
           onChange={handleChange}
+          disabled={loading}
           placeholder={t.auth.passwordMinCharsHint}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
@@ -177,6 +190,7 @@ export default function RegisterForm() {
           type="checkbox"
           checked={form.emailConsent}
           onChange={handleChange}
+          disabled={loading}
           className="mt-0.5 accent-green-600"
           data-testid="email-consent-checkbox"
         />
@@ -189,13 +203,9 @@ export default function RegisterForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
-      >
+      <Button type="submit" loading={loading} variant="primary" size="md" className="w-full">
         {loading ? t.auth.registering : t.auth.register}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-gray-500">
         {t.auth.haveAccount}{" "}

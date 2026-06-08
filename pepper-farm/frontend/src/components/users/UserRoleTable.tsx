@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getAllUsers, promoteUser, searchUsers, UserData } from "@/services/users";
 import { useLanguage } from "@/context/LanguageContext";
 import { translateEnum } from "@/i18n/dictionaries";
+import Button from "@/components/ui/Button";
 
 const WORKER_ROLE_ID  = 3;
 const VISITOR_ROLE_ID = 4;
@@ -142,22 +143,24 @@ export default function UserRoleTable() {
                   </td>
                   <td className="px-4 py-2">
                     {user.roleName === "Visitor" && (
-                      <button
+                      <Button
                         onClick={() => handlePromote(user.userId)}
                         disabled={promoting === user.userId}
-                        className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 transition"
+                        variant="primary"
+                        size="sm"
                       >
                         {promoting === user.userId ? t.users.promoting : t.users.promoteToEmployee}
-                      </button>
+                      </Button>
                     )}
                     {user.roleName === "Worker" && (
-                      <button
+                      <Button
                         onClick={() => handleRevoke(user.userId)}
                         disabled={promoting === user.userId}
-                        className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition"
+                        variant="danger"
+                        size="sm"
                       >
                         {promoting === user.userId ? t.users.updating : t.users.revokeEmployee}
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>

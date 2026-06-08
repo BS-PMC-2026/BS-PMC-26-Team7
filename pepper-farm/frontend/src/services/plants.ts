@@ -38,10 +38,11 @@ export async function updatePlantLocation(
   token: string,
   plantId: number,
   zoneId: number | null,
+  transferredAt?: string,
 ): Promise<PlantData> {
   return apiFetch<PlantData>(`/api/plants/${plantId}/location`, {
     method: "PUT",
-    body: JSON.stringify({ zoneId }),
+    body: JSON.stringify({ zoneId, transferredAt: transferredAt ?? null }),
     headers: { Authorization: `Bearer ${token}` },
   });
 }

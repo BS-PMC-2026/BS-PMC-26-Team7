@@ -51,7 +51,6 @@ export default function FarmStorySection() {
             </p>
             <h2
               className="text-4xl font-bold text-white"
-              style={{ fontFamily: 'Lora, serif' }}
             >
               {la.grownWithIntention}
             </h2>

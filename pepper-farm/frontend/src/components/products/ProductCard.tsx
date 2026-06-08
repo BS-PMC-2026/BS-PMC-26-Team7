@@ -1,10 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { ProductResponse } from '@/services/productService';
+import { ProductResponse , deleteProduct } from '@/services/productService';
+import { addToCart } from '@/services/cartService';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizeProductCategoryForDisplay } from '@/lib/displayNormalization';
 
 interface ProductCardProps {
   product: ProductResponse;
@@ -33,11 +37,82 @@ function isDiscountCurrentlyActive(product: ProductResponse): boolean {
 }
 
 export default function ProductCard({ product, showEditButton = false }: ProductCardProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const router = useRouter();
+  const pathname = usePathname();
   const pr = t.products;
   const outOfStock = product.AllocatedQuantity === 0;
   const discountValid = isDiscountCurrentlyActive(product);
   const displayPrice = discountValid ? product.FinalPrice : product.Price;
+
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMsg, setCartMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role ?? payload.Role ?? null);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const isWorker = userRole === 'Worker';
+
+  function hasToken(): boolean {
+    return typeof window !== 'undefined' && Boolean(localStorage.getItem('token'));
+  }
+
+  function goToLoginAfter(path: string) {
+    router.push(`/login?redirect=${encodeURIComponent(path)}`);
+  }
+
+  async function handleAddToCart() {
+    if (!hasToken()) {
+      goToLoginAfter(pathname || '/visitor/products');
+      return;
+    }
+    setAddingToCart(true);
+    setCartMsg(null);
+    try {
+      await addToCart(product.ProductId, 1);
+      setCartMsg('✓');
+      setTimeout(() => setCartMsg(null), 1500);
+    } catch {
+      setCartMsg('!');
+      setTimeout(() => setCartMsg(null), 2000);
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  function handleBuyNow() {
+    const checkoutPath = `/checkout?productId=${product.ProductId}&qty=1`;
+    if (!hasToken()) {
+      goToLoginAfter(checkoutPath);
+      return;
+    }
+    router.push(checkoutPath);
+  }
+  async function handleDelete() {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this product?'
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteProduct(product.ProductId);
+
+    alert('Product deleted successfully.');
+
+    window.location.reload();
+  } catch {
+    alert('Failed to delete product.');
+  }
+}
 
   return (
     <Card
@@ -79,7 +154,7 @@ export default function ProductCard({ product, showEditButton = false }: Product
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-semibold text-gray-900 leading-snug">{product.ProductName}</h3>
           {product.Category && (
-            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">{product.Category}</Badge>
+            <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">{normalizeProductCategoryForDisplay(product.Category, locale)}</Badge>
           )}
         </div>
 
@@ -115,12 +190,42 @@ export default function ProductCard({ product, showEditButton = false }: Product
         </div>
 
         {showEditButton && (
-          <Link
-            href={`/manager/products/${product.ProductId}/edit`}
-            className="mt-2 w-full text-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
-          >
-            {pr.editProduct}
-          </Link>
+  <div className="mt-2 flex gap-2">
+    <Link
+      href={`/manager/products/${product.ProductId}/edit`}
+      className="flex-1 text-center rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+    >
+      {pr.editProduct}
+    </Link>
+
+    <button
+      onClick={handleDelete}
+      className="flex-1 rounded-md border border-red-500 text-red-600 px-3 py-1.5 text-xs font-medium hover:bg-red-50 transition"
+    >
+      Delete
+    </button>
+  </div>
+)}
+
+        {!showEditButton && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={outOfStock || addingToCart}
+              data-testid="add-to-cart-btn"
+              className="flex-1 rounded-md bg-[var(--color-primary)] text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-40 transition"
+            >
+              {addingToCart ? '...' : cartMsg === '✓' ? '✓' : st.addToCart}
+            </button>
+            <button
+              onClick={handleBuyNow}
+              disabled={outOfStock}
+              data-testid="buy-now-btn"
+              className="flex-1 rounded-md border border-[var(--color-primary)] text-[var(--color-primary)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-secondary-light)] disabled:opacity-40 transition"
+            >
+              {st.buyNow}
+            </button>
+          </div>
         )}
       </div>
     </Card>

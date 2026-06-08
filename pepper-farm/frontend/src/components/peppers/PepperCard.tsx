@@ -4,6 +4,7 @@ import { Pepper } from '@/types/pepper';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizePepperZoneForDisplay } from '@/lib/displayNormalization';
 
 interface PepperCardProps {
   pepper: Pepper;
@@ -17,16 +18,16 @@ function HeatBadge({ min, max }: { min?: number | null; max?: number | null }) {
       : `${min?.toLocaleString()} SHU`;
 
   return (
-    <Badge className="bg-gray-100 text-gray-600 border border-gray-200 shrink-0">
-      🌶 {label}
+    <Badge className="self-start w-fit bg-gray-100 text-gray-600 border border-gray-200 shrink-0">
+      🌶 <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>{label}</span>
     </Badge>
   );
 }
 
 export default function PepperCard({ pepper }: PepperCardProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   return (
-    <Card className="overflow-hidden flex flex-col transition-shadow hover:shadow-md rounded-2xl">
+    <Card className="overflow-hidden flex flex-col h-full transition-shadow hover:shadow-md rounded-2xl">
       {/* Image */}
       <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
         {pepper.ImageUrl ? (
@@ -48,10 +49,11 @@ export default function PepperCard({ pepper }: PepperCardProps) {
 
       {/* Body */}
       <div className="p-4 flex flex-col gap-2 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-gray-900 leading-snug">{pepper.PepperName}</h3>
-          <HeatBadge min={pepper.HeatLevelScovilleMin} max={pepper.HeatLevelScovilleMax} />
-        </div>
+        {/* Name on its own full-width line (up to 2 lines) */}
+        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">{pepper.PepperName}</h3>
+
+        {/* SHU badge on its own row below the name */}
+        <HeatBadge min={pepper.HeatLevelScovilleMin} max={pepper.HeatLevelScovilleMax} />
 
         {pepper.ScientificName && (
           <p className="text-xs text-gray-400 italic leading-none">{pepper.ScientificName}</p>
@@ -64,9 +66,9 @@ export default function PepperCard({ pepper }: PepperCardProps) {
         )}
 
         {(pepper.OptimalPARMin != null || pepper.OptimalPARMax != null) && (
-          <p className="text-xs text-gray-400 pt-1">
+          <p className="text-xs text-gray-400 pt-1" dir="ltr">
             PAR:{' '}
-            <span className="text-purple-600 font-medium">
+            <span className="text-purple-600 font-medium" dir="ltr" style={{ unicodeBidi: 'isolate' }}>
               {pepper.OptimalPARMin != null ? pepper.OptimalPARMin : '—'}
               {' – '}
               {pepper.OptimalPARMax != null ? pepper.OptimalPARMax : '—'}
@@ -77,7 +79,7 @@ export default function PepperCard({ pepper }: PepperCardProps) {
 
         {pepper.Zone && (
           <p className="text-xs text-gray-400 mt-auto pt-2 border-t border-gray-100">
-            {t.peppers.zoneLabel}: <span className="text-gray-600 font-medium">{pepper.Zone}</span>
+            {t.peppers.zoneLabel}: <span className="text-gray-600 font-medium">{normalizePepperZoneForDisplay(pepper.Zone, locale)}</span>
           </p>
         )}
       </div>

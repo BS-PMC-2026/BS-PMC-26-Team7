@@ -1,8 +1,27 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from models.plant import Plant
 from models.pepper_variety import PepperVariety
 from models.farm_zone import FarmZone
 from schemas.plant import PlantCreate
+
+# Zone codes where a new pepper seedling may be first planted
+_NURSERY_CODES: frozenset[str] = frozenset({"NURSERY"})
+
+# Zone codes where an existing seedling may be transferred to
+_TRANSFERABLE_CODES: frozenset[str] = frozenset({
+    "GH-01", "GH-02", "GH-03", "GH-04",
+    "GH-05", "GH-06", "GH-07", "GH-08",
+    "GH-09", "GH-10",          # growing greenhouses
+    "GERM-01", "GERM-02", "GERM-03", "GERM-04",  # visitor greenhouses
+})
+
+_ERR_NOT_NURSERY   = "Peppers can only be planted first in the nursery."
+_ERR_NOT_GREENHOUSE = "Pepper seedlings can only be transferred to growing or visitor greenhouses."
+
+
+def _zone_code(zone: FarmZone) -> str:
+    return (zone.ZoneCode or "").strip().upper()
 
 
 def create_plant(db: Session, plant_data: PlantCreate) -> tuple[Plant | None, str | None]:
@@ -22,6 +41,8 @@ def create_plant(db: Session, plant_data: PlantCreate) -> tuple[Plant | None, st
         )
         if not existing_zone:
             return None, "Selected farm zone does not exist."
+        if _zone_code(existing_zone) not in _NURSERY_CODES:
+            return None, _ERR_NOT_NURSERY
 
     existing_plant_code = (
         db.query(Plant)
@@ -46,8 +67,10 @@ def create_plant(db: Session, plant_data: PlantCreate) -> tuple[Plant | None, st
     db.refresh(plant)
     return plant, None
 
+
 def update_plant_location(
-    db: Session, plant_id: int, zone_id: int | None
+    db: Session, plant_id: int, zone_id: int | None,
+    transferred_at: datetime | None = None,
 ) -> tuple[Plant | None, str | None]:
     plant = db.query(Plant).filter(Plant.PlantId == plant_id).first()
     if not plant:
@@ -57,8 +80,12 @@ def update_plant_location(
         existing_zone = db.query(FarmZone).filter(FarmZone.ZoneId == zone_id).first()
         if not existing_zone:
             return None, "Selected farm zone does not exist."
+        if _zone_code(existing_zone) not in _TRANSFERABLE_CODES:
+            return None, _ERR_NOT_GREENHOUSE
 
     plant.ZoneId = zone_id
+    if transferred_at is not None:
+        plant.TransferredAt = transferred_at
     db.commit()
     db.refresh(plant)
     return plant, None

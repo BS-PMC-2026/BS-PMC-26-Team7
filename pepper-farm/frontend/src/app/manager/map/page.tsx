@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import FarmMap, { FarmSection } from '@/components/map/FarmMap';
+import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
 import { getAllPlants, PlantData, createPlant } from '@/services/plants';
 import { getAllPeppers } from '@/services/peppers';
 import { Pepper } from '@/types/pepper';
 import { useLanguage } from '@/context/LanguageContext';
+import { PLANTABLE_ZONE_TYPES } from '@/data/farmSections';
 
 const ZONE_CODE_TO_ID: Record<string, number> = {
   'GH-01': 1,  'GH-02': 2,  'GH-03': 3,  'GH-04': 4,
@@ -16,13 +18,16 @@ const ZONE_CODE_TO_ID: Record<string, number> = {
   'GERM-03': 16, 'GERM-04': 17, 'FACTORY': 18,
 };
 
+const MSG_NURSERY_ONLY = 'Peppers can only be planted first in the nursery.';
+const HINT_NURSERY_ONLY = 'New seedlings must start in the Nursery before transfer to a greenhouse.';
+
 export default function ManagerMapPage() {
   const { t } = useLanguage();
   const mp = t.map;
   const [peppers,        setPeppers]        = useState<Pepper[]>([]);
   const [plants,         setPlants]         = useState<PlantData[]>([]);
   const [selectedPepper, setSelectedPepper] = useState<number | "">("");
-  const [message,        setMessage]        = useState<{ text: string; ok: boolean } | null>(null);
+  const [message,        setMessage]        = useState<{ text: string; ok: boolean; nursery?: boolean } | null>(null);
   const [saving,         setSaving]         = useState(false);
 
   const token = typeof window !== "undefined"
@@ -39,6 +44,13 @@ export default function ManagerMapPage() {
       setMessage({ text: mp.pleaseSelectPepper, ok: false });
       return;
     }
+
+    // Business rule: first planting is only allowed in the Nursery
+    if (!PLANTABLE_ZONE_TYPES.has(section.type)) {
+      setMessage({ text: MSG_NURSERY_ONLY, ok: false, nursery: true });
+      return;
+    }
+
     setSaving(true);
     setMessage(null);
     try {
@@ -50,6 +62,7 @@ export default function ManagerMapPage() {
         PlantCode: plantCode,
         PepperId:  Number(selectedPepper),
         ZoneId:    zoneId ?? null,
+        PlantedAt: new Date().toISOString(),
         Status:    'Growing',
         IsActive:  true,
       });
@@ -98,18 +111,21 @@ export default function ManagerMapPage() {
           </select>
           {selectedPepper && (
             <span className="text-sm text-green-600 font-medium">
-              ✅ {mp.clickZoneHint}
+              ✅ Click the Nursery zone to plant
             </span>
           )}
         </div>
 
         {message && (
-          <div className={`rounded-lg px-4 py-2 text-sm mb-4 ${
+          <div className={`rounded-lg px-4 py-2 text-sm mb-4 flex items-start gap-2 ${
             message.ok
               ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-600"
+              : message.nursery
+                ? "bg-amber-50 border-2 border-amber-400 text-amber-900 font-semibold"
+                : "bg-red-50 border border-red-200 text-red-600"
           }`}>
-            {message.text}
+            {message.nursery && <span className="text-base shrink-0 mt-px">🌱</span>}
+            <span>{message.text}</span>
           </div>
         )}
 
@@ -117,17 +133,33 @@ export default function ManagerMapPage() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <FarmMap
             plants={plants}
-            renderPopupExtra={(section) => (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <button
-                  onClick={() => handleAssignToZone(section)}
-                  disabled={!selectedPepper || saving}
-                  className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition"
-                >
-                  {saving ? mp.planting : selectedPepper ? mp.plantHere : mp.selectPepperFirst}
-                </button>
-              </div>
-            )}
+            renderPopupExtra={(section) => {
+              const isPlantable = PLANTABLE_ZONE_TYPES.has(section.type);
+              return (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  {selectedPepper && !isPlantable && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+                      {HINT_NURSERY_ONLY}
+                    </p>
+                  )}
+                  <Button
+                    onClick={() => handleAssignToZone(section)}
+                    disabled={!selectedPepper || saving || !isPlantable}
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                  >
+                    {saving
+                      ? mp.planting
+                      : !selectedPepper
+                        ? mp.selectPepperFirst
+                        : isPlantable
+                          ? mp.plantHere
+                          : 'Nursery only — cannot plant here'}
+                  </Button>
+                </div>
+              );
+            }}
           />
         </div>
       </div>

@@ -4,6 +4,7 @@ from database import get_db
 from models.task import Task
 from services.task_service import (
     add_checklist_item,
+    cancel_task,
     create_task,
     delete_checklist_item,
     get_all_tasks,
@@ -88,6 +89,27 @@ def update_task_endpoint(
     result, error = update_task(db, task_id, data)
     if error:
         raise HTTPException(status_code=400, detail=error)
+    return result
+
+
+@router.delete("/{task_id}", response_model=TaskResponse)
+def cancel_task_endpoint(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
+    """BSPMT7-491 (US42): Manager-only soft-delete. Marks the task cancelled
+    instead of removing it, so it leaves the active/history lists but stays in
+    the DB. Only the manager who created the task may delete it."""
+    result, error = cancel_task(db, task_id, current_user["user_id"])
+    if error:
+        if error == "Task not found.":
+            status = 404
+        elif error == "You can only delete tasks you created.":
+            status = 403
+        else:
+            status = 400
+        raise HTTPException(status_code=status, detail=error)
     return result
 
 

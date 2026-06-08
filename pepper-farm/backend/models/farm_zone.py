@@ -8,6 +8,7 @@ class FarmZone(Base):
     ZoneId           = Column(Integer, primary_key=True, autoincrement=True)
     ZoneName         = Column(String(100), nullable=False, unique=True)
     ZoneCode         = Column(String(50), nullable=True, unique=True)
+    ZoneType         = Column(String(50), nullable=True)
     PepperId         = Column(Integer, ForeignKey("PepperVarieties.PepperId"), nullable=True)
     AreaSquareMeters = Column(Numeric(10, 2), nullable=True)
     Latitude         = Column(Numeric(9, 6), nullable=True)

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useScroll, useSpring, useTransform, motion } from 'framer-motion';
 
 import LandingNavbar      from '@/components/landing/LandingNavbar';
@@ -9,7 +8,6 @@ import StatsSection       from '@/components/landing/StatsSection';
 import PeppersGridSection from '@/components/landing/PeppersGridSection';
 import FarmStorySection   from '@/components/landing/FarmStorySection';
 import MapTeaserSection   from '@/components/landing/MapTeaserSection';
-import FinalCTASection    from '@/components/landing/FinalCTASection';
 import Footer             from '@/components/landing/Footer';
 
 /**
@@ -22,15 +20,8 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
-  /* Navbar switches visual state once scrolled past hero */
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const unsub = scrollYProgress.on('change', (v) => setScrolled(v > 0.02));
-    return unsub;
-  }, [scrollYProgress]);
-
   return (
-    <div className="min-h-screen bg-[#f0fdf4] overflow-x-hidden" style={{ fontFamily: 'Raleway, sans-serif' }}>
+    <div className="app-page-bg overflow-x-hidden">
 
       {/* Scroll progress bar */}
       <motion.div
@@ -38,7 +29,8 @@ export default function LandingPage() {
         style={{ scaleX: scrollYProgress, transformOrigin: '0%' }}
       />
 
-      <LandingNavbar scrolled={scrolled} />
+      {/* Navbar is always rendered in its stable white state (no scroll-driven switch) */}
+      <LandingNavbar scrolled />
 
       <HeroSection smoothProgress={smoothProgress} scrollYProgress={scrollYProgress} />
 
@@ -49,8 +41,6 @@ export default function LandingPage() {
       <FarmStorySection />
 
       <MapTeaserSection />
-
-      <FinalCTASection />
 
       <Footer />
     </div>

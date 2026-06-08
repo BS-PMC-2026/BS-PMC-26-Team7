@@ -63,7 +63,7 @@ function UnsubscribeContent() {
       )}
       {(state === 'success' || state === 'already') && (
         <a href="/" className="text-green-600 hover:underline text-sm">
-          Return to Pepper Farm
+          Return to Hadinerim
         </a>
       )}
     </div>
@@ -71,11 +71,11 @@ function UnsubscribeContent() {
 }
 
 export default function UnsubscribePage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+    <main className="app-page-bg flex flex-col items-center justify-center p-4">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-green-700">🌶️ PepperFarm</h1>
+        <h1 className="text-2xl font-bold text-green-700">🌶️ {locale === 'he' ? 'הדינרים' : 'Hadinerim'}</h1>
         <p className="text-sm text-gray-500 mt-1">{t.consent.unsubscribeFromNewsletter}</p>
       </div>
       <Suspense fallback={<p className="text-gray-400">{t.common.loading}</p>}>

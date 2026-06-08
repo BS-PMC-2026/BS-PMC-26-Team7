@@ -154,6 +154,8 @@ def get_inventory_by_variety(db: Session) -> List[dict]:
                     "Status": p.Status,
                     "ZoneId": p.ZoneId,
                     "ZoneName": zone_name_by_id.get(p.ZoneId) if p.ZoneId else None,
+                    "PlantedAt": p.PlantedAt.isoformat() if p.PlantedAt else None,
+                    "TransferredAt": p.TransferredAt.isoformat() if p.TransferredAt else None,
                 }
                 for p in plants
             ],

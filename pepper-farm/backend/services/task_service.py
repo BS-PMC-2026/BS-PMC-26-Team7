@@ -131,6 +131,10 @@ def update_task(db: Session, task_id: int, data: UpdateTaskRequest) -> tuple[Tas
     if data.status is not None:
         if data.status not in ALLOWED_STATUSES:
             return None, f"Invalid status '{data.status}'."
+        # Cancelling is a manager-only soft-delete handled by cancel_task; it must
+        # not be reachable through the general (worker-accessible) update path.
+        if data.status == "cancelled":
+            return None, "Use the delete action to cancel a task."
         task.Status = data.status
         if data.status == "in_progress" and task.StartedAt is None:
             task.StartedAt = datetime.now(timezone.utc)
@@ -150,10 +154,37 @@ def update_task(db: Session, task_id: int, data: UpdateTaskRequest) -> tuple[Tas
     return _to_response(task), None
 
 
+def cancel_task(
+    db: Session, task_id: int, requester_user_id: int
+) -> tuple[TaskResponse | None, str | None]:
+    """Soft-delete a task by marking it cancelled (US42 / BSPMT7-491).
+
+    Works for tasks in any status (todo, in_progress, done) so a manager can
+    remove anything created by mistake or no longer relevant. The task is never
+    removed from the database and history fields (CompletedAt, etc.) are kept;
+    it is simply excluded from the active and completed lists via the status
+    filter. Only the manager who created the task may cancel it.
+    """
+    task = db.query(Task).filter(Task.Id == task_id).first()
+    if not task:
+        return None, "Task not found."
+    if task.CreatedByUserId != requester_user_id:
+        return None, "You can only delete tasks you created."
+    if task.Status == "cancelled":
+        return _to_response(task), None
+
+    task.Status = "cancelled"
+    task.UpdatedAt = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(task)
+    return _to_response(task), None
+
+
 def get_all_tasks(db: Session) -> list[TaskResponse]:
     tasks = (
         db.query(Task)
         .options(selectinload(Task.checklist_items))
+        .filter(Task.Status != "cancelled")
         .order_by(Task.CreatedAt.desc())
         .all()
     )
@@ -164,7 +195,10 @@ def get_tasks_by_user(db: Session, user_id: int) -> list[TaskResponse]:
     tasks = (
         db.query(Task)
         .options(selectinload(Task.checklist_items))
-        .filter(Task.AssignedToUserId == user_id)
+        .filter(
+            Task.AssignedToUserId == user_id,
+            Task.Status != "cancelled",
+        )
         .order_by(Task.CreatedAt.desc())
         .all()
     )

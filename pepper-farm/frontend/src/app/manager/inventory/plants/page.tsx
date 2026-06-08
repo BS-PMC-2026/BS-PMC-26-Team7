@@ -4,16 +4,29 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Alert from '@/components/ui/Alert';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import { getInventoryByVariety } from '@/services/inventory';
-import { createPlant, updatePlantStatus } from '@/services/plants';
+import { createPlant, updatePlantStatus, updatePlantLocation } from '@/services/plants';
 import { getZones, ZoneSummary } from '@/services/zones';
 import { InventoryByVariety } from '@/types/inventory';
 import { useLanguage } from '@/context/LanguageContext';
 
 const PLANT_STATUSES = ['Healthy', 'Growing', 'Sick', 'Harvested', 'Dead'];
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+const TRANSFERABLE_ZONE_CODES = new Set([
+  'GH-01', 'GH-02', 'GH-03', 'GH-04', 'GH-05', 'GH-06', 'GH-07', 'GH-08',
+  'GH-09', 'GH-10',
+  'GERM-01', 'GERM-02', 'GERM-03', 'GERM-04',
+]);
 
 function statusBadgeClass(status: string | null): string {
   switch ((status ?? '').toLowerCase()) {
@@ -54,6 +67,14 @@ export default function PlantsByVarietyPage() {
 
   // ── Inline status update ───────────────────────────────────────────────────
   const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
+
+  // ── Transfer modal ─────────────────────────────────────────────────────────
+  type PlantSummary = InventoryByVariety['Plants'][number];
+  const [transferModal,   setTransferModal]   = useState<{ plant: PlantSummary; pepperName: string } | null>(null);
+  const [transferZoneId,  setTransferZoneId]  = useState('');
+  const [transferDate,    setTransferDate]    = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferError,   setTransferError]   = useState<string | null>(null);
 
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -127,23 +148,38 @@ export default function PlantsByVarietyPage() {
   }
 
   function openAddModal(pepperId: number, pepperName: string) {
+    const words    = pepperName.trim().split(/\s+/);
+    const initials = words.slice(0, 3).map(w => w[0].toUpperCase()).join('');
+    const now      = new Date();
+    const datePart = `${String(now.getFullYear()).slice(2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const tail     = String(Date.now()).slice(-4);
+    const code     = `${initials}-${datePart}-${tail}`;
+    const nursery  = zones.find(z => z.ZoneCode === 'NURSERY');
     setAddModal({ pepperId, pepperName });
-    setAddForm({ PlantCode: '', ZoneId: '', PlantedAt: '', Status: '', Notes: '' });
+    setAddForm({
+      PlantCode: code,
+      ZoneId:    nursery ? String(nursery.ZoneId) : '',
+      PlantedAt: now.toISOString(),
+      Status:    'Growing',
+      Notes:     '',
+    });
     setAddError(null);
   }
 
   async function handleAddPlant(e: React.FormEvent) {
     e.preventDefault();
     if (!addModal) return;
+    if (!addForm.ZoneId)    { setAddError('Zone is required.');         return; }
+    if (!addForm.PlantedAt) { setAddError('Planted date is required.'); return; }
     setAddLoading(true);
     setAddError(null);
     try {
       await createPlant({
         PlantCode: addForm.PlantCode.trim(),
         PepperId:  addModal.pepperId,
-        ZoneId:    addForm.ZoneId ? Number(addForm.ZoneId) : undefined,
-        PlantedAt: addForm.PlantedAt || undefined,
-        Status:    addForm.Status || undefined,
+        ZoneId:    Number(addForm.ZoneId),
+        PlantedAt: addForm.PlantedAt,
+        Status:    'Growing',
         Notes:     addForm.Notes.trim() || undefined,
         IsActive:  true,
       });
@@ -154,6 +190,24 @@ export default function PlantsByVarietyPage() {
       setAddError(err instanceof Error ? err.message : inv.addPlantFailed);
     } finally {
       setAddLoading(false);
+    }
+  }
+
+  async function handleTransfer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!transferModal || !transferZoneId || !transferDate) return;
+    setTransferLoading(true);
+    setTransferError(null);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+    try {
+      await updatePlantLocation(token, transferModal.plant.PlantId, Number(transferZoneId), transferDate);
+      const data = await getInventoryByVariety();
+      setRows(data);
+      setTransferModal(null);
+    } catch (err: unknown) {
+      setTransferError(err instanceof Error ? err.message : 'Transfer failed.');
+    } finally {
+      setTransferLoading(false);
     }
   }
 
@@ -311,35 +365,65 @@ export default function PlantsByVarietyPage() {
                                       <th className="text-left py-1 pr-4">{inv.colPlantCode}</th>
                                       <th className="text-left py-1 pr-4">{t.tasks.status}</th>
                                       <th className="text-left py-1 pr-4">{inv.colZone}</th>
+                                      <th className="text-left py-1 pr-4">Plant Date</th>
+                                      <th className="text-left py-1 pr-4">Transfer Date</th>
+                                      <th className="text-left py-1 pr-4" />
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {r.Plants.map((p) => (
-                                      <tr key={p.PlantId} className="border-t border-[var(--color-border)]">
-                                        <td className="py-1 pr-4 text-[var(--color-foreground)]" dir="ltr">
-                                          #{p.PlantId}
-                                        </td>
-                                        <td className="py-1 pr-4 text-[var(--color-foreground)] font-medium" dir="ltr">
-                                          {p.PlantCode}
-                                        </td>
-                                        <td className="py-1 pr-4">
-                                          <select
-                                            value={p.Status ?? ''}
-                                            disabled={statusUpdating === p.PlantId}
-                                            onChange={(e) => handleStatusChange(p.PlantId, e.target.value)}
-                                            className={`text-xs rounded px-1.5 py-0.5 border-0 cursor-pointer focus:outline-none ${statusBadgeClass(p.Status)} disabled:opacity-50`}
-                                          >
-                                            <option value="">—</option>
-                                            {PLANT_STATUSES.map((s) => (
-                                              <option key={s} value={s}>{s}</option>
-                                            ))}
-                                          </select>
-                                        </td>
-                                        <td className="py-1 pr-4 text-[var(--color-muted-foreground)]" dir="ltr">
-                                          {p.ZoneName ?? (p.ZoneId ? `Zone ${p.ZoneId}` : '—')}
-                                        </td>
-                                      </tr>
-                                    ))}
+                                    {r.Plants.map((p) => {
+                                      const nurseryId    = zones.find(z => z.ZoneCode === 'NURSERY')?.ZoneId;
+                                      const canTransfer  = p.ZoneId === nurseryId && p.Status === 'Healthy';
+                                      return (
+                                        <tr key={p.PlantId} className="border-t border-[var(--color-border)]">
+                                          <td className="py-1 pr-4 text-[var(--color-foreground)]" dir="ltr">
+                                            #{p.PlantId}
+                                          </td>
+                                          <td className="py-1 pr-4 text-[var(--color-foreground)] font-medium" dir="ltr">
+                                            {p.PlantCode}
+                                          </td>
+                                          <td className="py-1 pr-4">
+                                            <select
+                                              value={p.Status ?? ''}
+                                              disabled={statusUpdating === p.PlantId}
+                                              onChange={(e) => handleStatusChange(p.PlantId, e.target.value)}
+                                              className={`text-xs rounded px-1.5 py-0.5 border-0 cursor-pointer focus:outline-none ${statusBadgeClass(p.Status)} disabled:opacity-50`}
+                                            >
+                                              <option value="">—</option>
+                                              {PLANT_STATUSES.map((s) => (
+                                                <option key={s} value={s}>{s}</option>
+                                              ))}
+                                            </select>
+                                          </td>
+                                          <td className="py-1 pr-4 text-[var(--color-muted-foreground)]" dir="ltr">
+                                            {p.ZoneName ?? (p.ZoneId ? `Zone ${p.ZoneId}` : '—')}
+                                          </td>
+                                          <td className="py-1 pr-4 text-[var(--color-muted-foreground)] whitespace-nowrap" dir="ltr">
+                                            {fmtDate(p.PlantedAt)}
+                                          </td>
+                                          <td className="py-1 pr-4 text-[var(--color-muted-foreground)] whitespace-nowrap" dir="ltr">
+                                            {fmtDate(p.TransferredAt)}
+                                          </td>
+                                          <td className="py-1 pr-4">
+                                            {canTransfer && (
+                                              <Button
+                                                onClick={() => {
+                                                  setTransferModal({ plant: p, pepperName: r.PepperName });
+                                                  setTransferZoneId('');
+                                                  setTransferDate(new Date().toISOString().slice(0, 10));
+                                                  setTransferError(null);
+                                                }}
+                                                variant="primary"
+                                                size="sm"
+                                                className="whitespace-nowrap"
+                                              >
+                                                Transfer →
+                                              </Button>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               )}
@@ -361,59 +445,51 @@ export default function PlantsByVarietyPage() {
         <Modal onClose={() => setAddModal(null)}>
           <h2 className="text-lg font-semibold mb-1">{inv.addPlantTitle}</h2>
           <p className="text-sm text-[var(--color-muted-foreground)] mb-4">{addModal.pepperName}</p>
-          {addError && <Alert variant="info" className="mb-3">{addError}</Alert>}
+          {addError && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <span className="shrink-0 text-base">🚫</span>
+              <span>{addError}</span>
+            </div>
+          )}
           <form onSubmit={handleAddPlant} className="space-y-3">
             <div>
               <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
-                {inv.colPlantCode} *
+                {inv.colPlantCode}
               </label>
               <input
-                required
+                readOnly
                 value={addForm.PlantCode}
-                onChange={(e) => setAddForm((f) => ({ ...f, PlantCode: e.target.value }))}
-                placeholder="e.g. PLT-001"
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm bg-[var(--color-muted)] text-[var(--color-muted-foreground)] cursor-not-allowed"
               />
             </div>
             <div>
               <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
                 {inv.colZone}
               </label>
-              <select
-                value={addForm.ZoneId}
-                onChange={(e) => setAddForm((f) => ({ ...f, ZoneId: e.target.value }))}
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none"
-              >
-                <option value="">— {inv.noZone} —</option>
-                {zones.map((z) => (
-                  <option key={z.ZoneId} value={z.ZoneId}>{z.ZoneName}</option>
-                ))}
-              </select>
+              <input
+                readOnly
+                value={zones.find(z => z.ZoneCode === 'NURSERY')?.ZoneName ?? 'Nursery'}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm bg-[var(--color-muted)] text-[var(--color-muted-foreground)] cursor-not-allowed"
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
                 {t.tasks.status}
               </label>
-              <select
-                value={addForm.Status}
-                onChange={(e) => setAddForm((f) => ({ ...f, Status: e.target.value }))}
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none"
-              >
-                <option value="">— optional —</option>
-                {PLANT_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+              <input
+                readOnly
+                value="Growing"
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm bg-[var(--color-muted)] text-[var(--color-muted-foreground)] cursor-not-allowed"
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
                 {inv.plantedAt}
               </label>
               <input
-                type="date"
-                value={addForm.PlantedAt}
-                onChange={(e) => setAddForm((f) => ({ ...f, PlantedAt: e.target.value }))}
-                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none"
+                readOnly
+                value={fmtDate(addForm.PlantedAt)}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm bg-[var(--color-muted)] text-[var(--color-muted-foreground)] cursor-not-allowed"
               />
             </div>
             <div>
@@ -442,6 +518,74 @@ export default function PlantsByVarietyPage() {
               >
                 {addLoading ? inv.saving : inv.addPlant}
               </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── Transfer Modal ── */}
+      {transferModal && (
+        <Modal onClose={() => setTransferModal(null)}>
+          <h2 className="text-lg font-semibold mb-1">Transfer Seedling</h2>
+          <p className="text-sm text-[var(--color-muted-foreground)] mb-1">{transferModal.pepperName}</p>
+          <p className="text-xs text-[var(--color-muted-foreground)] mb-4">{transferModal.plant.PlantCode}</p>
+          {transferError && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <span className="shrink-0 text-base">🚫</span>
+              <span>{transferError}</span>
+            </div>
+          )}
+          <form onSubmit={handleTransfer} className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
+                Target Greenhouse *
+              </label>
+              <select
+                required
+                value={transferZoneId}
+                onChange={(e) => setTransferZoneId(e.target.value)}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              >
+                <option value="">— select greenhouse —</option>
+                {zones
+                  .filter(z => z.ZoneCode && TRANSFERABLE_ZONE_CODES.has(z.ZoneCode))
+                  .map(z => (
+                    <option key={z.ZoneId} value={z.ZoneId}>{z.ZoneName}</option>
+                  ))
+                }
+              </select>
+              <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                Only growing and visitor greenhouses are valid transfer targets.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase block mb-1">
+                Transfer Date *
+              </label>
+              <input
+                required
+                type="date"
+                value={transferDate}
+                onChange={(e) => setTransferDate(e.target.value)}
+                className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setTransferModal(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-muted)] transition"
+              >
+                {inv.cancel}
+              </button>
+              <Button
+                type="submit"
+                disabled={transferLoading || !transferZoneId || !transferDate}
+                variant="primary"
+                size="md"
+              >
+                {transferLoading ? 'Transferring…' : 'Confirm Transfer'}
+              </Button>
             </div>
           </form>
         </Modal>

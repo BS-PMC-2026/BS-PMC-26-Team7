@@ -12,6 +12,7 @@ global.fetch = jest.fn();
 describe('LoginForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.history.pushState({}, '', '/login');
   });
 
   it('renders email and password fields', () => {
@@ -56,6 +57,35 @@ describe('LoginForm', () => {
     });
   });
 
+  it('disables submit and fields while login is pending', async () => {
+    let resolveLogin: (value: unknown) => void = () => {};
+    (fetch as jest.Mock).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogin = resolve;
+      }),
+    );
+
+    render(<LoginForm />);
+    const email = screen.getByPlaceholderText('your@email.com');
+    const password = screen.getByPlaceholderText('Your password');
+    fireEvent.change(email, { target: { value: 'test@farm.com' } });
+    fireEvent.change(password, { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    expect(screen.getByRole('button')).toBeDisabled();
+    expect(email).toBeDisabled();
+    expect(password).toBeDisabled();
+
+    resolveLogin({
+      ok: false,
+      json: async () => ({ detail: 'Invalid email or password.' }),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /login/i })).not.toBeDisabled();
+    });
+  });
+
   it('redirects to /visitor after Visitor login', async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok:   true,
@@ -76,6 +106,30 @@ describe('LoginForm', () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/visitor');
+    });
+  });
+
+  it('uses a safe redirect query after login when provided', async () => {
+    window.history.pushState({}, '', '/login?redirect=%2Fcheckout%3FproductId%3D1%26qty%3D1');
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok:   true,
+      json: async () => ({
+        accessToken: 'tok123',
+        tokenType:   'bearer',
+        role:        'Visitor',
+        fullName:    'Test User',
+      }),
+    });
+
+    render(<LoginForm />);
+    fireEvent.change(screen.getByPlaceholderText('your@email.com'),
+      { target: { value: 'test@farm.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Your password'),
+      { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByText('Login'));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/checkout?productId=1&qty=1');
     });
   });
 

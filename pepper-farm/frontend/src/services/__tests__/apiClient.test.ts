@@ -1,4 +1,5 @@
 import { apiFetch } from '../apiClient';
+import { markRouteLoadingWindow } from '@/lib/globalLoading';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -23,6 +24,7 @@ describe('apiFetch', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     localStorage.clear();
+    delete (window as Window & { __pepperRouteLoadingUntil?: number }).__pepperRouteLoadingUntil;
   });
 
   it('calls a relative /api path — no absolute URL prefix', async () => {
@@ -114,6 +116,39 @@ describe('apiFetch', () => {
     mockOkJson([]);
     await apiFetch('/api/tasks');
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not trigger global loading events for ordinary GET requests', async () => {
+    const onStart = jest.fn();
+    const onEnd = jest.fn();
+    window.addEventListener('pepper-farm:loading-start', onStart);
+    window.addEventListener('pepper-farm:loading-end', onEnd);
+
+    mockOkJson([]);
+    await apiFetch('/api/tasks');
+
+    expect(onStart).not.toHaveBeenCalled();
+    expect(onEnd).not.toHaveBeenCalled();
+
+    window.removeEventListener('pepper-farm:loading-start', onStart);
+    window.removeEventListener('pepper-farm:loading-end', onEnd);
+  });
+
+  it('triggers global loading events for GET requests during a route-loading window', async () => {
+    const onStart = jest.fn();
+    const onEnd = jest.fn();
+    window.addEventListener('pepper-farm:loading-start', onStart);
+    window.addEventListener('pepper-farm:loading-end', onEnd);
+
+    markRouteLoadingWindow();
+    mockOkJson([]);
+    await apiFetch('/api/tasks');
+
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener('pepper-farm:loading-start', onStart);
+    window.removeEventListener('pepper-farm:loading-end', onEnd);
   });
 });
 

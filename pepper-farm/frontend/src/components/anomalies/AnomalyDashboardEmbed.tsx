@@ -204,7 +204,7 @@ export default function AnomalyDashboardEmbed() {
   const handleFilterChange = () => setOffset(0);
 
   const handleCreateTask = useCallback((alert: RecentAlert) => {
-    router.push(`/manager/tasks?${buildAlertTaskQueryString(alert)}`);
+    router.push(`/manager?section=tasks&${buildAlertTaskQueryString(alert)}`);
   }, [router]);
 
   const handleAlertResolved = (alertId: number) => {

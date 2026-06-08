@@ -16,12 +16,22 @@ from models.farm_zone import FarmZone
 from models.pepper_variety import PepperVariety
 import models.plant   # noqa: F401 — registers Plants table referenced by SensorAssignment FK
 import models.sensor  # noqa: F401 — registers SensorAssignment, SensorAlert, etc.
-from schemas.task import ChecklistItemIn, CreateTaskRequest, UpdateChecklistItemRequest
+from schemas.task import (
+    ChecklistItemIn,
+    CreateTaskRequest,
+    UpdateChecklistItemRequest,
+    UpdateTaskRequest,
+)
 from services.task_service import (
     add_checklist_item,
+    cancel_task,
     create_task,
     delete_checklist_item,
+    get_all_tasks,
+    get_completed_tasks,
+    get_tasks_by_user,
     update_checklist_item,
+    update_task,
 )
 
 # ------------------------------------------------------------------ #
@@ -366,3 +376,103 @@ def test_checklist_items_belong_to_correct_task(db):
     assert task_a.checklistItems[0].title == "Item A"
     assert len(task_b.checklistItems) == 1
     assert task_b.checklistItems[0].title == "Item B"
+
+
+# ------------------------------------------------------------------ #
+# Delete / cancel task (US42 / BSPMT7-491)
+# ------------------------------------------------------------------ #
+
+def test_cancel_task_sets_status_cancelled(db):
+    dto = CreateTaskRequest(title="Stray task", taskType="inspection", priority="low", dueDate=FUTURE_DUE)
+    task, _ = create_task(db, MANAGER_ID, dto)
+
+    result, error = cancel_task(db, task.id, MANAGER_ID)
+
+    assert error is None
+    assert result is not None
+    assert result.status == "cancelled"
+    # Row still exists in the DB (soft delete, not a hard delete).
+    assert db.query(Task).filter(Task.Id == task.id).first() is not None
+
+
+def test_cancel_task_not_found(db):
+    result, error = cancel_task(db, 999999, MANAGER_ID)
+    assert result is None
+    assert error == "Task not found."
+
+
+def test_can_cancel_done_task(db):
+    """US42 updated rule: a completed task can be soft-deleted; history fields stay."""
+    dto = CreateTaskRequest(title="Finished task", taskType="inspection", priority="low", dueDate=FUTURE_DUE)
+    task, _ = create_task(db, MANAGER_ID, dto)
+    update_task(db, task.id, UpdateTaskRequest(status="done"))
+    completed_at = db.query(Task).filter(Task.Id == task.id).first().CompletedAt
+    assert completed_at is not None
+
+    result, error = cancel_task(db, task.id, MANAGER_ID)
+
+    assert error is None
+    assert result is not None
+    assert result.status == "cancelled"
+    # CompletedAt and the row itself are preserved.
+    row = db.query(Task).filter(Task.Id == task.id).first()
+    assert row is not None
+    assert row.CompletedAt == completed_at
+
+
+def test_cannot_cancel_another_managers_task(db):
+    """Only the creating manager may cancel a task."""
+    dto = CreateTaskRequest(title="Carol's task", taskType="inspection", priority="low", dueDate=FUTURE_DUE)
+    task, _ = create_task(db, ANOTHER_MANAGER_ID, dto)
+
+    result, error = cancel_task(db, task.id, MANAGER_ID)
+
+    assert result is None
+    assert error == "You can only delete tasks you created."
+    # Status untouched.
+    assert db.query(Task).filter(Task.Id == task.id).first().Status == "todo"
+
+
+def test_update_task_rejects_cancelled_status(db):
+    dto = CreateTaskRequest(title="Keep me", taskType="inspection", priority="low", dueDate=FUTURE_DUE)
+    task, _ = create_task(db, MANAGER_ID, dto)
+
+    result, error = update_task(db, task.id, UpdateTaskRequest(status="cancelled"))
+
+    assert result is None
+    assert error == "Use the delete action to cancel a task."
+    # Status is unchanged.
+    assert db.query(Task).filter(Task.Id == task.id).first().Status == "todo"
+
+
+def test_cancelled_task_excluded_from_get_all_tasks(db):
+    keep, _ = create_task(db, MANAGER_ID, CreateTaskRequest(title="Keep", taskType="inspection", priority="low", dueDate=FUTURE_DUE))
+    drop, _ = create_task(db, MANAGER_ID, CreateTaskRequest(title="Drop", taskType="inspection", priority="low", dueDate=FUTURE_DUE))
+
+    cancel_task(db, drop.id, MANAGER_ID)
+
+    titles = [t.title for t in get_all_tasks(db)]
+    assert "Keep" in titles
+    assert "Drop" not in titles
+
+
+def test_cancelled_task_excluded_from_get_tasks_by_user(db):
+    assigned, _ = create_task(db, MANAGER_ID, CreateTaskRequest(
+        title="Worker task", taskType="inspection", priority="low",
+        dueDate=FUTURE_DUE, assignedToUserId=WORKER_ID,
+    ))
+
+    cancel_task(db, assigned.id, MANAGER_ID)
+
+    assert get_tasks_by_user(db, WORKER_ID) == []
+
+
+def test_cancelled_done_task_excluded_from_history(db):
+    """A completed task that is soft-deleted disappears from the History list."""
+    done, _ = create_task(db, MANAGER_ID, CreateTaskRequest(title="Done then dropped", taskType="inspection", priority="low", dueDate=FUTURE_DUE))
+    update_task(db, done.id, UpdateTaskRequest(status="done"))
+    assert any(t.title == "Done then dropped" for t in get_completed_tasks(db))
+
+    cancel_task(db, done.id, MANAGER_ID)
+
+    assert all(t.title != "Done then dropped" for t in get_completed_tasks(db))

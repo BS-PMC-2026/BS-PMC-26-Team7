@@ -59,3 +59,9 @@ export async function updateProduct(
     body: JSON.stringify(payload),
   });
 }
+
+export async function deleteProduct(id: number): Promise<void> {
+  return apiFetch<void>(`/api/products/${id}`, {
+    method: 'DELETE',
+  });
+}

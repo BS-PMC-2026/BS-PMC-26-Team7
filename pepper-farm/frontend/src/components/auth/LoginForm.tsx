@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ROLE_ROUTES } from "@/lib/constants";
 import { useLanguage } from "@/context/LanguageContext";
+import { useLoading } from "@/context/LoadingContext";
+import Button from "@/components/ui/Button";
 
 interface FormData {
   email:    string;
@@ -13,6 +15,7 @@ interface FormData {
 export default function LoginForm() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { withLoader, startRouteLoader } = useLoading();
 
   const [form,    setForm]    = useState<FormData>({ email: "", password: "" });
   const [error,   setError]   = useState("");
@@ -34,28 +37,36 @@ export default function LoginForm() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/auth/login`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
+      await withLoader(async () => {
+        const res = await fetch(`/api/auth/login`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(form),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.detail ?? t.auth.loginFailed);
+          return;
+        }
+
+        localStorage.setItem("token",    data.accessToken);
+        localStorage.setItem("role",     data.role);
+        localStorage.setItem("fullName", data.fullName);
+
+        document.cookie = `token=${data.accessToken}; path=/; max-age=3600`;
+        document.cookie = `role=${data.role}; path=/; max-age=3600`;
+
+        const redirect = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect")
+          : null;
+        const route = redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : ROLE_ROUTES[data.role] ?? "/visitor";
+        startRouteLoader();
+        router.push(route);
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.detail ?? t.auth.loginFailed);
-        return;
-      }
-
-      localStorage.setItem("token",    data.accessToken);
-      localStorage.setItem("role",     data.role);
-      localStorage.setItem("fullName", data.fullName);
-
-      document.cookie = `token=${data.accessToken}; path=/; max-age=3600`;
-      document.cookie = `role=${data.role}; path=/; max-age=3600`;
-
-      const route = ROLE_ROUTES[data.role] ?? "/visitor";
-      router.push(route);
 
     } catch {
       setError(t.auth.networkError);
@@ -78,6 +89,7 @@ export default function LoginForm() {
           type="email"
           value={form.email}
           onChange={handleChange}
+          disabled={loading}
           placeholder={t.auth.emailPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
           dir="ltr"
@@ -91,6 +103,7 @@ export default function LoginForm() {
           type="password"
           value={form.password}
           onChange={handleChange}
+          disabled={loading}
           placeholder={t.auth.passwordPlaceholder}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
@@ -102,13 +115,9 @@ export default function LoginForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition"
-      >
+      <Button type="submit" loading={loading} variant="primary" size="md" className="w-full">
         {loading ? t.auth.loggingIn : t.auth.login}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-gray-500">
         {t.auth.noAccount}{" "}

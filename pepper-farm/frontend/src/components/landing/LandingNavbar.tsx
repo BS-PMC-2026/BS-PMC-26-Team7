@@ -21,7 +21,7 @@ interface LandingNavbarProps {
  */
 export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const la = t.landing;
 
   const NAV_ITEMS: IMenu[] = [
@@ -35,7 +35,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
         { id: 21, title: la.navFarmMap,      url: '/visitor/map'       },
         { id: 22, title: la.navSafetyMap,    url: '/visitor/spray-restrictions' },
         { id: 23, title: la.navProducts,     url: '/visitor/products'  },
-        { id: 24, title: la.navAllVarieties, url: '/visitor/peppers/1' },
+        { id: 24, title: la.navAllVarieties, url: '/visitor' },
       ],
     },
     { id: 3, title: la.navOurFarm, url: '/#farm', dropdown: false },
@@ -75,9 +75,8 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
         </Link>
 
@@ -108,7 +107,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/register"
-              className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-150 cursor-pointer"
+              className="px-4 py-2 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors duration-150 cursor-pointer"
             >
               {la.getStarted}
             </Link>
@@ -193,7 +192,7 @@ export default function LandingNavbar({ scrolled }: LandingNavbarProps) {
                   </Link>
                   <Link
                     href="/register"
-                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer"
+                    className="flex-1 text-center py-2 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] cursor-pointer"
                   >
                     {la.register}
                   </Link>
