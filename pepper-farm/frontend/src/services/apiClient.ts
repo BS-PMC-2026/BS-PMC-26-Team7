@@ -1,3 +1,9 @@
+import {
+  beginGlobalLoading,
+  endGlobalLoading,
+  isRouteLoadingWindowActive,
+} from "@/lib/globalLoading";
+
 /**
  * Centralised HTTP helper for all frontend API calls.
  *
@@ -10,7 +16,6 @@
  * Mode component remounting and sibling components loading the same resource.
  */
 
-// In-flight map: path → Promise<unknown>.  Cleared once the request settles.
 const inflight = new Map<string, Promise<unknown>>();
 
 interface ValidationErrorItem {
@@ -45,6 +50,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  * - Authorization header is injected automatically from localStorage
  * - Passing `options.headers.Authorization` overrides the stored token
  * - GET requests without a body are deduplicated in-flight
+ * - non-GET requests trigger the global full-screen loader with ref counting
  * - timeoutMs defaults to 10 s; pass a shorter value (e.g. 5000) for polling
  */
 export function apiFetch<T>(
@@ -53,11 +59,14 @@ export function apiFetch<T>(
 ): Promise<T> {
   const method = (options?.method ?? "GET").toUpperCase();
   const isGet = method === "GET" && !options?.body;
+  const shouldUseGlobalLoader = !isGet || isRouteLoadingWindowActive();
   const cacheKey = isGet ? path : null;
 
   if (cacheKey && inflight.has(cacheKey)) {
     return inflight.get(cacheKey) as Promise<T>;
   }
+
+  if (shouldUseGlobalLoader) beginGlobalLoading();
 
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
@@ -66,7 +75,7 @@ export function apiFetch<T>(
   const isFormData = options?.body instanceof FormData;
   const token = getStoredToken();
 
-  // Strip our custom timeoutMs so it doesn't reach the native fetch
+  // Strip our custom timeoutMs so it does not reach the native fetch.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { timeoutMs: _omit, ...fetchOptions } = options ?? {};
 
@@ -100,6 +109,7 @@ export function apiFetch<T>(
     .finally(() => {
       clearTimeout(timer);
       if (cacheKey) inflight.delete(cacheKey);
+      if (shouldUseGlobalLoader) endGlobalLoading();
     });
 
   if (cacheKey) inflight.set(cacheKey, promise);

@@ -121,7 +121,7 @@ export default function CouponsPage() {
                 value={form.code}
                 onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
                 placeholder="SAVE10"
-                className="w-full border border-[var(--color-border)] rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:border-[var(--color-primary)]"
+                className="w-full border border-[var(--color-border)] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]"
                 data-testid="coupon-code-input"
               />
             </div>
@@ -225,7 +225,7 @@ export default function CouponsPage() {
               data-testid={`coupon-row-${c.couponId}`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono font-semibold text-gray-900">{c.code}</span>
+                <span className=" font-semibold text-gray-900">{c.code}</span>
                 <span className="text-sm text-gray-500">
                   {c.discountType === 'percentage' ? `${c.discountValue}%` : `$${c.discountValue}`} OFF
                 </span>

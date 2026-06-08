@@ -59,6 +59,7 @@ jest.mock('lucide-react', () => {
   const icons = [
     'LayoutDashboard','ShoppingBag','ShoppingCart','Sprout','ChevronDown',
     'Leaf','LogOut','MapPin','Bell','X','ClipboardCheck','ShieldAlert',
+    'Menu',
   ];
   const mocks: Record<string, React.FC<{ size?: number }>> = {};
   icons.forEach((name) => {
@@ -111,9 +112,9 @@ describe('WorkerNavbar — rendering', () => {
     mockMarkAllAppNotifsRead.mockClear();
   });
 
-  it('renders the PepperFarm logo', () => {
+  it('renders the Hadinerim logo', () => {
     renderNavbar();
-    expect(screen.getByText('PepperFarm')).toBeInTheDocument();
+    expect(screen.getByText('Hadinerim')).toBeInTheDocument();
   });
 
   it('renders the "Worker" role badge', () => {
@@ -149,7 +150,7 @@ describe('WorkerNavbar — rendering', () => {
 
   it('logo links to the home page', () => {
     renderNavbar();
-    expect(screen.getByRole('link', { name: /pepperfarm/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /hadinerim/i })).toHaveAttribute('href', '/');
   });
 });
 

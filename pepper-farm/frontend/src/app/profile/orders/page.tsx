@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { getMyOrders, Order } from '@/services/ordersService';
 import { useLanguage } from '@/context/LanguageContext';
+import BackButton from '@/components/ui/BackButton';
 
 function fmt(n: number) { return `₪${Number(n).toFixed(2)}`; }
 
@@ -31,7 +31,6 @@ function formatDate(iso: string | null | undefined) {
 export default function MyOrdersPage() {
   const { t } = useLanguage();
   const st = t.store;
-  const router = useRouter();
 
   const [orders,  setOrders]  = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,14 +44,9 @@ export default function MyOrdersPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4 transition"
-        >
-          ← {t.common.back ?? 'Back'}
-        </button>
+        <BackButton fallbackHref="/visitor/products" className="mb-4" />
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">{st.myOrders}</h1>
 
@@ -90,7 +84,7 @@ export default function MyOrdersPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-semibold text-gray-900 font-mono text-sm">{order.orderNumber}</span>
+                      <span className="font-semibold text-gray-900 text-sm">{order.orderNumber}</span>
                       <StatusBadge status={order.status} />
                     </div>
                     <p className="text-xs text-gray-500">{formatDate(order.createdAtUtc)}</p>

@@ -11,17 +11,7 @@ import {
   MotionValue,
 } from 'framer-motion';
 import { ShoppingBag, MapPin, ChevronDown } from 'lucide-react';
-import FloatingPepper from '@/components/ui/FloatingPepper';
 import { useLanguage } from '@/context/LanguageContext';
-
-const PEPPER_PARTICLES = [
-  { x: 10, delay: 0,   size: 16 },
-  { x: 25, delay: 1.3, size: 24 },
-  { x: 40, delay: 2.6, size: 16 },
-  { x: 55, delay: 3.9, size: 32 },
-  { x: 70, delay: 5.2, size: 16 },
-  { x: 85, delay: 6.5, size: 24 },
-];
 
 interface HeroSectionProps {
   /** Shared scroll spring progress (0–1) for parallax */
@@ -61,8 +51,8 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
 
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    cursorX.set(e.clientX - rect.left);
-    cursorY.set(e.clientY - rect.top);
+    cursorX.set(e.clientX - rect.left - 192);
+    cursorY.set(e.clientY - rect.top - 192);
   };
 
   return (
@@ -93,21 +83,12 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
         aria-hidden="true"
       />
 
-      {/* z-[2] — Pepper particles */}
-      <div className="absolute inset-0 z-[2] overflow-hidden" aria-hidden="true">
-        {PEPPER_PARTICLES.map((p, i) => (
-          <FloatingPepper key={i} x={p.x} delay={p.delay} size={p.size} />
-        ))}
-      </div>
-
       {/* z-[3] — Cursor glow */}
       <motion.div
         className="absolute w-96 h-96 rounded-full pointer-events-none z-[3]"
         style={{
           x: springX,
           y: springY,
-          translateX: '-50%',
-          translateY: '-50%',
           background: 'radial-gradient(circle, rgba(134,239,172,0.25) 0%, transparent 70%)',
         }}
         aria-hidden="true"
@@ -120,7 +101,6 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className="text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-tight mb-6 drop-shadow-lg"
-          style={{ fontFamily: 'Lora, serif' }}
         >
           {la.heroLine1}
           <br />
@@ -152,7 +132,7 @@ export default function HeroSection({ smoothProgress, scrollYProgress }: HeroSec
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/visitor/products"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors duration-200 cursor-pointer shadow-lg shadow-green-200"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary-hover)] transition-colors duration-200 cursor-pointer shadow-lg"
             >
               <ShoppingBag className="w-4 h-4" />
               {la.shopPeppers}

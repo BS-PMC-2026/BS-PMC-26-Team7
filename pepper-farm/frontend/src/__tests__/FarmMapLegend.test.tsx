@@ -6,6 +6,10 @@ jest.mock('@/lib/managerDashboardApi', () => ({
   getManagerDashboardData: jest.fn(),
 }));
 
+jest.mock('@/services/spray', () => ({
+  getZoneSprayMap: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock('@/components/map/FarmMap', () => ({
   __esModule: true,
   default: () => <div data-testid="farm-map-mock" />,
@@ -39,7 +43,7 @@ function legendLabels(): string[] {
   return Array.from(legend.querySelectorAll('span.text-xs')).map((el) => el.textContent ?? '');
 }
 
-describe('Dashboard – Farm Map legend changes by active filter', () => {
+describe('Dashboard Farm Map legend changes by manager mode', () => {
   beforeEach(() => {
     localStorage.clear();
     mockGetData.mockResolvedValue(EMPTY_DASHBOARD_DATA);
@@ -49,143 +53,107 @@ describe('Dashboard – Farm Map legend changes by active filter', () => {
     jest.clearAllMocks();
   });
 
-  it('shows the default (no-filter) alert legend on initial render', async () => {
+  it('shows the planting legend on initial render', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-legend')).toBeInTheDocument();
     });
-    const labels = legendLabels();
-    expect(labels).toContain('Task + Sensor alert');
-    expect(labels).toContain('Open task');
-    expect(labels).toContain('Sensor anomaly');
-    expect(labels).toContain('No alerts');
+    expect(legendLabels()).toEqual(expect.arrayContaining([
+      'First planting allowed in Nursery only.',
+      'Transfers allowed to: Growing greenhouses, Visitor greenhouses.',
+    ]));
   });
 
-  it('switches to the pepper legend when the Pepper filter is active', async () => {
+  it('switches to the task legend when the Tasks mode is active', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-pepper')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-tasks')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('filter-pepper'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-tasks'));
 
     await waitFor(() => {
-      const labels = legendLabels();
-      expect(labels).toContain('Has planted pepper');
-      expect(labels).toContain('No pepper assigned');
+      expect(legendLabels()).toEqual(expect.arrayContaining(['Has open tasks', 'No open tasks']));
     });
-    const labels = legendLabels();
-    expect(labels).not.toContain('Task + Sensor alert');
-    expect(labels).not.toContain('Has open tasks');
+    expect(legendLabels()).not.toContain('First planting allowed in Nursery only.');
   });
 
-  it('switches to the task legend when the Task filter is active', async () => {
+  it('switches to the sensor legend when the Sensor mode is active', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-task')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-sensor')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('filter-task'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-sensor'));
 
     await waitFor(() => {
-      const labels = legendLabels();
-      expect(labels).toContain('Has open tasks');
-      expect(labels).toContain('No open tasks');
+      expect(legendLabels()).toEqual(expect.arrayContaining(['High severity alert', 'Medium severity alert', 'Normal']));
     });
-    const labels = legendLabels();
-    expect(labels).not.toContain('Task + Sensor alert');
-    expect(labels).not.toContain('Has planted pepper');
+    expect(legendLabels()).not.toContain('First planting allowed in Nursery only.');
   });
 
-  it('switches to the sensor legend when the Sensor filter is active', async () => {
+  it('switches to the spray legend when the Sprays mode is active', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-sensor')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-sprays')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('filter-sensor'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-sprays'));
 
     await waitFor(() => {
-      const labels = legendLabels();
-      expect(labels).toContain('High severity alert');
-      expect(labels).toContain('Medium severity alert');
-      expect(labels).toContain('Normal');
-    });
-    const labels = legendLabels();
-    expect(labels).not.toContain('Task + Sensor alert');
-  });
-
-  it('restores the default legend when clear button is clicked', async () => {
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByTestId('filter-pepper')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId('filter-pepper'));
-    await waitFor(() => {
-      expect(legendLabels()).toContain('Has planted pepper');
-    });
-
-    fireEvent.click(screen.getByTestId('filter-clear'));
-    await waitFor(() => {
-      const labels = legendLabels();
-      expect(labels).toContain('Task + Sensor alert');
-      expect(labels).toContain('No alerts');
+      expect(legendLabels()).toEqual(expect.arrayContaining(['Entry Restricted', 'Caution - Consult Manager', 'Entry Permitted']));
     });
   });
 
-  it('toggles the same filter off (re-click) and restores the default legend', async () => {
+  it('moves between modes without toggling back to the old no-filter alert legend', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-task')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-tasks')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('filter-task'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-tasks'));
     await waitFor(() => {
       expect(legendLabels()).toContain('Has open tasks');
     });
 
-    // Re-clicking the same filter button turns it off
-    fireEvent.click(screen.getByTestId('filter-task'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-planting'));
     await waitFor(() => {
-      const labels = legendLabels();
-      expect(labels).toContain('Task + Sensor alert');
+      expect(legendLabels()).toContain('First planting allowed in Nursery only.');
     });
+    expect(legendLabels()).not.toContain('Task + Sensor alert');
   });
 
-  it('active filter button has highlighted styling', async () => {
+  it('active mode button has highlighted styling', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-pepper')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-tasks')).toBeInTheDocument();
     });
 
-    const btn = screen.getByTestId('filter-pepper');
-    // Before click: should NOT have the active (primary-color) background
+    const btn = screen.getByTestId('manager-map-mode-tasks');
     expect(btn.className).not.toContain('bg-[var(--color-primary)]');
 
     fireEvent.click(btn);
-    // After click: should have the active (primary-color) background
     await waitFor(() => {
       expect(btn.className).toContain('bg-[var(--color-primary)]');
     });
   });
 
-  it('clear button is visible only when a filter is active', async () => {
+  it('shows the spray refresh button only in Sprays mode', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId('filter-pepper')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-map-mode-planting')).toBeInTheDocument();
     });
 
-    expect(screen.queryByTestId('filter-clear')).toBeNull();
+    expect(screen.queryByTestId('manager-spray-refresh-button')).toBeNull();
 
-    fireEvent.click(screen.getByTestId('filter-pepper'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-sprays'));
     await waitFor(() => {
-      expect(screen.getByTestId('filter-clear')).toBeInTheDocument();
+      expect(screen.getByTestId('manager-spray-refresh-button')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('filter-clear'));
+    fireEvent.click(screen.getByTestId('manager-map-mode-planting'));
     await waitFor(() => {
-      expect(screen.queryByTestId('filter-clear')).toBeNull();
+      expect(screen.queryByTestId('manager-spray-refresh-button')).toBeNull();
     });
   });
 });

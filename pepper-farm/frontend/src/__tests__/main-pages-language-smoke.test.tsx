@@ -93,6 +93,21 @@ jest.mock('@/services/sensors', () => ({
 
 jest.mock('@/services/reports', () => ({
   getInventoryReport: jest.fn().mockResolvedValue([]),
+  getProductStatistics: jest.fn().mockResolvedValue({
+    summary: {
+      total_orders: 0,
+      total_revenue: 0,
+      total_units_sold: 0,
+      average_order_value: 0,
+      unique_buyers: 0,
+      best_selling_product: null,
+      period_start: null,
+      period_end: null,
+    },
+    best_selling_products: [],
+    revenue_by_period: [],
+    recent_orders: [],
+  }),
 }));
 
 jest.mock('@/services/peppers', () => ({
@@ -203,30 +218,34 @@ describe('Inventory page smoke test', () => {
   });
 });
 
-// ── 3. Tasks page ────────────────────────────────────────────────────────────
+// ── 3. Manage Tasks modal content (ported from /manager/tasks into the dashboard) ──
 
-describe('Tasks page smoke test', () => {
+describe('Manage Tasks modal content smoke test', () => {
   beforeEach(() => { localStorage.clear(); jest.clearAllMocks(); });
 
+  const renderModal = async (locale: 'en' | 'he') => {
+    const ManageTasksModalContent = (await import('@/components/tasks/ManageTasksModalContent')).default;
+    await renderInProvider(
+      <ManageTasksModalContent activeTab="active" onTabChange={() => {}} alertPrefill={null} onAlertPrefillConsumed={() => {}} />,
+      locale,
+    );
+  };
+
   it('renders in English without crashing', async () => {
-    const TasksPage = (await import('@/app/manager/tasks/page')).default;
-    await renderInProvider(<TasksPage />, 'en');
+    await renderModal('en');
   });
 
   it('renders in Hebrew without crashing', async () => {
-    const TasksPage = (await import('@/app/manager/tasks/page')).default;
-    await renderInProvider(<TasksPage />, 'he');
+    await renderModal('he');
   });
 
   it('renders translated tasks title in English', async () => {
-    const TasksPage = (await import('@/app/manager/tasks/page')).default;
-    await renderInProvider(<TasksPage />, 'en');
+    await renderModal('en');
     expect(screen.getByText(getDictionary('en').tasks.title)).toBeInTheDocument();
   });
 
   it('renders translated tasks title in Hebrew', async () => {
-    const TasksPage = (await import('@/app/manager/tasks/page')).default;
-    await renderInProvider(<TasksPage />, 'he');
+    await renderModal('he');
     expect(screen.getByText(getDictionary('he').tasks.title)).toBeInTheDocument();
   });
 });

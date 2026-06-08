@@ -3,12 +3,14 @@ import React from 'react';
 interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
+  /** Override the overlay's z-index utility class (e.g. when nesting inside another modal). Defaults to 'z-50'. */
+  overlayClassName?: string;
 }
 
-export default function Modal({ onClose, children }: ModalProps) {
+export default function Modal({ onClose, children, overlayClassName = 'z-50' }: ModalProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 ${overlayClassName} flex items-center justify-center p-4`}
       style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
       onClick={onClose}
     >

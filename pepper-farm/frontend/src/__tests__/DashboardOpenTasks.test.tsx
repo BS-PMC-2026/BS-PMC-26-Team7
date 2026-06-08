@@ -8,6 +8,10 @@ jest.mock('@/lib/managerDashboardApi', () => ({
   getManagerDashboardData: jest.fn(),
 }));
 
+jest.mock('@/services/spray', () => ({
+  getZoneSprayMap: jest.fn().mockResolvedValue([]),
+}));
+
 // Mock FarmMap — it pulls in browser-only canvas APIs
 jest.mock('@/components/map/FarmMap', () => ({
   __esModule: true,
@@ -111,7 +115,7 @@ describe('Dashboard – Open Tasks card', () => {
     });
     renderPage();
     await waitFor(() => {
-      expect(screen.getAllByRole('article')).toHaveLength(10);
+      expect(screen.getAllByTestId('urgency-normal')).toHaveLength(10);
     });
   });
 

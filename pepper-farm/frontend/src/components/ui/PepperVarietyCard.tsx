@@ -54,7 +54,6 @@ export default function PepperVarietyCard({
         <div className="flex items-start justify-between mb-3">
           <h3
             className="text-lg font-semibold text-green-900"
-            style={{ fontFamily: 'Lora, serif' }}
           >
             {name}
           </h3>
@@ -71,7 +70,6 @@ export default function PepperVarietyCard({
 
         <p
           className="text-sm text-gray-600 leading-relaxed"
-          style={{ fontFamily: 'Raleway, sans-serif' }}
         >
           {description}
         </p>

@@ -101,6 +101,13 @@ interface FarmMapProps {
   tasks?: Task[];
   zoneHealth?: ZoneHealth[];
   showLegend?: boolean;
+  /**
+   * Whether to show internal operational alert information (the
+   * Task/Sensor alert legend and the "Zone Alerts" popup section).
+   * Defaults to true so Manager/Worker maps are unchanged.
+   * The Visitor map passes false to hide manager/worker operational details.
+   */
+  showAlerts?: boolean;
 }
 
 export default function FarmMap({
@@ -111,6 +118,7 @@ export default function FarmMap({
   tasks = [],
   zoneHealth = [],
   showLegend = true,
+  showAlerts = true,
 }: FarmMapProps = {}) {
   const [selected,    setSelected]    = useState<FarmSection | null>(null);
   const [zoneData,    setZoneData]    = useState<ZoneData | null>(null);
@@ -485,7 +493,11 @@ export default function FarmMap({
       {showLegend && (
       <div className="mt-4 flex flex-col gap-3">
 
-        {/* Status legend (alert view or active filter) */}
+        {/* Status legend (alert view or active filter).
+            The alert legend (activeFilter === null) is hidden when showAlerts is
+            false — e.g. the Visitor map — so internal Task/Sensor alert items are
+            not exposed. Filter legends (pepper/task/sensor) are unaffected. */}
+        {(activeFilter !== null || showAlerts) && (
         <div className="flex flex-wrap gap-3">
           {activeLegend.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
@@ -504,6 +516,7 @@ export default function FarmMap({
             </div>
           ))}
         </div>
+        )}
 
         {/* Zone-type legend — always visible */}
         <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
@@ -576,8 +589,9 @@ export default function FarmMap({
               </div>
             )}
 
-            {/* Filter-aware body */}
-            {activeFilter === null && (
+            {/* Filter-aware body. The "Zone Alerts" summary is hidden when
+                showAlerts is false (Visitor map) to avoid exposing operational info. */}
+            {activeFilter === null && showAlerts && (
               <div className="mb-3">
                 <p className="text-xs text-gray-500 font-semibold mb-2">{ma.mapZoneAlerts}</p>
                 {renderAlertSummary(selected)}

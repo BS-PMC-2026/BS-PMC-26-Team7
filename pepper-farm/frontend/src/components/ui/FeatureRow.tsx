@@ -48,14 +48,12 @@ export default function FeatureRow({
 
       <div>
         <h3
-          className="text-xl font-semibold text-green-900 mb-2"
-          style={{ fontFamily: 'Lora, serif' }}
+          className="text-xl font-semibold text-white mb-2"
         >
           {title}
         </h3>
         <p
-          className="text-gray-600 leading-relaxed max-w-lg"
-          style={{ fontFamily: 'Raleway, sans-serif' }}
+          className="text-green-100/90 leading-relaxed max-w-lg"
         >
           {body}
         </p>

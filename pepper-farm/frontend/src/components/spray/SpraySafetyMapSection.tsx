@@ -183,7 +183,7 @@ export default function SpraySafetyMapSection() {
                   <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                     <td className="px-4 py-3">
                       <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
-                      <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
+                      <span className="block text-xs text-[var(--color-muted-foreground)]">{z.zoneCode}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${ENTRY_STYLE[z.entryPermissionStatus ?? 'no_data']}`} data-testid="entry-permission-status">

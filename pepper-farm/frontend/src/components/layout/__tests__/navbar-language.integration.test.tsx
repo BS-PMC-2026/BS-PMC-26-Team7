@@ -100,7 +100,7 @@ describe('ManagerNavbar language integration', () => {
     renderManagerNavbar();
     await waitFor(() => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('Tasks')).toBeInTheDocument();
+      expect(screen.getByText('Inventory')).toBeInTheDocument();
       expect(screen.getByText('Sensor Explorer')).toBeInTheDocument();
       expect(screen.getByText('Analytics')).toBeInTheDocument();
       expect(screen.getByText('Users')).toBeInTheDocument();
@@ -147,11 +147,11 @@ describe('ManagerNavbar language integration', () => {
     });
   });
 
-  it('active route highlighting works on /manager/tasks path', async () => {
-    renderManagerNavbar('/manager/tasks');
+  it('active route highlighting works on /manager/inventory path', async () => {
+    renderManagerNavbar('/manager/inventory');
     await waitFor(() => {
-      const tasksLink = screen.getByRole('link', { name: /Tasks/i });
-      expect(tasksLink).toBeInTheDocument();
+      const inventoryButton = screen.getByRole('button', { name: /Inventory/i });
+      expect(inventoryButton).toBeInTheDocument();
     });
   });
 
@@ -161,8 +161,11 @@ describe('ManagerNavbar language integration', () => {
       const dashboardLink = screen.getByRole('link', { name: /Dashboard/i });
       expect(dashboardLink).toHaveAttribute('href', '/manager');
 
-      const tasksLink = screen.getByRole('link', { name: /Tasks/i });
-      expect(tasksLink).toHaveAttribute('href', '/manager/tasks');
+      const inventoryButton = screen.getByRole('button', { name: /Inventory/i });
+      fireEvent.click(inventoryButton);
+
+      const stockLink = screen.getByRole('link', { name: /Stock/i });
+      expect(stockLink).toHaveAttribute('href', '/manager/inventory');
 
       const sensorLink = screen.getByRole('link', { name: /Sensor Explorer/i });
       expect(sensorLink).toHaveAttribute('href', '/manager/sensors');

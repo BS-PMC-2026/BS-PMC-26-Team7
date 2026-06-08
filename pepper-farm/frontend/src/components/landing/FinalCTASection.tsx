@@ -28,7 +28,6 @@ export default function FinalCTASection({
         </p>
         <h2
           className="text-4xl font-bold text-green-900 mb-5"
-          style={{ fontFamily: 'Lora, serif' }}
         >
           {la.readyToTasteHeat}
         </h2>
@@ -40,7 +39,7 @@ export default function FinalCTASection({
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link
               href={primaryHref}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors duration-200 cursor-pointer shadow-lg shadow-green-200"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-white bg-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary-hover)] transition-colors duration-200 cursor-pointer shadow-lg"
             >
               {la.createFreeAccount}
               <ArrowRight className="w-4 h-4" />

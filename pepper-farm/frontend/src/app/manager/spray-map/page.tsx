@@ -404,7 +404,7 @@ export default function SprayMapPage() {
                     <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
-                        <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
+                        <span className="block text-xs text-[var(--color-muted-foreground)]">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLE[z.sprayStatus]}`}>
@@ -524,7 +524,7 @@ export default function SprayMapPage() {
                             </span>
                             <span>
                               <span className="font-medium text-[var(--color-foreground)]">{alert.ZoneName}</span>
-                              <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{alert.ZoneCode}</span>
+                              <span className="block text-xs text-[var(--color-muted-foreground)]">{alert.ZoneCode}</span>
                             </span>
                           </span>
                         </td>
@@ -634,7 +634,7 @@ export default function SprayMapPage() {
                       >
                         <td className="px-4 py-3">
                           <span className="font-medium text-[var(--color-foreground)]">{alert.ZoneName}</span>
-                          <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{alert.ZoneCode}</span>
+                          <span className="block text-xs text-[var(--color-muted-foreground)]">{alert.ZoneCode}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${OVERDUE_SEVERITY_STYLE[alert.Severity]}`}>
@@ -704,7 +704,7 @@ export default function SprayMapPage() {
               </h3>
               <p className="text-sm text-[var(--color-muted-foreground)] mb-4">
                 {sp.zone}: <span className="font-medium text-[var(--color-foreground)]">{assigningAlert.ZoneName}</span>{' '}
-                <span className="font-mono text-xs text-[var(--color-muted-foreground)]">({assigningAlert.ZoneCode})</span>
+                <span className=" text-xs text-[var(--color-muted-foreground)]">({assigningAlert.ZoneCode})</span>
               </p>
 
               {assignSuccess ? (

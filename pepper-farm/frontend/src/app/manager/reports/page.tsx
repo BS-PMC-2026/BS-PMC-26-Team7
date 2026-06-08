@@ -677,7 +677,7 @@ function ProductStatisticsReport() {
                   <tbody>
                     {data.recent_orders.map(o => (
                       <tr key={o.order_id} className="hover:bg-[var(--color-muted)] border-b">
-                        <td className="px-4 py-3 font-mono text-xs text-[var(--color-muted-foreground)]">{o.order_number}</td>
+                        <td className="px-4 py-3 text-xs text-[var(--color-muted-foreground)]">{o.order_number}</td>
                         <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">{o.buyer_name ?? '—'}</td>
                         <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(o.created_at + 'Z').toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCurrency(o.total_amount)}</td>

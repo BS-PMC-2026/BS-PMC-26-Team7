@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
-  ClipboardList,
   Radio,
   Leaf,
   ShoppingBag,
@@ -21,12 +21,9 @@ import {
   CheckCircle2,
   X,
   ExternalLink,
-  Droplets,
   ShieldAlert,
-  Mail,
-  Tag,
   Package,
-  UserCheck,
+  Menu,
 } from 'lucide-react';
 import { useAnomalyNotification } from '@/context/AnomalyNotificationContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -72,7 +69,7 @@ function timeAgo(dateStr: string | null | undefined): string {
 export default function ManagerNavbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { t, dir } = useLanguage();
+  const { t, dir, locale } = useLanguage();
   const {
     unreadCount,
     clearUnread,
@@ -86,7 +83,9 @@ export default function ManagerNavbar() {
 
   const [openGroup,  setOpenGroup]  = useState<string | null>(null);
   const [bellOpen,   setBellOpen]   = useState(false);
-  const [scrolled,   setScrolled]   = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  /* Navbar is always in its stable white state - no scroll-driven style switch (BSPMT7-486). */
+  const scrolled = true;
   const [notificationTab, setNotificationTab] = useState<'active' | 'history'>('active');
   const [dismissed, setDismissed] = useState<Record<string, number[]>>({
     sensor: [],
@@ -94,8 +93,12 @@ export default function ManagerNavbar() {
     overdue: [],
     completed: [],
   });
+  const [canSlideTabs, setCanSlideTabs] = useState({ left: false, right: false });
+  const [inventoryMenuPosition, setInventoryMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   const navRef        = useRef<HTMLElement>(null);
+  const tabScrollerRef = useRef<HTMLDivElement>(null);
+  const inventoryButtonRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navGroups: NavGroup[] = [
     {
@@ -158,12 +161,6 @@ export default function ManagerNavbar() {
   };
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
         setOpenGroup(null);
@@ -177,7 +174,42 @@ export default function ManagerNavbar() {
   useEffect(() => {
     setOpenGroup(null);
     setBellOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
+
+  const updateInventoryMenuPosition = () => {
+    const rect = inventoryButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const menuWidth = 224;
+    setInventoryMenuPosition({
+      top: rect.bottom + 8,
+      left: Math.min(Math.max(8, rect.left), window.innerWidth - menuWidth - 8),
+    });
+  };
+
+  useEffect(() => {
+    const scroller = tabScrollerRef.current;
+    if (!scroller) return;
+
+    const updateSlideState = () => {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      const current = Math.abs(scroller.scrollLeft);
+      setCanSlideTabs({
+        left: current > 2,
+        right: current < maxScroll - 2,
+      });
+      if (openGroup === 'inventory') updateInventoryMenuPosition();
+    };
+
+    updateSlideState();
+    scroller.addEventListener('scroll', updateSlideState, { passive: true });
+    window.addEventListener('resize', updateSlideState);
+    return () => {
+      scroller.removeEventListener('scroll', updateSlideState);
+      window.removeEventListener('resize', updateSlideState);
+    };
+  }, [openGroup]);
 
   const scheduleClose = () => {
     closeTimerRef.current = setTimeout(() => setOpenGroup(null), 100);
@@ -196,12 +228,28 @@ export default function ManagerNavbar() {
     const next = !bellOpen;
     setBellOpen(next);
     setOpenGroup(null);
+    setMobileMenuOpen(false);
     if (next) clearUnread();
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     router.push('/login');
+  };
+
+  const slideManagerTabs = (direction: 'left' | 'right') => {
+    tabScrollerRef.current?.scrollBy({
+      left: direction === 'left' ? -220 : 220,
+      behavior: 'smooth',
+    });
+  };
+
+  const handleNavbarWheel = (event: React.WheelEvent<HTMLElement>) => {
+    const scroller = tabScrollerRef.current;
+    if (!scroller || window.innerWidth < 768) return;
+
+    event.preventDefault();
+    scroller.scrollLeft += Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
   };
 
   const linkColor = scrolled ? 'text-green-800' : 'text-white';
@@ -213,6 +261,7 @@ export default function ManagerNavbar() {
     <motion.header
       ref={navRef as React.RefObject<HTMLElement>}
       dir={dir}
+      onWheel={handleNavbarWheel}
       className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled
           ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-[var(--color-border)]'
@@ -222,7 +271,7 @@ export default function ManagerNavbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-1">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 mr-3 no-underline">
@@ -237,9 +286,8 @@ export default function ManagerNavbar() {
             className={`font-semibold text-lg transition-colors duration-300 ${
               scrolled ? 'text-green-900' : 'text-white'
             }`}
-            style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
           <span
             className={`text-[9px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded border transition-colors duration-300 ${
@@ -253,131 +301,176 @@ export default function ManagerNavbar() {
         </Link>
 
         {/* Divider */}
-        <div className={`w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
+        <button
+          type="button"
+          onClick={() => { setMobileMenuOpen((open) => !open); setBellOpen(false); setOpenGroup(null); }}
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          className={`ml-auto flex md:hidden items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+            mobileMenuOpen
+              ? scrolled ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]' : 'bg-white/15 text-white'
+              : scrolled ? 'text-green-900 hover:bg-[var(--color-secondary-light)]' : 'text-white/80 hover:bg-white/10'
+          }`}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
 
-        {/* Dashboard */}
-        <NavLinkDirect href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
+        <div className={`hidden md:block w-px h-5 mx-1.5 shrink-0 ${scrolled ? 'bg-green-200' : 'bg-white/20'}`} />
 
-        {/* Tasks */}
-        <NavLinkDirect href="/manager/tasks" label={t.nav.tasks} icon={<ClipboardList size={14} />} active={pathname.startsWith('/manager/tasks')} scrolled={scrolled} />
+        <div className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-visible">
+          <button
+            type="button"
+            onClick={() => slideManagerTabs('left')}
+            aria-label="Show previous navigation tabs"
+            className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+              canSlideTabs.left
+                ? scrolled ? 'text-green-800 hover:bg-[var(--color-secondary-light)]' : 'text-white/70 hover:bg-white/10'
+                : scrolled ? 'text-green-900/25' : 'text-white/25'
+            }`}
+          >
+            <ChevronDown size={14} className="rotate-90" />
+          </button>
 
-        {/* Sensor Explorer */}
-        <NavLinkDirect href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
+          <div
+            ref={tabScrollerRef}
+            className="flex items-center gap-1 flex-1 min-w-[8rem] overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth navbar-scroll"
+          >
+            {/* Dashboard */}
+            <NavLinkDirect className="shrink-0" href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={14} />} active={pathname === '/manager'} scrolled={scrolled} />
 
-        {/* Inventory dropdown */}
-        {navGroups.map((group) => {
-          const active = isGroupActive(group);
-          const open   = openGroup === group.id;
+            {/* Sensor Explorer */}
+            <NavLinkDirect className="shrink-0" href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={14} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} scrolled={scrolled} />
 
-          return (
-            <div
-              key={group.id}
-              className="relative"
-              onMouseEnter={() => { cancelClose(); setOpenGroup(group.id); setBellOpen(false); }}
-              onMouseLeave={scheduleClose}
-            >
-              <button
-                onClick={() => { setOpenGroup(open ? null : group.id); setBellOpen(false); }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
-                  active || open
-                    ? `${activeLinkColor} ${activeBg}`
-                    : `${linkColor} opacity-70 ${hoverBg}`
-                }`}
-                style={{ fontFamily: 'Raleway, sans-serif' }}
-              >
-                <span className="opacity-80">{group.icon}</span>
-                {group.label}
-                <motion.span
-                  animate={{ rotate: open ? 180 : 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="flex opacity-50"
+            {/* Inventory dropdown */}
+            {navGroups.map((group) => {
+              const active = isGroupActive(group);
+              const open   = openGroup === group.id;
+
+              return (
+                <div
+                  key={group.id}
+                  className="relative shrink-0"
+                  onMouseEnter={() => {
+                    cancelClose();
+                    setOpenGroup(group.id);
+                    setBellOpen(false);
+                    requestAnimationFrame(updateInventoryMenuPosition);
+                  }}
+                  onMouseLeave={scheduleClose}
                 >
-                  <ChevronDown size={12} />
-                </motion.span>
-              </button>
-
-              {active && (
-                <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
-              )}
-
-              <AnimatePresence>
-                {open && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                    onMouseEnter={cancelClose}
-                    onMouseLeave={scheduleClose}
-                    className="absolute top-[calc(100%+8px)] left-0 min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white shadow-xl overflow-hidden z-[100]"
-                    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+                  <button
+                    ref={group.id === 'inventory' ? inventoryButtonRef : undefined}
+                    onClick={() => {
+                      setOpenGroup(open ? null : group.id);
+                      setBellOpen(false);
+                      requestAnimationFrame(updateInventoryMenuPosition);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none cursor-pointer text-sm font-medium transition-colors duration-150 whitespace-nowrap outline-none select-none ${
+                      active || open
+                        ? `${activeLinkColor} ${activeBg}`
+                        : `${linkColor} opacity-70 ${hoverBg}`
+                    }`}
                   >
-                    <div className="p-1.5">
-                      {group.items.map((item) => {
-                        const itemActive =
-                          pathname === item.href ||
-                          pathname.startsWith(item.href + '/');
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
-                              itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
-                            }`}
-                          >
-                            <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
-                              {item.icon}
-                            </span>
-                            <span>
-                              <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`} style={{ fontFamily: 'Raleway, sans-serif' }}>
-                                {item.label}
-                              </span>
-                              {item.description && (
-                                <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">
-                                  {item.description}
-                                </span>
-                              )}
-                            </span>
-                            {itemActive && (
-                              <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+                    <span className="opacity-80">{group.icon}</span>
+                    {group.label}
+                    <motion.span
+                      animate={{ rotate: open ? 180 : 0 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="flex opacity-50"
+                    >
+                      <ChevronDown size={12} />
+                    </motion.span>
+                  </button>
 
-        {/* Spray Map — includes spray alert history at #spray-alerts anchor */}
-        <NavLinkDirect href="/manager/spray-map" label={t.spray.managerTitle} icon={<Droplets size={14} />} active={pathname.startsWith('/manager/spray-map')} scrolled={scrolled} />
+                  {active && (
+                    <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
+                  )}
 
-        {/* Analytics */}
-        <NavLinkDirect href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
+                  {typeof document !== 'undefined' && createPortal(
+                    <AnimatePresence>
+                      {open && inventoryMenuPosition && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                          transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                          onMouseEnter={cancelClose}
+                          onMouseLeave={scheduleClose}
+                          className="fixed min-w-[224px] rounded-xl border border-[var(--color-border)] bg-white shadow-xl overflow-hidden z-[10000]"
+                          style={{
+                            top: inventoryMenuPosition.top,
+                            left: inventoryMenuPosition.left,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+                          }}
+                        >
+                          <div className="p-1.5">
+                            {group.items.map((item) => {
+                              const itemActive =
+                                pathname === item.href ||
+                                pathname.startsWith(item.href + '/');
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg no-underline transition-colors duration-100 ${
+                                    itemActive ? 'bg-[var(--color-secondary-light)]' : 'hover:bg-[var(--color-muted)]'
+                                  }`}
+                                >
+                                  <span className={`mt-0.5 shrink-0 ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
+                                    {item.icon}
+                                  </span>
+                                  <span>
+                                    <span className={`block text-sm font-medium leading-snug ${itemActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-foreground)]'}`}>
+                                      {item.label}
+                                    </span>
+                                    {item.description && (
+                                      <span className="block text-[11px] text-[var(--color-muted-foreground)] mt-0.5 leading-snug">
+                                        {item.description}
+                                      </span>
+                                    )}
+                                  </span>
+                                  {itemActive && (
+                                    <span className="ml-auto mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>,
+                    document.body,
+                  )}
+                </div>
+              );
+            })}
 
-        {/* Newsletter */}
-        <NavLinkDirect href="/manager/newsletter" label={t.nav.newsletter} icon={<Mail size={14} />} active={pathname.startsWith('/manager/newsletter')} scrolled={scrolled} />
+            {/* Analytics */}
+            <NavLinkDirect className="shrink-0" href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={14} />} active={pathname.startsWith('/manager/reports')} scrolled={scrolled} />
 
-        {/* US41: Orders */}
-        <NavLinkDirect href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
+            {/* US41: Orders */}
+            <NavLinkDirect className="shrink-0" href="/manager/orders" label="Orders" icon={<Package size={14} />} active={pathname.startsWith('/manager/orders')} scrolled={scrolled} />
 
-        {/* US41: Coupons */}
-        <NavLinkDirect href="/manager/coupons" label={t.store.coupons} icon={<Tag size={14} />} active={pathname.startsWith('/manager/coupons')} scrolled={scrolled} />
+            {/* Users */}
+            <NavLinkDirect className="shrink-0" href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
+          </div>
 
-        {/* US41: Employee Discounts */}
-        <NavLinkDirect href="/manager/employee-discounts" label="Emp. Discount" icon={<UserCheck size={14} />} active={pathname.startsWith('/manager/employee-discounts')} scrolled={scrolled} />
-
-        {/* Users */}
-        <NavLinkDirect href="/manager/users" label={t.nav.users} icon={<Users size={14} />} active={pathname.startsWith('/manager/users')} scrolled={scrolled} />
-
-        {/* Spacer */}
-        <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => slideManagerTabs('right')}
+            aria-label="Show more navigation tabs"
+            className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+              canSlideTabs.right
+                ? scrolled ? 'text-green-800 hover:bg-[var(--color-secondary-light)]' : 'text-white/70 hover:bg-white/10'
+                : scrolled ? 'text-green-900/25' : 'text-white/25'
+            }`}
+          >
+            <ChevronDown size={14} className="-rotate-90" />
+          </button>
+        </div>
 
         {/* Bell + notification panel */}
-        <div className="relative">
+        <div className="relative hidden md:block shrink-0">
           <button
             onClick={handleBellClick}
             aria-label={t.notifications.notifications}
@@ -427,7 +520,7 @@ export default function ManagerNavbar() {
               >
                 {/* Panel header */}
                 <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border)]">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]" style={{ fontFamily: 'Raleway, sans-serif' }}>
+                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
                     {t.notifications.notifications}
                   </span>
                   <button
@@ -548,7 +641,7 @@ export default function ManagerNavbar() {
                       </button>
                     )}
                     <Link
-                      href="/manager/spray-map#spray-alerts"
+                      href="/manager?section=sprays&panel=alerts"
                       onClick={() => setBellOpen(false)}
                       className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80"
                     >
@@ -566,7 +659,7 @@ export default function ManagerNavbar() {
                           className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}
                         >
                           <Link
-                            href="/manager/spray-map#spray-alerts"
+                            href="/manager?section=sprays&panel=alerts"
                             onClick={() => {
                               setBellOpen(false);
                               if (!alert.IsRead) acknowledgeSprayAlert?.(alert.SprayAlertId);
@@ -625,7 +718,7 @@ export default function ManagerNavbar() {
                         {t.notifications.clearGroup}
                       </button>
                     )}
-                    <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                    <Link href="/manager?section=sprays&panel=overdue" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
                       {t.common.viewAll} <ExternalLink size={9} />
                     </Link>
                   </div>
@@ -636,7 +729,7 @@ export default function ManagerNavbar() {
                     <div className="flex flex-col gap-0.5">
                       {recentOverdueAlerts.map((alert) => (
                         <div key={alert.OverdueAlertId} className={`flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors ${!alert.IsRead ? 'bg-[var(--color-warning-bg)]/50' : ''}`}>
-                          <Link href="/manager/spray-map#overdue-spray-alerts" onClick={() => { setBellOpen(false); if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); }} className="contents">
+                          <Link href="/manager?section=sprays&panel=overdue" onClick={() => { setBellOpen(false); if (!alert.IsRead) acknowledgeOverdueAlert?.(alert.OverdueAlertId); }} className="contents">
                             <span className={alert.Severity === 'high' ? 'mt-0.5 shrink-0 text-red-500' : 'mt-0.5 shrink-0 text-amber-500'}>
                               <ShieldAlert size={13} />
                             </span>
@@ -667,7 +760,7 @@ export default function ManagerNavbar() {
                         {t.notifications.clearGroup}
                       </button>
                     )}
-                    <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
+                    <Link href="/manager?section=tasks&tab=history" onClick={() => setBellOpen(false)} className="flex items-center gap-0.5 text-[10px] text-[var(--color-primary)] no-underline hover:text-[var(--color-primary)] opacity-80">
                       {t.common.viewHistory} <ExternalLink size={9} />
                     </Link>
                   </div>
@@ -678,7 +771,7 @@ export default function ManagerNavbar() {
                     <div className="flex flex-col gap-0.5">
                       {recentCompleted.map((task) => (
                         <div key={task.id} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg no-underline hover:bg-[var(--color-muted)] transition-colors">
-                          <Link href="/manager/tasks?tab=history" onClick={() => setBellOpen(false)} className="contents">
+                          <Link href="/manager?section=tasks&tab=history" onClick={() => setBellOpen(false)} className="contents">
                             <span className="mt-0.5 shrink-0 text-green-500">
                               <CheckCircle2 size={13} />
                             </span>
@@ -725,17 +818,19 @@ export default function ManagerNavbar() {
         </div>
 
         {/* Language switcher */}
-        <LanguageSwitcher />
+        <div className="hidden md:block shrink-0">
+          <LanguageSwitcher />
+        </div>
 
         {/* Divider */}
-        <div className={`w-px h-4.5 mx-1 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
+        <div className={`hidden md:block w-px h-4.5 mx-1 shrink-0 ${scrolled ? 'bg-[var(--color-border)]' : 'bg-white/20'}`} />
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           title={t.notifications.signOut}
           aria-label={t.notifications.signOut}
-          className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 ${
+          className={`hidden md:flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-colors duration-150 shrink-0 ${
             scrolled
               ? 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-error-bg)] hover:text-red-500'
               : 'text-white/40 hover:bg-white/10 hover:text-white/80'
@@ -744,6 +839,42 @@ export default function ManagerNavbar() {
           <LogOut size={14} />
         </button>
       </div>
+
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="md:hidden border-t border-white/10 bg-white/95 backdrop-blur-md shadow-xl"
+          >
+            <div className="mx-auto max-w-7xl px-4 py-3">
+              <div className="flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto">
+                <MobileNavLink href="/manager" label={t.nav.dashboard} icon={<LayoutDashboard size={15} />} active={pathname === '/manager'} />
+                <MobileNavLink href="/manager/sensors" label={t.nav.sensorExplorer} icon={<Radio size={15} />} active={pathname.startsWith('/manager/sensors') || pathname.startsWith('/manager/anomalies')} />
+                <div className="px-3 pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-muted-foreground)]">{t.nav.inventory}</div>
+                {navGroups[0].items.map((item) => (
+                  <MobileNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} active={pathname === item.href || pathname.startsWith(item.href + '/')} inset />
+                ))}
+                <MobileNavLink href="/manager/reports" label={t.nav.analytics} icon={<BarChart2 size={15} />} active={pathname.startsWith('/manager/reports')} />
+                <MobileNavLink href="/manager/orders" label="Orders" icon={<Package size={15} />} active={pathname.startsWith('/manager/orders')} />
+                <MobileNavLink href="/manager/users" label={t.nav.users} icon={<Users size={15} />} active={pathname.startsWith('/manager/users')} />
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+                  <LanguageSwitcher />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut size={15} />
+                    {t.notifications.signOut}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
@@ -758,15 +889,17 @@ function NavLinkDirect({
   icon,
   active,
   scrolled,
+  className = '',
 }: {
   href: string;
   label: string;
   icon: React.ReactNode;
   active: boolean;
   scrolled: boolean;
+  className?: string;
 }) {
   return (
-    <div className="relative">
+    <div className={`relative ${className}`}>
       <Link
         href={href}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg no-underline text-sm font-medium transition-colors duration-150 whitespace-nowrap ${
@@ -778,7 +911,6 @@ function NavLinkDirect({
               ? 'text-green-800 opacity-70 hover:opacity-100 hover:bg-[var(--color-secondary-light)] hover:text-green-800'
               : 'text-white opacity-60 hover:opacity-100 hover:bg-white/10 hover:text-white'
         }`}
-        style={{ fontFamily: 'Raleway, sans-serif' }}
       >
         <span className="opacity-75">{icon}</span>
         {label}
@@ -787,5 +919,35 @@ function NavLinkDirect({
         <div className={`absolute bottom-[-2px] left-2.5 right-2.5 h-0.5 rounded-sm ${scrolled ? 'bg-green-600' : 'bg-white/60'}`} />
       )}
     </div>
+  );
+}
+
+function MobileNavLink({
+  href,
+  label,
+  icon,
+  active,
+  inset = false,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  inset?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors ${
+        inset ? 'ml-3' : ''
+      } ${
+        active
+          ? 'bg-[var(--color-secondary-light)] text-[var(--color-primary)]'
+          : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+      }`}
+    >
+      <span className="opacity-75">{icon}</span>
+      {label}
+    </Link>
   );
 }

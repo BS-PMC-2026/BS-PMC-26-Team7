@@ -44,7 +44,6 @@ export default function MapTeaserSection({ mapHref = '/visitor/map' }: MapTeaser
                 </p>
                 <h2
                   className="text-3xl font-bold mb-4"
-                  style={{ fontFamily: 'Lora, serif' }}
                 >
                   {la.exploreFarmMap}
                 </h2>

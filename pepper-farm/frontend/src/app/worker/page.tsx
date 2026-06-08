@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import FarmMap, { type FarmSection } from '@/components/map/FarmMap';
 import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
 import SprayReportForm from '@/components/spray/SprayReportForm';
 import TaskProgressBar from '@/components/tasks/TaskProgressBar';
 import { useLanguage } from '@/context/LanguageContext';
@@ -676,7 +677,7 @@ export default function WorkerDashboard() {
                         <span className="shrink-0">🌶️</span>
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{pepperName ?? p.PlantCode}</p>
-                          <p className="font-mono text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
+                          <p className=" text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
                             #{p.PlantId} - {p.PlantCode}
                           </p>
                         </div>
@@ -694,7 +695,7 @@ export default function WorkerDashboard() {
                             <button
                               type="button"
                               onClick={() => openRegistryTransferFromMap(p, pepperName ?? p.PlantCode)}
-                              className="whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-green-700"
+                              className="whitespace-nowrap rounded bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
                             >
                               Transfer
                             </button>
@@ -763,7 +764,7 @@ export default function WorkerDashboard() {
                         <span className="shrink-0">🌶️</span>
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{pepperName ?? p.PlantCode}</p>
-                          <p className="font-mono text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
+                          <p className=" text-[10px] text-[var(--color-muted-foreground)]" dir="ltr">
                             #{p.PlantId} - {p.PlantCode}
                           </p>
                         </div>
@@ -789,14 +790,16 @@ export default function WorkerDashboard() {
                 <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
                   🔄 {peppers.find((pp) => pp.PepperId === selectedTransferPlant!.PepperId)?.PepperName ?? selectedTransferPlant!.PlantCode}
                 </div>
-                <button
+                <Button
                   data-testid="transfer-plant-button"
                   onClick={() => handleTransferPlant(section)}
                   disabled={transferring}
-                  className="w-full rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                  variant="secondary"
+                  size="md"
+                  className="w-full"
                 >
                   {transferring ? wk.transferring : wk.transferPlantHere}
-                </button>
+                </Button>
               </>
             ) : !selectedTransferPlant && (
               <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
@@ -873,12 +876,12 @@ export default function WorkerDashboard() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <main className="min-h-screen bg-[#F6F8F4]" dir={dir}>
+    <main className="app-page-bg" dir={dir}>
       {/* ── Header ── */}
       <div className="border-b border-[var(--color-border)] bg-white/85">
         <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-5 py-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">PepperFarm</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--color-primary)]">{locale === 'he' ? 'הדינרים' : 'Hadinerim'}</p>
             <h1 className="text-3xl font-semibold text-[var(--color-foreground)]">{wk.dashboardTitle}</h1>
           </div>
           {workerName && (
@@ -1124,7 +1127,7 @@ export default function WorkerDashboard() {
                             ).map((z) => (
                               <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                                 <td className="px-3 py-2">
-                                  <span className="font-medium text-[var(--color-foreground)] font-mono">{z.zoneCode}</span>
+                                  <span className="font-medium text-[var(--color-foreground)]">{z.zoneCode}</span>
                                 </td>
                                 <td className="px-3 py-2">
                                   <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold border ${
@@ -1311,7 +1314,7 @@ export default function WorkerDashboard() {
                                                                     setTransferRegDate(new Date().toISOString().slice(0, 10));
                                                                     setTransferRegError(null);
                                                                   }}
-                                                                  className="whitespace-nowrap rounded bg-green-600 px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-green-700"
+                                                                  className="whitespace-nowrap rounded bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
                                                                 >
                                                                   Transfer →
                                                                 </button>
@@ -1531,7 +1534,7 @@ export default function WorkerDashboard() {
 
             <h3 className="mb-1 pe-8 text-base font-semibold text-[var(--color-foreground)]">{wk.transferSeedling}</h3>
             <p className="mb-1 text-sm text-[var(--color-muted-foreground)]">{transferRegModal.pepperName}</p>
-            <p className="mb-4 font-mono text-xs text-[var(--color-muted-foreground)]">{transferRegModal.plant.PlantCode}</p>
+            <p className="mb-4 text-xs text-[var(--color-muted-foreground)]">{transferRegModal.plant.PlantCode}</p>
 
             {transferRegError && (
               <div className="mb-3 flex items-start gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -1573,7 +1576,7 @@ export default function WorkerDashboard() {
                 <button
                   type="submit"
                   disabled={transferRegLoading || !transferRegZoneId || !transferRegDate}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
+                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
                 >
                   {transferRegLoading ? wk.transferring : wk.confirmTransfer}
                 </button>

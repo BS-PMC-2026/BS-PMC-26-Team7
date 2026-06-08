@@ -4,10 +4,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
+const mockRouterPush = jest.fn();
+const mockRouterReplace = jest.fn();
+const mockSearchParamsToString = jest.fn(() => '');
+
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   usePathname: () => '/cart',
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: () => null, toString: mockSearchParamsToString }),
 }));
 
 const mockGetCart        = jest.fn();
@@ -150,7 +154,28 @@ describe('ProductCard (US41)', () => {
 // ── Cart page tests ───────────────────────────────────────────────────────────
 
 describe('Cart page', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSearchParamsToString.mockReturnValue('');
+    Object.defineProperty(window, 'localStorage', {
+      value: { getItem: jest.fn(() => 'token'), setItem: jest.fn(), removeItem: jest.fn() },
+      writable: true,
+    });
+  });
+
+  it('redirects guests to login instead of showing unauthenticated cart errors', async () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn() },
+      writable: true,
+    });
+    const CartPage = (await import('@/app/cart/page')).default;
+    render(<CartPage />);
+
+    await waitFor(() => {
+      expect(mockRouterReplace).toHaveBeenCalledWith('/login?redirect=/cart');
+    });
+    expect(mockGetCart).not.toHaveBeenCalled();
+  });
 
   it('shows empty state when cart has no items', async () => {
     mockGetCart.mockResolvedValue(EMPTY_CART);
@@ -194,7 +219,14 @@ describe('Cart page', () => {
 // ── Checkout page tests ───────────────────────────────────────────────────────
 
 describe('Checkout page', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSearchParamsToString.mockReturnValue('');
+    Object.defineProperty(window, 'localStorage', {
+      value: { getItem: jest.fn(() => 'token'), setItem: jest.fn(), removeItem: jest.fn() },
+      writable: true,
+    });
+  });
 
   it('renders checkout form', async () => {
     mockPreviewCheckout.mockResolvedValue({
@@ -305,6 +337,14 @@ describe('Card number formatting', () => {
 // ── Back navigation (Fix E) ────────────────────────────────────────────────────
 
 describe('Back navigation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(window, 'localStorage', {
+      value: { getItem: jest.fn(() => 'token'), setItem: jest.fn(), removeItem: jest.fn() },
+      writable: true,
+    });
+  });
+
   it('cart page has a back-to-products link', async () => {
     mockGetCart.mockResolvedValue({
       items: [], originalSubtotal: 0, productDiscountTotal: 0,

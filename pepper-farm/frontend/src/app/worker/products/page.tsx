@@ -67,11 +67,11 @@ const filteredAndSortedProducts = products
   });
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]">
+    <div className="app-page-bg">
       <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <PageHeader
-            label="PepperFarm"
+            label="Hadinerim"
             title="Product Catalog"
             subtitle="Browse all products available from our farm"
           />

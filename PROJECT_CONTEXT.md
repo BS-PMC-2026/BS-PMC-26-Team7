@@ -81,7 +81,7 @@ BS-PMC-26-Team7/
 | `/login` | `src/app/login/page.tsx` | Login | `POST /api/auth/login` | LoginForm |
 | `/register` | `src/app/register/page.tsx` | Registration | `POST /api/auth/register` | RegisterForm |
 | `/visitor` | `src/app/visitor/page.tsx` | Visitor homepage | Products, Peppers | LandingNavbar |
-| `/manager` | `src/app/manager/page.tsx` | Manager dashboard | anomalies summary, zones, trends, tasks | AnomalySummaryCards, RecentAlerts, zone health |
+| `/manager` | `src/app/manager/page.tsx` | Manager dashboard — operational control center with open-task creation/detail modals, Farm Map modes, worker-style planting controls, spray overview/dropdown, compact deviation + store analytics, embedded newsletter container, and store admin popups for coupons / employee discounts | dashboard data, zones, plants, spray zone map, product statistics, newsletter/coupon/discount APIs when embedded panels open | FarmMap, TaskForm, NewsletterPage, CouponsPage, EmployeeDiscountsPage, WeatherCard |
 | `/manager/anomalies` | `src/app/manager/anomalies/page.tsx` | Alert management | `/api/manager/anomalies/*` | AnomalySummaryCards, RecentAlerts, SSE stream |
 | `/manager/sensors` | `src/app/manager/sensors/page.tsx` | Sensor monitoring | `/api/sensors/*` | SensorCard, SensorMap |
 | `/manager/tasks` | `src/app/manager/tasks/page.tsx` | Task management | `/api/tasks/*` | TaskCard, TaskForm, TaskFilters, CompletedTasksHistory |
@@ -452,6 +452,18 @@ BS-PMC-26-Team7/
 
 31. **Worker spray reporting lives only on `/worker`.**  
     The old `/worker/spray-report` page was removed. The worker dashboard Sprays map opens a popup with the shared `SprayReportForm`; clicking "Create spray report" preselects the clicked sprayable zone. Do not add worker spray-report navigation back as a separate page unless the dashboard workflow is intentionally split again.
+
+32. **US47 design: all pages use the unified worker-style background.**  
+    The shared app background is `#F6F8F4`, exposed through `--background`, `--color-background`, and the `.app-page-bg` utility in `src/app/globals.css`. Root/role layouts and page-level wrappers should use this shared background. Do not add page-level `bg-gray-50`, `bg-[var(--color-muted)]`, or one-off background colours to full-page wrappers; reserve those fills for cards, tables, skeletons, hover states, and small panels.
+
+33. **US47 design: users must receive loading feedback for noticeable waits.**  
+    Use `PepperSpinnerLoader` for page-level, navigation/auth, checkout/payment, and long-running save/update/delete/publish/confirm waits. Small local mutations should use button-level or local pending state. Buttons/forms must be disabled while pending to prevent double submits. Loader copy is only `Loading.` / `Loading..` / `Loading...`; never use product/place names in loader text. The full-screen loader uses the unified `app-page-bg` / `#F6F8F4` background. `LoadingProvider` is mounted at the root and uses pending reference counting so parallel waits do not hide the loader early. `apiFetch` triggers the global loader for non-GET requests; background polling/GET refreshes should remain silent or local.
+
+34. **US47 design: homepage, font, back navigation, and responsive nav rules.**
+    The homepage must not use decorative floating pepper particles. Pepper visuals are allowed only when functional or intentionally part of product/variety cards, maps, plant/pepper domain UI, logos, icons, or `PepperSpinnerLoader`. The frontend uses one global inherited font family (`Raleway` via `--font-body` and `--font-heading`) across pages, containers, forms, buttons, navbars, dashboards, modals, IDs, codes, and payment fields; avoid local `fontFamily`, `font-sans`, `font-serif`, and `font-mono` overrides. Return/back navigation should use the shared `BackButton` component in `src/components/ui/BackButton.tsx`, with consistent "Back" / "חזרה" text, shared button styling, RTL-aware icon direction, and `fallbackHref` for direct visits. Navbar and page layouts must keep important actions visible or accessible across responsive widths; do not use `overflow-hidden`, truncation, or fixed widths in a way that hides required navigation/actions.
+
+35. **US47 manager dashboard: `/manager` is the operational control center.**
+    The manager dashboard mirrors the Worker Dashboard pattern with a left open-task panel, central Farm Map modes (`Planting`, `Tasks`, `Sensor Anomaly`, `Sprays`), and a right compact deviation/sensor panel. Dashboard selector actions must stay in popups/local controls, not navigate to `/manager/inventory/plants`, `/manager/tasks`, `/manager/map`, or `/manager/spray-map`. Planting mode supports nursery planting, plant status changes, and healthy-nursery-plant transfer to allowed greenhouse/germination zones directly from map popups. Tasks can be created from the open-task panel or from a zone popup. Sprays mode keeps only the Spray Zone Overview title/help text above the map and uses a collapsible Zone Entry Details dropdown. Newsletter management is embedded in a dashboard container, and coupon / employee-discount management opens in dashboard store modals. Keep complex manager pages as standalone routes for direct navigation unless a future task explicitly removes them.
 
 47. **US41: PayPal Sandbox (real PayPal, not mock):**
     - **Credit card = mock only**: Validates card fields + Luhn, stores only last 4 digits + brand. Never calls any real card gateway. Mock-decline card: `4000 0000 0000 0002`. `PaymentMethod="credit_card"` in DB.

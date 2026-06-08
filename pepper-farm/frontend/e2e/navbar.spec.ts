@@ -160,12 +160,6 @@ test.describe('ManagerNavbar — FarmManager', () => {
     await expect(page.getByRole('link', { name: /dashboard/i })).toBeVisible();
   });
 
-  test('Tasks link is visible and href is /manager/tasks', async ({ page }) => {
-    const link = page.getByRole('link', { name: /^tasks$/i });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/manager/tasks');
-  });
-
   test('Sensor Explorer link is visible and href is /manager/sensors', async ({ page }) => {
     const link = page.getByRole('link', { name: /sensor explorer/i });
     await expect(link).toBeVisible();
@@ -255,11 +249,6 @@ test.describe('ManagerNavbar — FarmManager', () => {
   test('does NOT show Worker-specific links (My Tasks, Spray Report)', async ({ page }) => {
     await expect(page.getByRole('link', { name: /my tasks/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /spray report/i })).not.toBeVisible();
-  });
-
-  test('Tasks link navigates to /manager/tasks', async ({ page }) => {
-    await page.getByRole('link', { name: /^tasks$/i }).click();
-    await expect(page).toHaveURL('/manager/tasks');
   });
 });
 

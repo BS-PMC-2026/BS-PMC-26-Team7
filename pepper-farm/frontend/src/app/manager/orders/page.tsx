@@ -136,7 +136,7 @@ export default function ManagerOrdersPage() {
                   className={`border-t border-[var(--color-border)] hover:bg-[var(--color-muted)]/40 transition ${idx % 2 === 0 ? '' : 'bg-gray-50/30'}`}
                   data-testid={`manager-order-row-${order.orderId}`}
                 >
-                  <td className="px-4 py-3 font-mono text-xs text-gray-800">{order.orderNumber}</td>
+                  <td className="px-4 py-3 text-xs text-gray-800">{order.orderNumber}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800 text-xs">{order.buyerName ?? '—'}</p>
                     <p className="text-[10px] text-gray-400">{order.buyerEmail ?? ''}</p>

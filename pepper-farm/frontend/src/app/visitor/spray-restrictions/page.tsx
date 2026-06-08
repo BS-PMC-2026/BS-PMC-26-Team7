@@ -65,7 +65,7 @@ export default function VisitorSprayRestrictionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-muted)]" data-testid="visitor-spray-restrictions-page">
+    <div className="app-page-bg" data-testid="visitor-spray-restrictions-page">
       {/* Header */}
       <div className="bg-white border-b border-[var(--color-border)]">
         <div className="max-w-7xl mx-auto px-6 py-10">
@@ -165,7 +165,7 @@ export default function VisitorSprayRestrictionsPage() {
                     <tr key={z.zoneId} className="hover:bg-[var(--color-muted)] transition-colors">
                       <td className="px-4 py-3">
                         <span className="font-medium text-[var(--color-foreground)]">{z.zoneName}</span>
-                        <span className="block text-xs text-[var(--color-muted-foreground)] font-mono">{z.zoneCode}</span>
+                        <span className="block text-xs text-[var(--color-muted-foreground)]">{z.zoneCode}</span>
                       </td>
                       <td className="px-4 py-3">
                         {/* US33 — primary entry permission badge */}

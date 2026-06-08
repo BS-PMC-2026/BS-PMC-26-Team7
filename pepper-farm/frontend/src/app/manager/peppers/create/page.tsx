@@ -198,11 +198,6 @@ export default function CreatePepperPage() {
         label="Pepper Varieties"
         title="Add Pepper Variety"
         subtitle="Register a new pepper variety in the farm management system."
-        action={
-          <Button variant="outline" onClick={() => router.push("/manager/peppers")}>
-            ← Back to Varieties
-          </Button>
-        }
       />
 
       {/* Global messages */}

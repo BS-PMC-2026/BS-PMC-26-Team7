@@ -16,13 +16,13 @@ interface FooterProps {
 }
 
 export default function Footer({ links }: FooterProps) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const la = t.landing;
 
+  /* Minimal footer: keep the Farm Map content link only — Login / Register
+     already live in the persistent top navbar, so they are not duplicated here. */
   const DEFAULT_LINKS: FooterLink[] = [
-    { label: la.footerLogin,    href: '/login'        },
-    { label: la.footerRegister, href: '/register'     },
-    { label: la.footerFarmMap,  href: '/visitor/map'  },
+    { label: la.footerFarmMap, href: '/visitor/map' },
   ];
 
   const navLinks = links ?? DEFAULT_LINKS;
@@ -39,9 +39,8 @@ export default function Footer({ links }: FooterProps) {
           </div>
           <span
             className="font-semibold text-green-900 text-sm"
-            style={{ fontFamily: 'Lora, serif' }}
           >
-            PepperFarm
+            {locale === 'he' ? 'הדינרים' : 'Hadinerim'}
           </span>
         </div>
 

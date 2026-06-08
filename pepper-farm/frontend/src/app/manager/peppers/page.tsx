@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
+import PepperSpinnerLoader from '@/components/ui/PepperSpinnerLoader';
 import { Pepper } from '@/types/pepper';
 import { getAllPeppers , deletePepper } from '@/services/peppers';
 import { useLanguage } from '@/context/LanguageContext';
@@ -24,6 +25,7 @@ export default function ManagerPeppersPage() {
   const [selectedPepperName, setSelectedPepperName] = useState('');
   const [selectedHeatLevel, setSelectedHeatLevel] = useState('');
   const [selectedZone, setSelectedZone] = useState('');
+  const [deletingPepperId, setDeletingPepperId] = useState<number | null>(null);
 
   const loadPeppers = useCallback(async () => {
     setIsLoading(true);
@@ -87,6 +89,7 @@ export default function ManagerPeppersPage() {
 
     setError(null);
     setSuccessMessage(null);
+    setDeletingPepperId(pepperId);
 
     try {
       await deletePepper(pepperId);
@@ -98,6 +101,8 @@ export default function ManagerPeppersPage() {
       setSuccessMessage(pe.deletedSuccessfully);
     } catch {
       setError(pe.failedToDelete);
+    } finally {
+      setDeletingPepperId(null);
     }
   };
 
@@ -183,7 +188,7 @@ export default function ManagerPeppersPage() {
 )}
 
       {isLoading ? (
-        <p className="text-sm text-[var(--color-muted-foreground)] text-center py-12">{pe.loading}</p>
+        <PepperSpinnerLoader minDelay={250} />
       ) : filteredPeppers.length === 0 ? (
         <EmptyState
           title={pe.noPeppersYet}
@@ -202,6 +207,8 @@ export default function ManagerPeppersPage() {
                 </Link>
                  <Button variant="secondary" className="text-xs px-2 py-1"
                  onClick={() => handleDeletePepper(pepper.PepperId)}
+                 loading={deletingPepperId === pepper.PepperId}
+                 disabled={deletingPepperId !== null}
                  >
                    {pe.deletePepper}
                    </Button>

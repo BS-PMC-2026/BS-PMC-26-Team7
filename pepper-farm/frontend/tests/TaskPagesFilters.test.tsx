@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import ManagerTasksPage from '@/app/manager/tasks/page';
+import ManageTasksModalContent from '@/components/tasks/ManageTasksModalContent';
 import WorkerPage from '@/app/worker/page';
 import { getMyTasks, getTasks } from '@/services/tasks';
 import { getAllUsers } from '@/services/users';
@@ -127,7 +127,14 @@ beforeEach(() => {
 
 describe('task page filters', () => {
   it('filters manager tasks by importance', async () => {
-    render(<ManagerTasksPage />);
+    render(
+      <ManageTasksModalContent
+        activeTab="active"
+        onTabChange={() => {}}
+        alertPrefill={null}
+        onAlertPrefillConsumed={() => {}}
+      />,
+    );
 
     expect(await screen.findByText('High irrigation task')).toBeInTheDocument();
     expect(screen.getByText('Medium inspection task')).toBeInTheDocument();

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, MotionConfig } from 'framer-motion';
 import * as React from 'react';
 
@@ -19,6 +20,7 @@ type MenuProps = {
 
 const Menu = ({ list }: MenuProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
+  const router = useRouter();
 
   return (
     <MotionConfig transition={{ bounce: 0, type: 'tween' }}>
@@ -35,6 +37,15 @@ const Menu = ({ list }: MenuProps) => {
                   `}
                   onMouseEnter={() => setHovered(item.id)}
                   onMouseLeave={() => setHovered(null)}
+                  onClick={(e) => {
+                    // A dropdown trigger has no real destination (url is '#'); it must
+                    // only open/close the menu. Without this, the first click lands on
+                    // the trigger and navigates to '#' (back to the home page).
+                    if (item?.dropdown) {
+                      e.preventDefault();
+                      setHovered((cur) => (cur === item.id ? null : item.id));
+                    }
+                  }}
                   href={item?.url}
                 >
                   {item?.title}
@@ -48,27 +59,51 @@ const Menu = ({ list }: MenuProps) => {
                 )}
                 {item?.dropdown && hovered === item?.id && (
                   <div
-                    className='absolute left-0 top-full'
+                    /* pt-4 (padding, not margin) keeps the gap between the trigger
+                       and the panel inside the hover hit-box, so moving the pointer
+                       down to an item doesn't drop `hovered` and unmount the menu
+                       before the click registers. Fixes first-click-doesn't-navigate. */
+                    className='absolute left-0 top-full pt-4'
                     onMouseEnter={() => setHovered(item.id)}
                     onMouseLeave={() => setHovered(null)}
                   >
+                    {/* Opacity-only entrance — no `layout`, no shared `layoutId`,
+                        no translate. A transform animation (especially the
+                        `layoutId='cursor'` shared with the underline dot) renders
+                        the panel offset from its real hit-box, so the first click
+                        passes through to the page behind. Fading in place keeps the
+                        menu anchors exactly under the pointer for first-click nav. */}
                     <motion.div
-                      layout
-                      transition={{ bounce: 0 }}
-                      initial={{ y: 10 }}
-                      animate={{ y: 0 }}
-                      exit={{ y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                       style={{
                         borderRadius: '8px',
                       }}
-                      className='mt-4 flex w-64 flex-col rounded bg-background border'
-                      layoutId={'cursor'}
+                      className='flex w-64 flex-col rounded bg-background border'
                     >
                       {item?.items?.map((nav) => {
                         return (
                           <motion.a
                             key={`link-${nav?.id}`}
                             href={`${nav?.url}`}
+                            onMouseDown={(e) => {
+                              // Navigate on press (mousedown fires before the hover
+                              // mouseleave that unmounts the menu and before the click
+                              // event), so the FIRST click always reaches the target.
+                              if (e.button !== 0) return; // ignore middle/right click
+                              e.preventDefault();
+                              setHovered(null);
+                              router.push(nav.url);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault(); // mouse already handled on mousedown
+                              if (e.detail === 0) {
+                                // Keyboard activation (Enter) — no preceding mousedown.
+                                setHovered(null);
+                                router.push(nav.url);
+                              }
+                            }}
                             className={'w-full p-4 hover:bg-muted text-foreground'}
                           >
                             {nav?.title}

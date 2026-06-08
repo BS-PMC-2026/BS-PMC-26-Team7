@@ -1,5 +1,5 @@
-import DelayedPageLoader from "@/components/ui/DelayedPageLoader";
+import PepperSpinnerLoader from "@/components/ui/PepperSpinnerLoader";
 
 export default function Loading() {
-  return <DelayedPageLoader />;
+  return <PepperSpinnerLoader minDelay={250} />;
 }

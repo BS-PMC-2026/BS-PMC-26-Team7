@@ -229,11 +229,6 @@ export default function EditPepperPage() {
         label="Pepper Varieties"
         title="Edit Pepper Variety"
         subtitle={formData.PepperName ? `Editing: ${formData.PepperName}` : `Pepper #${pepperId}`}
-        action={
-          <Button variant="outline" onClick={() => router.push("/manager/peppers")}>
-            ← Back to Varieties
-          </Button>
-        }
       />
 
       {/* Global messages */}
