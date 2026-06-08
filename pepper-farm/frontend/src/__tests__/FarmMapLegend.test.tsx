@@ -134,7 +134,7 @@ describe('Dashboard Farm Map legend changes by manager mode', () => {
 
     fireEvent.click(btn);
     await waitFor(() => {
-      expect(btn.className).toContain('bg-green-700');
+      expect(btn.className).toContain('bg-[var(--color-primary)]');
     });
   });
 

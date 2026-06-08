@@ -619,6 +619,13 @@ BS-PMC-26-Team7/
 
 **Notable gaps:** No backend tests for Zones router. No E2E coverage for worker flows (tasks, spray). No frontend tests for sensor detail views. `tests/test_task_report.py` has 3 pre-existing failures unrelated to US28/29/30 — needs investigation.
 
+**Test infrastructure (post-US41 fix):**
+- `models/__init__.py` now imports all ORM models. Any module that imports `models` (or individual model files) automatically registers every table with `Base.metadata` before `create_all()`.
+- `tests/conftest.py` does `import models` so pytest registers all models before any test's `setup_db` fixture runs — even for service-level tests that never do `from main import app`.
+- `setup_db` fixtures in `test_emails_api.py` and `test_newsletter_templates_api.py` now use `drop_all → create_all → try/yield/finally` for a robust, clean-slate pattern per test.
+- Background-task tests that check email logs patch `routers.emails.SessionLocal` and `routers.newsletter_templates.SessionLocal` to `TestingSessionLocal` so log writes land in the test DB instead of the production engine.
+- `auth_service.register()` calls `db.refresh(user)` after `db.commit()` so mock-DB tests (test_auth_api.py) can access `user.UserId` and `user.role` without triggering a lazy-load through the mock session.
+
 ---
 
 ## 12. Common Commands

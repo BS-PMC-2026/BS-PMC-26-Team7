@@ -45,6 +45,16 @@ jest.mock('framer-motion', () => {
   };
 });
 
+jest.mock('@/services/notificationsService', () => ({
+  getUnreadCount:            jest.fn().mockResolvedValue(0),
+  markAllNotificationsRead:  jest.fn().mockResolvedValue(undefined),
+  getMyNotifications:        jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('@/services/cartService', () => ({
+  getCart: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock('lucide-react', () => {
   const icons = [
     'LayoutDashboard','ShoppingBag','ShoppingCart','Sprout','ChevronDown',

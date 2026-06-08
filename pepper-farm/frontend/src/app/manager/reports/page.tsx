@@ -1,17 +1,21 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BarChart2, FileText } from 'lucide-react';
+import { BarChart2, FileText, TrendingUp, ShoppingBag } from 'lucide-react';
 import Alert from '@/components/ui/Alert';
 import InventoryReportTable from '@/components/reports/InventoryReportTable';
-import { getInventoryReport, InventoryReportRow, InventoryReportFilters } from '@/services/reports';
+import {
+  getInventoryReport, InventoryReportRow, InventoryReportFilters,
+  getTaskStatistics, TaskStatisticsResponse, TaskStatisticsFilters,
+  getProductStatistics, ProductStatisticsResponse, ProductStatisticsFilters,
+} from '@/services/reports';
 import { getTasksReportByWorker } from '@/services/tasks';
 import { getAllUsers, UserData } from '@/services/users';
 import { Task } from '@/types/task';
 
 /* -------------------------------------------------------------------------- */
-/* Constants                                                                    */
+/* Shared colour maps                                                           */
 /* -------------------------------------------------------------------------- */
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -24,18 +28,48 @@ const PRIORITY_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   todo:        'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]',
   in_progress: 'bg-[var(--color-info-bg)] text-[var(--color-info)]',
+  done:        'bg-green-100 text-green-700',
+  cancelled:   'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]',
 };
+
+/* -------------------------------------------------------------------------- */
+/* Shared KPI card                                                              */
+/* -------------------------------------------------------------------------- */
+
+function KpiCard({
+  label, value, sub, valueClass,
+}: { label: string; value: string | number; sub?: string; valueClass?: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-[var(--color-border)] p-4">
+      <p className="text-xs text-[var(--color-muted-foreground)] uppercase tracking-wider">{label}</p>
+      <p className={`text-2xl font-semibold mt-1 ${valueClass ?? 'text-[var(--color-foreground)]'}`}>{value}</p>
+      {sub && <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Section header                                                               */
+/* -------------------------------------------------------------------------- */
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-semibold text-[var(--color-foreground)] mb-3 mt-6">
+      {children}
+    </h3>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /* Open Tasks Report tab                                                        */
 /* -------------------------------------------------------------------------- */
 
 function OpenTasksReport() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [workers, setWorkers] = useState<UserData[]>([]);
+  const [tasks, setTasks]         = useState<Task[]>([]);
+  const [workers, setWorkers]     = useState<UserData[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<number | ''>('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
 
@@ -127,12 +161,12 @@ function OpenTasksReport() {
 
 function InventoryReport() {
   const router = useRouter();
-  const [rows, setRows] = useState<InventoryReportRow[]>([]);
+  const [rows, setRows]           = useState<InventoryReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState<string>('');
+  const [error, setError]         = useState<string | null>(null);
+  const [category, setCategory]   = useState<string>('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'category'>('name');
+  const [sortBy, setSortBy]       = useState<'name' | 'quantity' | 'category'>('name');
 
   const loadReport = useCallback(async (filters: InventoryReportFilters) => {
     const token = localStorage.getItem('token');
@@ -145,7 +179,7 @@ function InventoryReport() {
 
   useEffect(() => { loadReport({ category, lowStockOnly, sortBy }); }, [loadReport, category, lowStockOnly, sortBy]);
 
-  const categories = useMemo(() => Array.from(new Set(rows.map(r => r.Category))).sort(), [rows]);
+  const categories  = useMemo(() => Array.from(new Set(rows.map(r => r.Category))).sort(), [rows]);
   const lowStockCount = rows.filter(r => r.LowStock).length;
 
   return (
@@ -154,18 +188,9 @@ function InventoryReport() {
 
       {!isLoading && rows.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-[var(--color-border)] p-4">
-            <p className="text-xs text-[var(--color-muted-foreground)] uppercase tracking-wider">Total Items</p>
-            <p className="text-2xl font-semibold text-[var(--color-foreground)] mt-1">{rows.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-[var(--color-border)] p-4">
-            <p className="text-xs text-[var(--color-muted-foreground)] uppercase tracking-wider">Low Stock</p>
-            <p className="text-2xl font-semibold text-[var(--color-error)] mt-1">{lowStockCount}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-[var(--color-border)] p-4">
-            <p className="text-xs text-[var(--color-muted-foreground)] uppercase tracking-wider">Total Available</p>
-            <p className="text-2xl font-semibold text-[var(--color-foreground)] mt-1">{rows.reduce((s, r) => s + r.AvailableQuantity, 0)}</p>
-          </div>
+          <KpiCard label="Total Items"     value={rows.length} />
+          <KpiCard label="Low Stock"       value={lowStockCount} valueClass="text-[var(--color-error)]" />
+          <KpiCard label="Total Available" value={rows.reduce((s, r) => s + r.AvailableQuantity, 0)} />
         </div>
       )}
 
@@ -683,20 +708,30 @@ function ProductStatisticsReport() {
 /* Page                                                                         */
 /* -------------------------------------------------------------------------- */
 
+type Tab = 'open-tasks' | 'inventory' | 'task-statistics' | 'product-statistics';
+
 function ReportsPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const activeTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'open-tasks';
+  const router       = useRouter();
 
-  const tabs = [
-    { id: 'open-tasks', label: 'Open Tasks Report', icon: <FileText size={14} /> },
-    { id: 'inventory',  label: 'Inventory Report',  icon: <BarChart2 size={14} /> },
+  const rawTab = searchParams.get('tab');
+  const activeTab: Tab =
+    rawTab === 'inventory'          ? 'inventory' :
+    rawTab === 'task-statistics'    ? 'task-statistics' :
+    rawTab === 'product-statistics' ? 'product-statistics' :
+    'open-tasks';
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'open-tasks',         label: 'Open Tasks Report',   icon: <FileText size={14} /> },
+    { id: 'inventory',          label: 'Inventory Report',    icon: <BarChart2 size={14} /> },
+    { id: 'task-statistics',    label: 'Task Statistics',     icon: <TrendingUp size={14} /> },
+    { id: 'product-statistics', label: 'Product Statistics',  icon: <ShoppingBag size={14} /> },
   ];
 
   return (
     <>
       <div className="border-b border-[var(--color-border)]/60">
-        <div className="max-w-7xl mx-auto px-6 flex">
+        <div className="max-w-7xl mx-auto px-6 flex flex-wrap">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -706,6 +741,7 @@ function ReportsPageContent() {
                   ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                   : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border)]'
               }`}
+              data-testid={`tab-${tab.id}`}
             >
               {tab.icon}{tab.label}
             </button>
@@ -714,7 +750,10 @@ function ReportsPageContent() {
       </div>
 
       <div className="min-h-screen">
-        {activeTab === 'open-tasks' ? <OpenTasksReport /> : <InventoryReport />}
+        {activeTab === 'open-tasks'         && <OpenTasksReport />}
+        {activeTab === 'inventory'          && <InventoryReport />}
+        {activeTab === 'task-statistics'    && <TaskStatisticsReport />}
+        {activeTab === 'product-statistics' && <ProductStatisticsReport />}
       </div>
     </>
   );

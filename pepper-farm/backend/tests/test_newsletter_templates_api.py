@@ -3,6 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import models  # noqa: F401 — register all ORM models with Base.metadata
 import json
 from unittest.mock import patch
 
@@ -87,13 +88,16 @@ def _seed(db):
 @pytest.fixture(autouse=True)
 def setup_db():
     app.dependency_overrides[get_db] = override_get_db
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.drop_all(bind=engine)   # clean slate
+    Base.metadata.create_all(bind=engine) # create ALL tables (all models registered)
     db = TestingSessionLocal()
-    _seed(db)
-    db.close()
-    yield
-    Base.metadata.drop_all(bind=engine)
-    app.dependency_overrides.pop(get_db, None)
+    try:
+        _seed(db)
+        yield
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+        app.dependency_overrides.pop(get_db, None)
 
 
 # ── Auth / Role enforcement ───────────────────────────────────────────────────

@@ -145,7 +145,13 @@ export default function TaskCard({
   const tk = t.tasks;
   const assignee = workers.find((w) => w.userId === task.assignedToUserId);
   const dueDateLabel = task.dueDate
-    ? new Date(task.dueDate).toLocaleDateString()
+    ? new Date(task.dueDate).toLocaleString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : null;
 
   const nextStatus = NEXT_STATUS[task.status];

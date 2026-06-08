@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings, sensors, zones, spray, chatbot
+from routers import tasks, users, auth, peppers, plants, products, inventory, sensor_readings, sensors, zones, spray, chatbot, weather
 from routers.anomalies import router as anomalies_router, resolve_router
 from routers.emails import router as emails_router
 from routers.newsletter_templates import router as newsletter_templates_router
@@ -28,6 +28,11 @@ import models.spray  # noqa: F401  — registers Pesticide, SprayReport, SprayAl
 import models.email_log              # noqa: F401  — US39: EmailLogs table
 import models.newsletter_template    # noqa: F401  — US39: NewsletterTemplates table
 import models.notification           # noqa: F401  — US40: Notifications table
+import models.cart                  # noqa: F401  — US41: CartItems
+import models.order                 # noqa: F401  — US41: Orders, OrderItems
+import models.payment               # noqa: F401  — US41: PaymentRecords
+import models.coupon                # noqa: F401  — US41: Coupons, CouponRedemptions
+import models.employee_discount     # noqa: F401  — US41: EmployeeDiscountSettings, Overrides
 from database import SessionLocal
 from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles

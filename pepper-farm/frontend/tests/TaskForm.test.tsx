@@ -20,6 +20,7 @@ describe('TaskForm', () => {
 
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Water plants' } });
     fireEvent.change(screen.getByLabelText('Task Type *'), { target: { value: 'irrigation' } });
+    fireEvent.change(screen.getByLabelText('Due Date *'), { target: { value: '2030-12-31T10:00' } });
     fireEvent.change(screen.getByLabelText('Farm Zone'), { target: { value: 'GH-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
@@ -34,6 +35,7 @@ describe('TaskForm', () => {
 
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Inspect' } });
     fireEvent.change(screen.getByLabelText('Task Type *'), { target: { value: 'inspection' } });
+    fireEvent.change(screen.getByLabelText('Due Date *'), { target: { value: '2030-12-31T10:00' } });
 
     const itemInput = screen.getByPlaceholderText('e.g. Check humidity');
     fireEvent.change(itemInput, { target: { value: 'Check humidity' } });

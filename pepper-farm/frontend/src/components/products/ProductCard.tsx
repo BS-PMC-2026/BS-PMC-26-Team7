@@ -41,6 +41,7 @@ export default function ProductCard({ product, showEditButton = false }: Product
   const router = useRouter();
   const pathname = usePathname();
   const pr = t.products;
+  const st = t.store;
   const outOfStock = product.AllocatedQuantity === 0;
   const discountValid = isDiscountCurrentlyActive(product);
   const displayPrice = discountValid ? product.FinalPrice : product.Price;
@@ -146,6 +147,12 @@ export default function ProductCard({ product, showEditButton = false }: Product
         {discountValid && (
           <span className="absolute top-2 right-2 rounded-full bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 uppercase tracking-wide">
             {Math.round(product.DiscountPercentage)}{pr.discountOff}
+          </span>
+        )}
+
+        {isWorker && (
+          <span className="absolute bottom-2 left-2 rounded-full bg-blue-600 text-white text-[9px] font-semibold px-2 py-0.5 uppercase tracking-wide" data-testid="employee-discount-badge">
+            {st.employeeDiscount}
           </span>
         )}
       </div>

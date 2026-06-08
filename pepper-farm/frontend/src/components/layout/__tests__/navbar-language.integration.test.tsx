@@ -184,8 +184,12 @@ describe('ManagerNavbar language integration', () => {
       fireEvent.click(screen.getByLabelText('Switch to HE'));
     });
     await waitFor(() => {
-      const dashboardLink = screen.getByRole('link', { name: /Dashboard/i });
-      expect(dashboardLink).toHaveAttribute('href', '/manager');
+      // After switching to Hebrew the label is localized; verify by href, not name.
+      const dashboardLink = screen
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/manager");
+
+      expect(dashboardLink).toBeInTheDocument();
     });
   });
 });
@@ -247,8 +251,12 @@ describe('WorkerNavbar language integration', () => {
       fireEvent.click(screen.getByLabelText('Switch to HE'));
     });
     await waitFor(() => {
-      const dashboardLink = screen.getByRole('link', { name: /Dashboard/i });
-      expect(dashboardLink).toHaveAttribute('href', '/worker');
+      // After switching to Hebrew the label is localized; verify by href, not name.
+      const dashboardLink = screen
+        .getAllByRole("link")
+        .find((link) => link.getAttribute("href") === "/worker");
+
+      expect(dashboardLink).toBeInTheDocument();
     });
   });
 

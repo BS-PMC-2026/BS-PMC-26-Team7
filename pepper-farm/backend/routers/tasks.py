@@ -63,7 +63,10 @@ def get_completed_tasks_endpoint(
     )
 
 @router.get("", response_model=list[TaskResponse])
-def list_tasks_endpoint(db: Session = Depends(get_db)):
+def list_tasks_endpoint(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("FarmManager")),
+):
     return get_all_tasks(db)
 
 

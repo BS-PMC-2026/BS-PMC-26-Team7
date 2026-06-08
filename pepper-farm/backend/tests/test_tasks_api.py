@@ -11,6 +11,10 @@ from utils.jwt import get_current_user
 
 client = TestClient(app)
 
+# A valid (far-future) due date for tests that need creation to pass the
+# required-DueDate guard added in BSPMT7-449.
+FUTURE_DUE = "2030-12-31T10:00:00"
+
 
 # ------------------------------------------------------------------ #
 # Helpers
@@ -106,7 +110,7 @@ def test_create_task_without_anomaly_id_succeeds():
         with patch.object(task_service, "_to_response", return_value=_fake_response()):
             res = client.post(
                 "/api/tasks",
-                json={"title": "Water crops", "taskType": "irrigation"},
+                json={"title": "Water crops", "taskType": "irrigation", "dueDate": FUTURE_DUE},
             )
         assert res.status_code == 201
         assert res.json()["anomalyId"] is None
@@ -146,6 +150,7 @@ def test_create_task_with_valid_anomaly_id():
                     "taskType": "inspection",
                     "priority": "critical",
                     "anomalyId": 5,
+                    "dueDate": FUTURE_DUE,
                 },
             )
         assert res.status_code == 201
@@ -177,7 +182,7 @@ def test_create_task_with_invalid_anomaly_id_returns_error():
     try:
         res = client.post(
             "/api/tasks",
-            json={"title": "Handle alert", "taskType": "inspection", "anomalyId": 999},
+            json={"title": "Handle alert", "taskType": "inspection", "anomalyId": 999, "dueDate": FUTURE_DUE},
         )
         assert res.status_code == 400
         detail = res.json()["detail"]
@@ -212,6 +217,29 @@ def test_worker_cannot_create_task_returns_400():
 
 
 # ------------------------------------------------------------------ #
+# 4b. Missing dueDate is rejected with 400 (BSPMT7-449)
+# ------------------------------------------------------------------ #
+
+def test_create_task_without_due_date_returns_400():
+    """DueDate is required — omitting it yields a 400 from the service layer."""
+    mock_db = MagicMock()
+    manager = make_mock_manager()
+    mock_db.query.return_value.filter.return_value.first.return_value = manager
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = fake_manager
+    try:
+        res = client.post(
+            "/api/tasks",
+            json={"title": "No deadline", "taskType": "inspection"},
+        )
+        assert res.status_code == 400
+        assert res.json()["detail"] == "DueDate is required."
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ #
 # 5. anomalyId is optional — normal tasks have null reference
 # ------------------------------------------------------------------ #
 
@@ -229,7 +257,7 @@ def test_create_task_anomaly_id_is_optional():
         with patch.object(task_service, "_to_response", return_value=_fake_response()):
             res = client.post(
                 "/api/tasks",
-                json={"title": "Routine check", "taskType": "inspection"},
+                json={"title": "Routine check", "taskType": "inspection", "dueDate": FUTURE_DUE},
             )
         assert res.status_code == 201
         added_task = mock_db.add.call_args[0][0]
@@ -266,7 +294,7 @@ def test_create_task_uses_sensor_assignment_for_zone_and_pepper():
             res = client.post(
                 "/api/tasks",
                 # No zoneId / zoneCode / pepperId — should be filled from assignment
-                json={"title": "Handle alert", "taskType": "inspection", "anomalyId": 3},
+                json={"title": "Handle alert", "taskType": "inspection", "anomalyId": 3, "dueDate": FUTURE_DUE},
             )
         assert res.status_code == 201
 
@@ -315,6 +343,7 @@ def test_explicit_zone_overrides_sensor_assignment():
                     "taskType": "inspection",
                     "anomalyId": 4,
                     "zoneCode": "GH-01",  # explicit — must beat assignment.ZoneId=99
+                    "dueDate": FUTURE_DUE,
                 },
             )
         assert res.status_code == 201
