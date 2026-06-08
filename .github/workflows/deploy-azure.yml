@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: azure-webapps-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
