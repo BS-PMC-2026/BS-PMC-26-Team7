@@ -16,6 +16,7 @@ and falls back gracefully when the key is missing or the call fails.
 
 import logging
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -57,7 +58,16 @@ DEFAULT_LATITUDE = 31.283
 DEFAULT_LONGITUDE = 34.433
 
 FORECAST_DAYS = 4
-REQUEST_TIMEOUT = 30
+
+# Open-Meteo can be briefly slow or unreachable. We make a small, bounded number
+# of attempts with a short backoff between them. Each attempt uses a per-request
+# timeout, and the worst-case total wall time is kept safely under the frontend's
+# 20s weather timeout (services/weather.ts): 2 attempts * 8s + 1 * 0.5s backoff
+# ≈ 16.5s. If every attempt fails the caller still gets a WeatherApiError (→ 503),
+# preserving the existing "showing last available weather data" behavior.
+REQUEST_TIMEOUT = 8             # per-attempt timeout (seconds)
+OPEN_METEO_MAX_ATTEMPTS = 2     # total attempts (1 original + 1 retry)
+OPEN_METEO_RETRY_BACKOFF = 0.5  # seconds slept between attempts
 
 # Sensor readings older than this are treated as stale and ignored entirely
 # (excluded from the snapshot and from the rule-based recommendations).
@@ -215,28 +225,61 @@ def _fetch_open_meteo(
         "timezone": "auto",
     }
 
-    try:
-        with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
-            response = client.get(OPEN_METEO_BASE_URL, params=params)
-    except httpx.HTTPError as exc:
-        raise WeatherApiError(f"Failed to reach Open-Meteo: {exc}") from exc
+    # Retry only transient failures (network/timeout errors and 5xx upstream
+    # errors). Deterministic failures (4xx, non-JSON, unexpected shape) are not
+    # retried because a retry cannot fix them. Every failed attempt is logged
+    # with its exception type/message; the URL and params carry no secrets, and
+    # the API key is never part of this request.
+    last_error: WeatherApiError | None = None
+    for attempt in range(1, OPEN_METEO_MAX_ATTEMPTS + 1):
+        try:
+            with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
+                response = client.get(OPEN_METEO_BASE_URL, params=params)
+        except httpx.HTTPError as exc:
+            last_error = WeatherApiError(f"Failed to reach Open-Meteo: {exc}")
+            logger.warning(
+                "Open-Meteo request failed (attempt %d/%d) — %s: %s",
+                attempt, OPEN_METEO_MAX_ATTEMPTS, type(exc).__name__, exc,
+            )
+        else:
+            if response.status_code == 200:
+                try:
+                    body = response.json()
+                except ValueError:
+                    raise WeatherApiError(
+                        f"Open-Meteo returned non-JSON response: {response.text}"
+                    )
+                if (
+                    not isinstance(body, dict)
+                    or "current" not in body
+                    or "daily" not in body
+                ):
+                    raise WeatherApiError(
+                        f"Unexpected Open-Meteo response shape: {body}"
+                    )
+                return body
 
-    if response.status_code != 200:
-        raise WeatherApiError(
-            f"Open-Meteo HTTP {response.status_code}: {response.text}"
-        )
+            # Non-200: retry only on server-side (5xx) errors; 4xx is permanent.
+            message = f"Open-Meteo HTTP {response.status_code}: {response.text}"
+            if response.status_code < 500:
+                raise WeatherApiError(message)
+            last_error = WeatherApiError(message)
+            logger.warning(
+                "Open-Meteo upstream error (attempt %d/%d) — HTTP %d",
+                attempt, OPEN_METEO_MAX_ATTEMPTS, response.status_code,
+            )
 
-    try:
-        body = response.json()
-    except ValueError:
-        raise WeatherApiError(
-            f"Open-Meteo returned non-JSON response: {response.text}"
-        )
+        # Short backoff before the next attempt, if any remain.
+        if attempt < OPEN_METEO_MAX_ATTEMPTS:
+            time.sleep(OPEN_METEO_RETRY_BACKOFF)
 
-    if not isinstance(body, dict) or "current" not in body or "daily" not in body:
-        raise WeatherApiError(f"Unexpected Open-Meteo response shape: {body}")
-
-    return body
+    # All attempts exhausted — log once at error level and surface the last
+    # failure as the existing WeatherApiError (the router maps this to a 503).
+    logger.error(
+        "Open-Meteo unavailable after %d attempt(s): %s",
+        OPEN_METEO_MAX_ATTEMPTS, last_error,
+    )
+    raise last_error or WeatherApiError("Open-Meteo request failed")
 
 
 # --- Normalization ---------------------------------------------------------

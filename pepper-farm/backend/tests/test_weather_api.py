@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -136,6 +137,40 @@ def mock_open_meteo(*, status_code=200, json_data=None, text=""):
 
     with patch("services.weather_service.httpx.Client", return_value=fake_client):
         yield
+
+
+@contextmanager
+def mock_open_meteo_sequence(steps):
+    """Patch httpx.Client so successive .get() calls follow `steps` in order.
+
+    Each step is either an Exception instance (raised, simulating a network
+    error) or a dict with optional keys status_code/json_data/text (a fake
+    response). time.sleep is also patched out so the retry backoff does not slow
+    the tests. Lets us exercise the bounded-retry path deterministically.
+    """
+    side_effects = []
+    for step in steps:
+        if isinstance(step, Exception):
+            side_effects.append(step)
+        else:
+            r = MagicMock()
+            r.status_code = step.get("status_code", 200)
+            r.text = step.get("text", "")
+            jd = step.get("json_data")
+            if jd is not None:
+                r.json.return_value = jd
+            else:
+                r.json.side_effect = ValueError("no json")
+            side_effects.append(r)
+
+    fake_client = MagicMock()
+    fake_client.get.side_effect = side_effects
+    fake_client.__enter__.return_value = fake_client
+    fake_client.__exit__.return_value = False
+
+    with patch("services.weather_service.httpx.Client", return_value=fake_client), \
+         patch("services.weather_service.time.sleep", return_value=None):
+        yield fake_client
 
 
 def mock_openai_success(content="Winds are calm and no rain is expected, so spraying is fine."):
@@ -437,6 +472,53 @@ def test_range_affects_recommendations(manager_client):
     assert today_irrig["status"] == "advised"
     assert next2_irrig["status"] == "not_advised"
     assert next2_irrig["reason"] == "rain_expected"
+
+
+# --- Open-Meteo retry hardening --------------------------------------------
+
+def test_open_meteo_retries_then_succeeds_after_network_error(manager_client):
+    """A transient network error on the first attempt is retried and succeeds."""
+    with mock_open_meteo_sequence(
+        [httpx.ConnectTimeout("handshake timed out"), {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    assert fake_client.get.call_count == 2  # original + one retry
+
+
+def test_open_meteo_retries_then_succeeds_after_5xx(manager_client):
+    """A 5xx upstream error on the first attempt is retried and then succeeds."""
+    with mock_open_meteo_sequence(
+        [{"status_code": 503, "text": "busy"}, {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    assert fake_client.get.call_count == 2
+
+
+def test_open_meteo_4xx_not_retried(manager_client):
+    """A 4xx (permanent) error is NOT retried and surfaces as a 503 to the client."""
+    with mock_open_meteo_sequence(
+        # Second step would succeed, but it must never be reached.
+        [{"status_code": 400, "text": "bad request"}, {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 503
+    assert fake_client.get.call_count == 1  # no retry on 4xx
+
+
+def test_open_meteo_all_attempts_fail_returns_503(manager_client):
+    """When every attempt fails, the existing WeatherApiError → 503 behavior holds."""
+    with mock_open_meteo_sequence(
+        [httpx.ConnectTimeout("boom"), httpx.ConnectTimeout("boom again")]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 503
+    assert fake_client.get.call_count == 2  # exactly OPEN_METEO_MAX_ATTEMPTS
 
 
 # --- POST /api/manager/weather/ai-recommendation ---------------------------
