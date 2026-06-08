@@ -16,6 +16,7 @@ import type {
   WeatherRecommendation,
   WeatherRecommendationStatus,
   WeatherResponse,
+  WeatherSensorSnapshot,
 } from '@/types/weather';
 
 // Small visual hint per condition; falls back to a neutral icon.
@@ -147,6 +148,14 @@ export default function WeatherCard() {
     });
   };
 
+  // Sensor source: prefer the actual fresh sensor names; fall back to a count
+  // ("2 active sensors") when names are unavailable.
+  const sensorSourceLabel = (s: WeatherSensorSnapshot): string => {
+    if (s.sensorNames && s.sensorNames.length > 0) return s.sensorNames.join(', ');
+    const unit = s.sensorCount === 1 ? w.activeSensor : w.activeSensors;
+    return `${s.sensorCount} ${unit}`;
+  };
+
   const num = (value: number | null, suffix = ''): string =>
     value === null || value === undefined ? '—' : `${value}${suffix}`;
 
@@ -196,6 +205,10 @@ export default function WeatherCard() {
           {/* Current live weather */}
           <section>
             <h3 className="text-sm font-medium text-gray-500 mb-2">{w.currentWeather}</h3>
+            <p className="mb-2 text-xs text-gray-400">
+              {w.location}:{' '}
+              <span className="font-medium text-gray-600">{w.locationName}</span>
+            </p>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-4xl" aria-hidden>
                 {conditionEmoji(data.current.condition)}
@@ -294,6 +307,12 @@ export default function WeatherCard() {
                     {data.sensors.sensorCount}
                   </dd>
                 </div>
+                <p className="col-span-2 sm:col-span-4 text-xs text-gray-500">
+                  {w.sensorSource}:{' '}
+                  <span className="font-medium text-gray-700">
+                    {sensorSourceLabel(data.sensors)}
+                  </span>
+                </p>
                 {data.sensors.latestReadingUtc && (
                   <p className="col-span-2 sm:col-span-4 text-xs text-gray-400">
                     {w.updatedAt} {formatTime(data.sensors.latestReadingUtc)}

@@ -1295,6 +1295,11 @@ export interface WeatherDictionary {
   recommendations: string;
   sensors: string;
   sensorSnapshot: string;
+  location: string;
+  locationName: string;
+  sensorSource: string;
+  activeSensor: string;
+  activeSensors: string;
   temperature: string;
   humidity: string;
   windSpeed: string;
@@ -2663,6 +2668,11 @@ const en: Dictionary = {
     recommendations: 'Recommendations',
     sensors: 'Sensors',
     sensorSnapshot: 'Sensor Snapshot',
+    location: 'Weather location',
+    locationName: 'Pri Gan / Perigan, Israel',
+    sensorSource: 'Sensor source',
+    activeSensor: 'active sensor',
+    activeSensors: 'active sensors',
     temperature: 'Temperature',
     humidity: 'Humidity',
     windSpeed: 'Wind Speed',
@@ -4001,6 +4011,11 @@ const he: Dictionary = {
     recommendations: 'המלצות',
     sensors: 'חיישנים',
     sensorSnapshot: 'תמונת מצב חיישנים',
+    location: 'מיקום מזג האוויר',
+    locationName: 'פרי גן / פריגן, ישראל',
+    sensorSource: 'מקור החיישן',
+    activeSensor: 'חיישן פעיל',
+    activeSensors: 'חיישנים פעילים',
     temperature: 'טמפרטורה',
     humidity: 'לחות',
     windSpeed: 'מהירות רוח',

@@ -295,6 +295,8 @@ def test_sensor_snapshot_included_when_readings_exist(manager_client, db):
     assert sensors["sensorCount"] == 2
     assert sensors["avgTemperatureC"] == 26.0   # (25 + 27) / 2
     assert sensors["avgHumidityPct"] == 62.0     # (60 + 64) / 2
+    # Names default to "Sensor #<id>" here (seed has no DeviceName/UnitName).
+    assert len(sensors["sensorNames"]) == 2
 
 
 def test_sensors_null_when_no_readings(manager_client):
@@ -339,6 +341,99 @@ def test_stale_readings_excluded_from_snapshot(manager_client, db):
     assert sensors["sensorCount"] == 1            # only the fresh sensor
     assert sensors["avgTemperatureC"] == 22.0     # stale 99.0 excluded
     assert sensors["avgHumidityPct"] == 55.0
+
+
+def test_sensor_names_use_device_name(manager_client, db):
+    """sensorNames lists the fresh sensors' DeviceName values."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName="Pepper Farm Sensor", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName="Greenhouse Sensor", IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(
+                SensorId=1, MacAddress="AA", Temperature=25.0, Humidity=60.0,
+                PAR=150.0, SampleTimeUtc=_hours_ago(1), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(
+                SensorId=2, MacAddress="BB", Temperature=27.0, Humidity=64.0,
+                PAR=180.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert sensors["sensorCount"] == 2
+    assert set(sensors["sensorNames"]) == {"Pepper Farm Sensor", "Greenhouse Sensor"}
+
+
+def test_sensor_names_fallback_unitname_then_id(manager_client, db):
+    """DeviceName missing → UnitName; both missing → 'Sensor #<id>'."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName=None, UnitName="Unit-7", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName=None, UnitName=None, IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(
+                SensorId=1, MacAddress="AA", Temperature=25.0, Humidity=60.0,
+                PAR=150.0, SampleTimeUtc=_hours_ago(1), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(
+                SensorId=2, MacAddress="BB", Temperature=27.0, Humidity=64.0,
+                PAR=180.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert set(sensors["sensorNames"]) == {"Unit-7", "Sensor #2"}
+
+
+def test_stale_sensor_name_excluded(manager_client, db):
+    """A stale sensor's name must NOT appear in sensorNames."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName="Pepper Farm Sensor", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName="AT-C1 E1:98", IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(  # fresh
+                SensorId=1, MacAddress="AA", Temperature=22.0, Humidity=55.0,
+                PAR=120.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(  # stale (48h) — name must be excluded
+                SensorId=2, MacAddress="BB", Temperature=99.0, Humidity=99.0,
+                PAR=999.0, SampleTimeUtc=_hours_ago(48), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert sensors["sensorCount"] == 1
+    assert sensors["sensorNames"] == ["Pepper Farm Sensor"]
+    assert "AT-C1 E1:98" not in sensors["sensorNames"]
 
 
 def test_sensors_null_when_all_stale(manager_client, db):

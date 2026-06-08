@@ -345,6 +345,12 @@ def _is_fresh(sample_time: Optional[datetime], cutoff: datetime) -> bool:
     return naive >= cutoff
 
 
+def _sensor_display_name(sensor: Sensor) -> str:
+    """Human-readable name for a sensor: DeviceName → UnitName → 'Sensor #<id>'."""
+    name = (sensor.DeviceName or sensor.UnitName or "").strip()
+    return name or f"Sensor #{sensor.SensorId}"
+
+
 def get_sensor_snapshot(db: Session) -> Optional[WeatherSensorSnapshot]:
     """Best-effort farm-wide snapshot from the latest reading of each active
     sensor. Readings older than SENSOR_STALE_HOURS are excluded; if every
@@ -359,8 +365,10 @@ def get_sensor_snapshot(db: Session) -> Optional[WeatherSensorSnapshot]:
             .group_by(SensorReading.SensorId)
             .subquery()
         )
-        readings = (
-            db.query(SensorReading)
+        # Fetch each active sensor's latest reading together with its Sensor row
+        # so we can surface the human-readable sensor name in the snapshot.
+        rows = (
+            db.query(SensorReading, Sensor)
             .join(
                 latest_per_sensor,
                 (SensorReading.SensorId == latest_per_sensor.c.SensorId)
@@ -373,22 +381,25 @@ def get_sensor_snapshot(db: Session) -> Optional[WeatherSensorSnapshot]:
     except Exception:
         return None
 
-    if not readings:
+    if not rows:
         return None
 
-    # Drop stale readings so they never reach the snapshot or the rules.
+    # Drop stale readings so they never reach the snapshot or the rules. The
+    # accompanying Sensor row rides along, so a stale sensor's name is dropped
+    # here too and never reaches sensorNames.
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
         hours=SENSOR_STALE_HOURS
     )
-    fresh = [r for r in readings if _is_fresh(r.SampleTimeUtc, cutoff)]
+    fresh = [(r, s) for (r, s) in rows if _is_fresh(r.SampleTimeUtc, cutoff)]
     if not fresh:
         return None
 
-    temps = [r.Temperature for r in fresh if r.Temperature is not None]
-    hums = [r.Humidity for r in fresh if r.Humidity is not None]
-    pars = [r.PAR for r in fresh if r.PAR is not None]
-    times = [r.SampleTimeUtc for r in fresh if r.SampleTimeUtc is not None]
+    temps = [r.Temperature for (r, _) in fresh if r.Temperature is not None]
+    hums = [r.Humidity for (r, _) in fresh if r.Humidity is not None]
+    pars = [r.PAR for (r, _) in fresh if r.PAR is not None]
+    times = [r.SampleTimeUtc for (r, _) in fresh if r.SampleTimeUtc is not None]
     latest = max(times) if times else None
+    names = [_sensor_display_name(s) for (_, s) in fresh]
 
     def _avg(values: list[float]) -> Optional[float]:
         return round(sum(values) / len(values), 1) if values else None
@@ -398,6 +409,7 @@ def get_sensor_snapshot(db: Session) -> Optional[WeatherSensorSnapshot]:
         avgHumidityPct=_avg(hums),
         avgPar=_avg(pars),
         sensorCount=len(fresh),
+        sensorNames=names,
         latestReadingUtc=latest.isoformat() if latest else None,
     )
 
