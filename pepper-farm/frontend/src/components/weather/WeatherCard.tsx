@@ -82,6 +82,17 @@ export default function WeatherCard() {
     };
   }, [selectedRange]);
 
+  // Auto-dismiss the soft "showing last data" refresh warning so it never
+  // lingers on screen. It only appears when a refresh/range fetch fails while
+  // previous weather data is still shown; after a few seconds we clear the
+  // warning flag (the valid weather data itself is kept untouched). A later
+  // successful fetch also clears it via the effect above.
+  useEffect(() => {
+    if (!error || !data) return;
+    const timer = setTimeout(() => setError(false), 6000);
+    return () => clearTimeout(timer);
+  }, [error, data]);
+
   // AI is only ever triggered by this explicit handler.
   const handleGenerateAi = useCallback(() => {
     setAiLoading(true);
@@ -171,12 +182,14 @@ export default function WeatherCard() {
         <p className="text-sm text-red-600">{w.error}</p>
       )}
 
-      {/* Once we have data, keep showing it even if a later request fails. */}
+      {/* Once we have data, keep showing it even if a later request fails.
+          A failed refresh shows a softer "showing last data" notice (amber),
+          not the hard "failed to load" error used when there's no data at all. */}
       {data && (
         <div className="flex flex-col gap-5">
           {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-              {w.error}
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              {w.refreshError}
             </p>
           )}
 

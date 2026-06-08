@@ -14,6 +14,7 @@ a human-readable explanation of the ALREADY-DECIDED rule-based recommendation,
 and falls back gracefully when the key is missing or the call fails.
 """
 
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -39,6 +40,8 @@ from schemas.weather import (
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / ".env")
+
+logger = logging.getLogger(__name__)
 
 
 # --- Configuration ---------------------------------------------------------
@@ -483,51 +486,75 @@ def _get_model() -> str:
     return os.getenv("OPENAI_MODEL", OPENAI_MODEL_DEFAULT)
 
 
+_RANGE_PHRASES: dict[str, str] = {
+    "today": "today",
+    "next_2_days": "the next 2 days",
+    "next_7_days": "the weekly outlook (next 7 days)",
+}
+
+
 def _summarize_facts(weather: WeatherResponse) -> str:
     """Build a compact, bounded facts summary to ground the AI explanation."""
     cur = weather.current
     loc = weather.location
+    range_phrase = _RANGE_PHRASES.get(weather.selectedRange, weather.selectedRange)
+    # Use exactly the forecast window the rules used for this range
+    # (today -> 1 day, next_2_days -> 2 days, next_7_days -> 7 days).
+    window = weather.forecast[: _window_size(weather.selectedRange)]
     lines = [
+        f"Selected range: {weather.selectedRange} (refer to it as \"{range_phrase}\")",
         f"Location: {loc.latitude}, {loc.longitude} ({loc.timezone})",
-        f"Selected range: {weather.selectedRange}",
         (
-            f"Current: {cur.temperatureC}C, humidity {cur.humidityPct}%, "
-            f"wind {cur.windSpeedKph} km/h, precipitation {cur.precipitationMm} mm, "
-            f"condition {cur.condition}"
+            f"Current weather: temperature {cur.temperatureC}C, humidity "
+            f"{cur.humidityPct}%, wind {cur.windSpeedKph} km/h, precipitation "
+            f"{cur.precipitationMm} mm, condition {cur.condition}"
         ),
     ]
-    if weather.forecast:
+    if window:
         fc = "; ".join(
             f"{d.date}: {d.tempMinC}-{d.tempMaxC}C, rain "
             f"{d.precipitationProbabilityPct if d.precipitationProbabilityPct is not None else 0}%, "
-            f"{d.condition}"
-            for d in weather.forecast[:2]
+            f"max wind {d.windSpeedMaxKph} km/h, {d.condition}"
+            for d in window
         )
-        lines.append(f"Forecast (next days): {fc}")
+        lines.append(f"Forecast window ({len(window)} day(s) for this range): {fc}")
+        # The exact extremes the rules used (cite these for irrigation/field work).
+        w_max_temp = max((d.tempMaxC for d in window), default=cur.temperatureC)
+        w_max_rain = max(
+            (d.precipitationProbabilityPct or 0 for d in window), default=0
+        )
+        w_max_wind = max((d.windSpeedMaxKph for d in window), default=cur.windSpeedKph)
+        lines.append(
+            f"Window extremes the rules used: max temperature {w_max_temp}C, "
+            f"max rain probability {w_max_rain}%, max wind {w_max_wind} km/h"
+        )
     if weather.sensors:
         s = weather.sensors
         lines.append(
-            f"Farm sensors ({s.sensorCount}): avg temp {s.avgTemperatureC}C, "
-            f"avg humidity {s.avgHumidityPct}%, avg PAR {s.avgPar}"
+            f"Farm sensor snapshot ({s.sensorCount} sensor(s), CURRENT readings): "
+            f"avg temp {s.avgTemperatureC}C, avg humidity {s.avgHumidityPct}%, "
+            f"avg PAR {s.avgPar}"
         )
     else:
-        lines.append("Farm sensors: none available")
+        lines.append("Farm sensor snapshot: none available")
     rec = "; ".join(
         f"{r.activity}={r.status} "
         f"(factors: {', '.join(r.factors) if r.factors else r.reason})"
         for r in weather.recommendations
     )
-    lines.append(f"Rule-based recommendation (final, do not change): {rec}")
+    lines.append(f"Rule-based recommendation (FINAL — do not change any status): {rec}")
     if weather.selectedRange == "today" and weather.sensors:
         lines.append(
-            "Note: for the 'today' range a factor that comes from the sensor "
-            "snapshot (e.g. high_humidity) means the recommendation is supported "
-            "by the current sensor reading — say so in the explanation."
+            "Sensor note: for the 'today' range the sensor snapshot reflects "
+            "CURRENT farm conditions and may support today's recommendation "
+            "(e.g. a high_humidity factor) — mention that it is the current "
+            "sensor reading."
         )
     else:
         lines.append(
-            "Note: the sensor snapshot is current information only and does NOT "
-            "influence this range's recommendation."
+            "Sensor note: the sensor snapshot is CURRENT information only and is "
+            "NOT used as a forecast for this range — do not present it as future "
+            "data and do not let it imply anything about future days."
         )
     return "\n".join(lines)
 
@@ -549,17 +576,49 @@ def generate_ai_explanation(weather: WeatherResponse) -> WeatherAiResponse:
 
     api_key = _get_api_key()
     if not api_key:
+        logger.warning(
+            "Weather AI explanation skipped: OPENAI_API_KEY is not set; "
+            "returning the rule-based recommendation as fallback."
+        )
         return base
 
     system_prompt = (
-        "You are an assistant for a pepper farm. You are given weather facts, "
-        "farm sensor facts, and an ALREADY-DECIDED rule-based recommendation "
-        "for spraying, irrigation and field work, each with the factors that "
-        "led to it. Do NOT change or override the recommendation. Briefly "
-        "explain it (2-4 short sentences) in plain text with no Markdown, "
-        "citing the listed factors; when a recommendation lists more than one "
-        "factor, mention all of them (e.g. moderate wind and high humidity). "
-        "Reply in English."
+        "You are a professional agronomy advisor writing a short field briefing "
+        "for the manager of a pepper farm. You are given weather facts, the "
+        "selected forecast range, optional CURRENT farm sensor facts, and an "
+        "ALREADY-DECIDED rule-based recommendation for spraying, irrigation and "
+        "field work, each with the exact factors that led to it.\n"
+        "\n"
+        "Hard rules:\n"
+        "- The three statuses (advised / caution / not advised) are FINAL. Never "
+        "change, override, soften, or re-decide them; only explain the reasoning "
+        "behind each one.\n"
+        "- Do NOT merely restate the status or echo the raw factor codes. "
+        "Interpret them agronomically and justify them with the concrete numbers "
+        "provided.\n"
+        "\n"
+        "Output format (plain text, no Markdown, no bullet symbols):\n"
+        "- Begin with one short lead sentence naming the selected range in words "
+        "(today / the next 2 days / the weekly outlook) and the overall picture.\n"
+        "- Then exactly three lines, one per activity, each starting with the "
+        "label and a colon, in this order:\n"
+        "    Spraying: ...\n"
+        "    Irrigation: ...\n"
+        "    Field work: ...\n"
+        "- Treat the three activities with EQUAL depth (roughly one sentence "
+        "each). Do not over-focus on spraying.\n"
+        "\n"
+        "In each activity line, cite the specific weather numbers that drove its "
+        "status: wind in km/h, rain probability in %, precipitation in mm, "
+        "temperature in C, and humidity in % — use the ones relevant to that "
+        "activity. When a recommendation lists more than one factor, mention all "
+        "of them (e.g. moderate wind together with high humidity). "
+        "If farm sensor facts are present, add at most one short closing "
+        "sentence: for the 'today' range note the sensor snapshot reflects "
+        "CURRENT farm conditions and may support today's call; for any other "
+        "range note it is current information only and is NOT a forecast for "
+        "future days. "
+        "Be specific and professional — avoid generic filler. Reply in English."
     )
 
     try:
@@ -572,15 +631,28 @@ def generate_ai_explanation(weather: WeatherResponse) -> WeatherAiResponse:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": _summarize_facts(weather)},
             ],
-            max_tokens=300,
+            max_tokens=400,
         )
         explanation = (completion.choices[0].message.content or "").strip()
-    except Exception:
-        # Covers missing package, rate limits, network/service errors. We do not
-        # log details to avoid leaking request content or the API key.
+    except Exception as exc:
+        # Covers missing package, rate limits, quota, auth and network/service
+        # errors. We log the exception TYPE and message (which OpenAI errors
+        # expose as a status/quota/auth reason) so the failure is diagnosable —
+        # the API key is never part of the exception and is never logged, and we
+        # never log the request content.
+        logger.warning(
+            "Weather AI explanation unavailable (%s): %s; "
+            "returning the rule-based recommendation as fallback.",
+            type(exc).__name__,
+            exc,
+        )
         return base
 
     if not explanation:
+        logger.warning(
+            "Weather AI explanation came back empty; returning the rule-based "
+            "recommendation as fallback."
+        )
         return base
 
     return WeatherAiResponse(
