@@ -1,2 +1,9 @@
 .env.local
 tsconfig.tsbuildinfo
+
+# Playwright E2E artifacts (never commit)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+sprint3_e2e_tests_main.txt
