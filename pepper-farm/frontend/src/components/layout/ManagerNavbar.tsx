@@ -525,6 +525,8 @@ export default function ManagerNavbar() {
                   </span>
                   <button
                     onClick={() => setBellOpen(false)}
+                    aria-label={t.common.close}
+                    data-testid="manager-notifications-close"
                     className="flex p-0.5 rounded border-none bg-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] cursor-pointer transition-colors"
                   >
                     <X size={13} />

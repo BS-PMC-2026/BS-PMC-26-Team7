@@ -28,6 +28,23 @@ import { test, expect, Page } from '@playwright/test';
 const PEPPER_ID = 1;
 const EDIT_URL = `/manager/peppers/edit/${PEPPER_ID}`;
 
+/**
+ * The edit page lives under /manager/*, which the Next.js middleware
+ * (src/middleware.ts) guards via a `role` cookie. Without a FarmManager role
+ * cookie every navigation is redirected to /login and the form never renders.
+ * Set the cookie (plus a localStorage token for Authorization headers) before
+ * each test so the guarded page loads.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.context().addCookies([
+    { name: 'token', value: 'e2e-mock-token', url: 'http://localhost:3000' },
+    { name: 'role', value: 'FarmManager', url: 'http://localhost:3000' },
+  ]);
+  await page.addInitScript(() => {
+    window.localStorage.setItem('token', 'e2e-mock-token');
+  });
+});
+
 const MOCK_PEPPER = {
   PepperId: PEPPER_ID,
   PepperName: 'Jalapeño',
@@ -251,14 +268,21 @@ test.describe('Edit Pepper — validation', () => {
     await page.goto(EDIT_URL);
   });
 
-  test('clearing pepper name shows validation error and blocks submission', async ({ page }) => {
-    await page.locator('input[name="PepperName"]').fill('');
+  test('clearing the required pepper name blocks submission', async ({ page }) => {
+    const nameInput = page.locator('input[name="PepperName"]');
+    await nameInput.fill('');
     await page.getByRole('button', { name: /save|update/i }).click();
 
-    // Either form-level validation text or server 422 error should appear
-    await expect(
-      page.getByText(/required|cannot be empty/i).first()
-    ).toBeVisible({ timeout: 3000 });
+    // PepperName is marked `required`, so the browser's native validation rejects
+    // the empty value and prevents the form from being submitted — the field is
+    // reported invalid (valueMissing) and no success message ever appears.
+    const validity = await nameInput.evaluate((el: HTMLInputElement) => ({
+      valid: el.validity.valid,
+      valueMissing: el.validity.valueMissing,
+    }));
+    expect(validity.valid).toBe(false);
+    expect(validity.valueMissing).toBe(true);
+    await expect(page.getByText(/updated successfully|saved/i)).toHaveCount(0);
   });
 
   test('entering invalid scoville range shows validation error', async ({ page }) => {
@@ -271,13 +295,20 @@ test.describe('Edit Pepper — validation', () => {
     ).toBeVisible({ timeout: 3000 });
   });
 
-  test('entering negative scoville value shows validation error', async ({ page }) => {
-    await page.locator('input[name="HeatLevelScovilleMin"]').fill('-1');
+  test('entering a negative scoville value blocks submission', async ({ page }) => {
+    const minInput = page.locator('input[name="HeatLevelScovilleMin"]');
+    await minInput.fill('-1');
     await page.getByRole('button', { name: /save|update/i }).click();
 
-    await expect(
-      page.getByText(/negative|invalid|must be/i).first()
-    ).toBeVisible({ timeout: 3000 });
+    // The Scoville inputs declare min="0", so a negative value is rejected by
+    // native validation (rangeUnderflow) and the form is not submitted.
+    const validity = await minInput.evaluate((el: HTMLInputElement) => ({
+      valid: el.validity.valid,
+      rangeUnderflow: el.validity.rangeUnderflow,
+    }));
+    expect(validity.valid).toBe(false);
+    expect(validity.rangeUnderflow).toBe(true);
+    await expect(page.getByText(/updated successfully|saved/i)).toHaveCount(0);
   });
 });
 
