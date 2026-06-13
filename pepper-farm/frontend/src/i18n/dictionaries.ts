@@ -1295,6 +1295,11 @@ export interface WeatherDictionary {
   recommendations: string;
   sensors: string;
   sensorSnapshot: string;
+  location: string;
+  locationName: string;
+  sensorSource: string;
+  activeSensor: string;
+  activeSensors: string;
   temperature: string;
   humidity: string;
   windSpeed: string;
@@ -1315,6 +1320,7 @@ export interface WeatherDictionary {
   notAdvised: string;
   loading: string;
   error: string;
+  refreshError: string;
   aiRecommendation: string;
   generateAiRecommendation: string;
   aiLoading: string;
@@ -2662,6 +2668,11 @@ const en: Dictionary = {
     recommendations: 'Recommendations',
     sensors: 'Sensors',
     sensorSnapshot: 'Sensor Snapshot',
+    location: 'Weather location',
+    locationName: 'Pri Gan / Perigan, Israel',
+    sensorSource: 'Sensor source',
+    activeSensor: 'active sensor',
+    activeSensors: 'active sensors',
     temperature: 'Temperature',
     humidity: 'Humidity',
     windSpeed: 'Wind Speed',
@@ -2682,10 +2693,11 @@ const en: Dictionary = {
     notAdvised: 'Not Advised',
     loading: 'Loading weather…',
     error: 'Failed to load weather',
+    refreshError: 'Could not refresh weather right now. Showing last available weather data.',
     aiRecommendation: 'AI Recommendation',
     generateAiRecommendation: 'Generate AI recommendation',
     aiLoading: 'Generating recommendation…',
-    aiFallback: 'AI explanation is unavailable right now. Showing the rule-based recommendation.',
+    aiFallback: 'The optional AI explanation is unavailable right now — this does not affect the weather recommendation shown above, which is still valid.',
     noSensorData: 'No sensor data available',
     conditions: {
       clear: 'Clear',
@@ -3999,6 +4011,11 @@ const he: Dictionary = {
     recommendations: 'המלצות',
     sensors: 'חיישנים',
     sensorSnapshot: 'תמונת מצב חיישנים',
+    location: 'מיקום מזג האוויר',
+    locationName: 'פרי גן / פריגן, ישראל',
+    sensorSource: 'מקור החיישן',
+    activeSensor: 'חיישן פעיל',
+    activeSensors: 'חיישנים פעילים',
     temperature: 'טמפרטורה',
     humidity: 'לחות',
     windSpeed: 'מהירות רוח',
@@ -4019,10 +4036,11 @@ const he: Dictionary = {
     notAdvised: 'לא מומלץ',
     loading: 'טוען מזג אוויר…',
     error: 'טעינת מזג האוויר נכשלה',
+    refreshError: 'לא ניתן לרענן את מזג האוויר כעת. מוצגים נתוני מזג האוויר האחרונים הזמינים.',
     aiRecommendation: 'המלצה חכמה',
     generateAiRecommendation: 'קבל המלצה חכמה',
     aiLoading: 'מפיק המלצה…',
-    aiFallback: 'ההסבר החכם אינו זמין כעת. מוצגת ההמלצה מבוססת-הכללים.',
+    aiFallback: 'ההסבר החכם (אופציונלי) אינו זמין כעת — אין לכך השפעה על המלצת מזג האוויר שמוצגת למעלה, והיא עדיין תקפה.',
     noSensorData: 'אין נתוני חיישנים זמינים',
     conditions: {
       clear: 'בהיר',

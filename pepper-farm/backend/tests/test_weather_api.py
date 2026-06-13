@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -136,6 +137,40 @@ def mock_open_meteo(*, status_code=200, json_data=None, text=""):
 
     with patch("services.weather_service.httpx.Client", return_value=fake_client):
         yield
+
+
+@contextmanager
+def mock_open_meteo_sequence(steps):
+    """Patch httpx.Client so successive .get() calls follow `steps` in order.
+
+    Each step is either an Exception instance (raised, simulating a network
+    error) or a dict with optional keys status_code/json_data/text (a fake
+    response). time.sleep is also patched out so the retry backoff does not slow
+    the tests. Lets us exercise the bounded-retry path deterministically.
+    """
+    side_effects = []
+    for step in steps:
+        if isinstance(step, Exception):
+            side_effects.append(step)
+        else:
+            r = MagicMock()
+            r.status_code = step.get("status_code", 200)
+            r.text = step.get("text", "")
+            jd = step.get("json_data")
+            if jd is not None:
+                r.json.return_value = jd
+            else:
+                r.json.side_effect = ValueError("no json")
+            side_effects.append(r)
+
+    fake_client = MagicMock()
+    fake_client.get.side_effect = side_effects
+    fake_client.__enter__.return_value = fake_client
+    fake_client.__exit__.return_value = False
+
+    with patch("services.weather_service.httpx.Client", return_value=fake_client), \
+         patch("services.weather_service.time.sleep", return_value=None):
+        yield fake_client
 
 
 def mock_openai_success(content="Winds are calm and no rain is expected, so spraying is fine."):
@@ -260,6 +295,8 @@ def test_sensor_snapshot_included_when_readings_exist(manager_client, db):
     assert sensors["sensorCount"] == 2
     assert sensors["avgTemperatureC"] == 26.0   # (25 + 27) / 2
     assert sensors["avgHumidityPct"] == 62.0     # (60 + 64) / 2
+    # Names default to "Sensor #<id>" here (seed has no DeviceName/UnitName).
+    assert len(sensors["sensorNames"]) == 2
 
 
 def test_sensors_null_when_no_readings(manager_client):
@@ -304,6 +341,99 @@ def test_stale_readings_excluded_from_snapshot(manager_client, db):
     assert sensors["sensorCount"] == 1            # only the fresh sensor
     assert sensors["avgTemperatureC"] == 22.0     # stale 99.0 excluded
     assert sensors["avgHumidityPct"] == 55.0
+
+
+def test_sensor_names_use_device_name(manager_client, db):
+    """sensorNames lists the fresh sensors' DeviceName values."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName="Pepper Farm Sensor", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName="Greenhouse Sensor", IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(
+                SensorId=1, MacAddress="AA", Temperature=25.0, Humidity=60.0,
+                PAR=150.0, SampleTimeUtc=_hours_ago(1), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(
+                SensorId=2, MacAddress="BB", Temperature=27.0, Humidity=64.0,
+                PAR=180.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert sensors["sensorCount"] == 2
+    assert set(sensors["sensorNames"]) == {"Pepper Farm Sensor", "Greenhouse Sensor"}
+
+
+def test_sensor_names_fallback_unitname_then_id(manager_client, db):
+    """DeviceName missing → UnitName; both missing → 'Sensor #<id>'."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName=None, UnitName="Unit-7", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName=None, UnitName=None, IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(
+                SensorId=1, MacAddress="AA", Temperature=25.0, Humidity=60.0,
+                PAR=150.0, SampleTimeUtc=_hours_ago(1), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(
+                SensorId=2, MacAddress="BB", Temperature=27.0, Humidity=64.0,
+                PAR=180.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert set(sensors["sensorNames"]) == {"Unit-7", "Sensor #2"}
+
+
+def test_stale_sensor_name_excluded(manager_client, db):
+    """A stale sensor's name must NOT appear in sensorNames."""
+    db.add_all(
+        [
+            Sensor(SensorId=1, MacAddress="AA", DeviceName="Pepper Farm Sensor", IsActive=True),
+            Sensor(SensorId=2, MacAddress="BB", DeviceName="AT-C1 E1:98", IsActive=True),
+        ]
+    )
+    db.add_all(
+        [
+            SensorReading(  # fresh
+                SensorId=1, MacAddress="AA", Temperature=22.0, Humidity=55.0,
+                PAR=120.0, SampleTimeUtc=_hours_ago(2), ReadingType="std", RawJson="{}",
+            ),
+            SensorReading(  # stale (48h) — name must be excluded
+                SensorId=2, MacAddress="BB", Temperature=99.0, Humidity=99.0,
+                PAR=999.0, SampleTimeUtc=_hours_ago(48), ReadingType="std", RawJson="{}",
+            ),
+        ]
+    )
+    db.commit()
+
+    with mock_open_meteo(json_data=make_meteo_body()):
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    sensors = res.json()["sensors"]
+    assert sensors["sensorCount"] == 1
+    assert sensors["sensorNames"] == ["Pepper Farm Sensor"]
+    assert "AT-C1 E1:98" not in sensors["sensorNames"]
 
 
 def test_sensors_null_when_all_stale(manager_client, db):
@@ -379,7 +509,17 @@ def test_today_combined_factors_wind_and_humidity(manager_client, db):
 def test_next_2_days_ignores_sensor(manager_client, db):
     """Next 2 days: a fresh high-humidity sensor must NOT affect recommendations."""
     seed_humid_sensor(db, humidity=92.0)
-    with mock_open_meteo(json_data=make_meteo_body()):  # calm
+    # Genuinely calm forecast winds (< 12 km/h) so the spraying result is driven
+    # purely by conditions, isolating the "sensor humidity is ignored" check.
+    calm_daily = {
+        "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+        "weather_code": [1, 2, 1, 0],
+        "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+        "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+        "precipitation_probability_max": [10, 5, 0, 15],
+        "wind_speed_10m_max": [8.0, 7.0, 9.0, 6.0],
+    }
+    with mock_open_meteo(json_data=make_meteo_body(daily=calm_daily)):  # calm winds
         res = manager_client.get("/api/manager/weather?range=next_2_days")
 
     assert res.status_code == 200
@@ -400,6 +540,81 @@ def test_weekly_ignores_sensor(manager_client, db):
     assert res.status_code == 200
     spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
     assert "high_humidity" not in spraying["factors"]
+
+
+def test_next_2_days_high_forecast_wind_blocks_spraying(manager_client):
+    """Next 2 days: calm current wind but high FORECAST wind → not_advised/high_wind."""
+    body = make_meteo_body(
+        current=MODERATE_WIND_CURRENT | {"wind_speed_10m": 5.0},  # calm right now
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],   # no rain confounder
+            "wind_speed_10m_max": [10.0, 25.0, 8.0, 8.0],     # day 2 (in window) is windy
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=next_2_days")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "not_advised"
+    assert spraying["reason"] == "high_wind"
+    assert "high_wind" in spraying["factors"]
+
+
+def test_next_2_days_moderate_forecast_wind_cautions_spraying(manager_client):
+    """Next 2 days: calm current wind but moderate FORECAST wind → caution/moderate_wind."""
+    body = make_meteo_body(
+        current=MODERATE_WIND_CURRENT | {"wind_speed_10m": 5.0},  # calm right now
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],   # no rain confounder
+            "wind_speed_10m_max": [15.0, 14.0, 8.0, 8.0],     # 12–20 band within window
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=next_2_days")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "caution"
+    assert spraying["reason"] == "moderate_wind"
+    assert "moderate_wind" in spraying["factors"]
+
+
+def test_today_ignores_high_forecast_wind(manager_client):
+    """Today: calm current wind keeps spraying advised even if the daily max is high."""
+    body = make_meteo_body(
+        current={
+            "time": "2026-05-31T14:00",
+            "temperature_2m": 24.0,
+            "relative_humidity_2m": 50,
+            "wind_speed_10m": 5.0,            # calm right now
+            "precipitation": 0.0,
+            "weather_code": 1,
+        },
+        daily={
+            "time": ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03"],
+            "weather_code": [1, 1, 1, 0],
+            "temperature_2m_max": [28.0, 27.0, 29.0, 26.0],
+            "temperature_2m_min": [17.0, 16.0, 18.0, 15.0],
+            "precipitation_probability_max": [0, 0, 0, 0],
+            "wind_speed_10m_max": [30.0, 8.0, 8.0, 8.0],      # today's daily max is high
+        },
+    )
+    with mock_open_meteo(json_data=body):
+        res = manager_client.get("/api/manager/weather?range=today")
+
+    assert res.status_code == 200
+    spraying = {r["activity"]: r for r in res.json()["recommendations"]}["spraying"]
+    assert spraying["status"] == "advised"            # today uses current wind only
+    assert spraying["reason"] == "good_conditions"
 
 
 def test_weekly_returns_seven_forecast_days(manager_client):
@@ -437,6 +652,53 @@ def test_range_affects_recommendations(manager_client):
     assert today_irrig["status"] == "advised"
     assert next2_irrig["status"] == "not_advised"
     assert next2_irrig["reason"] == "rain_expected"
+
+
+# --- Open-Meteo retry hardening --------------------------------------------
+
+def test_open_meteo_retries_then_succeeds_after_network_error(manager_client):
+    """A transient network error on the first attempt is retried and succeeds."""
+    with mock_open_meteo_sequence(
+        [httpx.ConnectTimeout("handshake timed out"), {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    assert fake_client.get.call_count == 2  # original + one retry
+
+
+def test_open_meteo_retries_then_succeeds_after_5xx(manager_client):
+    """A 5xx upstream error on the first attempt is retried and then succeeds."""
+    with mock_open_meteo_sequence(
+        [{"status_code": 503, "text": "busy"}, {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 200
+    assert fake_client.get.call_count == 2
+
+
+def test_open_meteo_4xx_not_retried(manager_client):
+    """A 4xx (permanent) error is NOT retried and surfaces as a 503 to the client."""
+    with mock_open_meteo_sequence(
+        # Second step would succeed, but it must never be reached.
+        [{"status_code": 400, "text": "bad request"}, {"json_data": make_meteo_body()}]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 503
+    assert fake_client.get.call_count == 1  # no retry on 4xx
+
+
+def test_open_meteo_all_attempts_fail_returns_503(manager_client):
+    """When every attempt fails, the existing WeatherApiError → 503 behavior holds."""
+    with mock_open_meteo_sequence(
+        [httpx.ConnectTimeout("boom"), httpx.ConnectTimeout("boom again")]
+    ) as fake_client:
+        res = manager_client.get("/api/manager/weather")
+
+    assert res.status_code == 503
+    assert fake_client.get.call_count == 2  # exactly OPEN_METEO_MAX_ATTEMPTS
 
 
 # --- POST /api/manager/weather/ai-recommendation ---------------------------

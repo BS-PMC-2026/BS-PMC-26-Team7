@@ -16,6 +16,7 @@ import type {
   WeatherRecommendation,
   WeatherRecommendationStatus,
   WeatherResponse,
+  WeatherSensorSnapshot,
 } from '@/types/weather';
 
 // Small visual hint per condition; falls back to a neutral icon.
@@ -82,6 +83,17 @@ export default function WeatherCard() {
     };
   }, [selectedRange]);
 
+  // Auto-dismiss the soft "showing last data" refresh warning so it never
+  // lingers on screen. It only appears when a refresh/range fetch fails while
+  // previous weather data is still shown; after a few seconds we clear the
+  // warning flag (the valid weather data itself is kept untouched). A later
+  // successful fetch also clears it via the effect above.
+  useEffect(() => {
+    if (!error || !data) return;
+    const timer = setTimeout(() => setError(false), 6000);
+    return () => clearTimeout(timer);
+  }, [error, data]);
+
   // AI is only ever triggered by this explicit handler.
   const handleGenerateAi = useCallback(() => {
     setAiLoading(true);
@@ -136,6 +148,14 @@ export default function WeatherCard() {
     });
   };
 
+  // Sensor source: prefer the actual fresh sensor names; fall back to a count
+  // ("2 active sensors") when names are unavailable.
+  const sensorSourceLabel = (s: WeatherSensorSnapshot): string => {
+    if (s.sensorNames && s.sensorNames.length > 0) return s.sensorNames.join(', ');
+    const unit = s.sensorCount === 1 ? w.activeSensor : w.activeSensors;
+    return `${s.sensorCount} ${unit}`;
+  };
+
   const num = (value: number | null, suffix = ''): string =>
     value === null || value === undefined ? '—' : `${value}${suffix}`;
 
@@ -171,18 +191,24 @@ export default function WeatherCard() {
         <p className="text-sm text-red-600">{w.error}</p>
       )}
 
-      {/* Once we have data, keep showing it even if a later request fails. */}
+      {/* Once we have data, keep showing it even if a later request fails.
+          A failed refresh shows a softer "showing last data" notice (amber),
+          not the hard "failed to load" error used when there's no data at all. */}
       {data && (
         <div className="flex flex-col gap-5">
           {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-              {w.error}
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              {w.refreshError}
             </p>
           )}
 
           {/* Current live weather */}
           <section>
             <h3 className="text-sm font-medium text-gray-500 mb-2">{w.currentWeather}</h3>
+            <p className="mb-2 text-xs text-gray-400">
+              {w.location}:{' '}
+              <span className="font-medium text-gray-600">{w.locationName}</span>
+            </p>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-4xl" aria-hidden>
                 {conditionEmoji(data.current.condition)}
@@ -281,6 +307,12 @@ export default function WeatherCard() {
                     {data.sensors.sensorCount}
                   </dd>
                 </div>
+                <p className="col-span-2 sm:col-span-4 text-xs text-gray-500">
+                  {w.sensorSource}:{' '}
+                  <span className="font-medium text-gray-700">
+                    {sensorSourceLabel(data.sensors)}
+                  </span>
+                </p>
                 {data.sensors.latestReadingUtc && (
                   <p className="col-span-2 sm:col-span-4 text-xs text-gray-400">
                     {w.updatedAt} {formatTime(data.sensors.latestReadingUtc)}

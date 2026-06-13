@@ -34,6 +34,7 @@ export interface WeatherSensorSnapshot {
   avgHumidityPct: number | null;
   avgPar: number | null;
   sensorCount: number;
+  sensorNames: string[];
   latestReadingUtc: string | null;
 }
 

@@ -66,6 +66,10 @@ class WeatherSensorSnapshot(BaseModel):
     avgHumidityPct: Optional[float] = None
     avgPar: Optional[float] = None
     sensorCount: int = 0
+    # Human-readable names of the FRESH sensors that contributed to this
+    # snapshot (DeviceName, falling back to UnitName, then "Sensor #<id>").
+    # Stale sensors are already excluded upstream, so they never appear here.
+    sensorNames: List[str] = []
     latestReadingUtc: Optional[str] = None
 
     class Config:
